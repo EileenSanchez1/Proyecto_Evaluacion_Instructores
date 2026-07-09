@@ -1,12 +1,491 @@
+
 {% extends 'layout.html' %}
 
 {% block title %}
-Evaluaciones
+Fichas
 {% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles_fichas.css') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
+<div class="pagina-fichas">
 
-<h1>Hola</h1>
+    <div class="encabezado">
+        <div>
+            <h1 class="titulo">Gestión de Fichas</h1>
+            <p class="subtitulo">Administra las fichas de formación registradas en el sistema</p>
+        </div>
+        <div>
+            <button type="button" class="btn-nuevo" onclick="abrirModalCrear()">
+                <i class="bi bi-plus-circle"></i>
+                Nueva Ficha
+            </button>
+        </div>
+    </div>
 
+    <div class="barra-superior">
+        <div class="input-group buscador">
+            <span class="input-group-text">
+                <i class="bi bi-search"></i>
+            </span>
+            <input
+                type="text"
+                id="buscadorFichas"
+                class="form-control"
+                placeholder="Buscar por número de ficha o programa..."
+            >
+        </div>
+
+        <div class="filtro-estado">
+            <select id="filtroEstado" class="form-select">
+                <option value="">Todos los estados</option>
+                <option value="En ejecución">En ejecución</option>
+                <option value="Finalizada">Finalizada</option>
+                <option value="Suspendida">Suspendida</option>
+                <option value="Cancelada">Cancelada</option>
+            </select>
+        </div>
+    </div>
+
+    <p class="contador-resultados" id="contadorResultados"></p>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="gridFichas">
+    </div>
+
+    <div id="sinResultados" style="display: none;">
+        <i class="bi bi-search"></i>
+        <h4>No se encontraron fichas</h4>
+        <p>Intenta con otro término de búsqueda o cambia el filtro de estado</p>
+    </div>
+
+</div>
+
+<!-- Modal Ver Detalle -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-card-text me-2"></i>Detalle de la Ficha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body detalle-body" id="detalleBodyContent">
+            </div>
+            <div class="modal-footer" id="detalleFooterContent">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear / Editar -->
+<div class="modal fade" id="modalFormulario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloModalFormulario"><i class="bi bi-plus-circle me-2"></i>Nueva Ficha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formFicha" onsubmit="return guardarFicha(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="fichaIdInput">
+
+                    <label class="form-label"><i class="bi bi-hash"></i> Número de Ficha</label>
+                    <input type="text" id="numeroInput" class="form-control-form" placeholder="Ej: 3407184" required>
+
+                    <label class="form-label"><i class="bi bi-mortarboard"></i> Programa de Formación</label>
+                    <input type="text" id="programaInput" class="form-control-form" placeholder="Ej: Análisis y Desarrollo de Software" required>
+
+                    <div class="form-row-2">
+                        <div>
+                            <label class="form-label"><i class="bi bi-bar-chart-steps"></i> Nivel</label>
+                            <select id="nivelInput" class="form-select-form" required>
+                                <option value="" disabled selected>Selecciona un nivel</option>
+                                <option value="Técnico">Técnico</option>
+                                <option value="Tecnólogo">Tecnólogo</option>
+                                <option value="Complementaria">Complementaria</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label"><i class="bi bi-sun"></i> Jornada</label>
+                            <select id="jornadaInput" class="form-select-form" required>
+                                <option value="" disabled selected>Selecciona una jornada</option>
+                                <option value="Diurna">Diurna</option>
+                                <option value="Mixta">Mixta</option>
+                                <option value="Nocturna">Nocturna</option>
+                                <option value="Fin de semana">Fin de semana</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div>
+                            <label class="form-label"><i class="bi bi-calendar-event"></i> Fecha de inicio</label>
+                            <input type="date" id="fechaInicioInput" class="form-control-form" required>
+                        </div>
+                        <div>
+                            <label class="form-label"><i class="bi bi-calendar-check"></i> Fecha de fin</label>
+                            <input type="date" id="fechaFinInput" class="form-control-form" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div>
+                            <label class="form-label"><i class="bi bi-flag"></i> Estado</label>
+                            <select id="estadoInput" class="form-select-form" required>
+                                <option value="En ejecución">En ejecución</option>
+                                <option value="Finalizada">Finalizada</option>
+                                <option value="Suspendida">Suspendida</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label"><i class="bi bi-people"></i> N.º Aprendices</label>
+                            <input type="number" id="aprendicesInput" class="form-control-form" placeholder="Ej: 28" min="0" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel-form" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-submit-form" id="btnSubmitFicha">
+                        <i class="bi bi-check-circle"></i> Guardar Ficha
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ==========================
+// Datos iniciales (semilla)
+// ==========================
+var fichasIniciales = [
+    {
+        id: 1,
+        numero: "3407184",
+        programa: "Análisis y Desarrollo de Software",
+        nivel: "Tecnólogo",
+        jornada: "Mixta",
+        fechaInicio: "2025-02-03",
+        fechaFin: "2026-12-18",
+        estado: "En ejecución",
+        aprendices: 32
+    },
+    {
+        id: 2,
+        numero: "2845110",
+        programa: "Contabilidad y Finanzas",
+        nivel: "Técnico",
+        jornada: "Diurna",
+        fechaInicio: "2024-06-10",
+        fechaFin: "2025-08-15",
+        estado: "Finalizada",
+        aprendices: 25
+    },
+    {
+        id: 3,
+        numero: "2987654",
+        programa: "Diseño e Integración de Multimedia",
+        nivel: "Tecnólogo",
+        jornada: "Nocturna",
+        fechaInicio: "2025-03-01",
+        fechaFin: "2027-02-20",
+        estado: "En ejecución",
+        aprendices: 20
+    }
+];
+
+// ==========================
+// Persistencia (localStorage)
+// ==========================
+function cargarFichas() {
+    var fichas = localStorage.getItem('fichas');
+    if (!fichas) {
+        localStorage.setItem('fichas', JSON.stringify(fichasIniciales));
+        return fichasIniciales;
+    }
+    return JSON.parse(fichas);
+}
+
+function guardarFichas(fichas) {
+    localStorage.setItem('fichas', JSON.stringify(fichas));
+}
+
+// ==========================
+// Utilidades
+// ==========================
+function claseBadgeEstado(estado) {
+    switch (estado) {
+        case "En ejecución": return "badge-en-ejecucion";
+        case "Finalizada": return "badge-finalizada";
+        case "Suspendida": return "badge-suspendida";
+        case "Cancelada": return "badge-cancelada";
+        default: return "badge-en-ejecucion";
+    }
+}
+
+function formatearFecha(fecha) {
+    if (!fecha) return "-";
+    var partes = fecha.split("-");
+    if (partes.length !== 3) return fecha;
+    return partes[2] + "/" + partes[1] + "/" + partes[0];
+}
+
+// ==========================
+// Render del listado
+// ==========================
+function renderizarFichas(fichas) {
+    var grid = document.getElementById('gridFichas');
+    grid.innerHTML = '';
+
+    for (var i = 0; i < fichas.length; i++) {
+        var ficha = fichas[i];
+        var col = document.createElement('div');
+        col.className = 'col ficha-item';
+        col.setAttribute('data-numero', ficha.numero.toLowerCase());
+        col.setAttribute('data-programa', ficha.programa.toLowerCase());
+        col.setAttribute('data-estado', ficha.estado);
+
+        col.innerHTML =
+            '<div class="card ficha-card">' +
+                '<div class="card-body">' +
+                    '<div class="ficha-encabezado-card">' +
+                        '<div class="ficha-numero"><i class="bi bi-hash"></i>' + ficha.numero + '</div>' +
+                        '<span class="badge-estado ' + claseBadgeEstado(ficha.estado) + '">' + ficha.estado + '</span>' +
+                    '</div>' +
+                    '<p class="ficha-programa">' + ficha.programa + '</p>' +
+                    '<hr>' +
+                    '<p><i class="bi bi-bar-chart-steps"></i> Nivel: ' + ficha.nivel + '</p>' +
+                    '<p><i class="bi bi-sun"></i> Jornada: ' + ficha.jornada + '</p>' +
+                    '<p><i class="bi bi-calendar-range"></i> ' + formatearFecha(ficha.fechaInicio) + ' - ' + formatearFecha(ficha.fechaFin) + '</p>' +
+                    '<p><i class="bi bi-people"></i> Aprendices: ' + ficha.aprendices + '</p>' +
+                    '<div class="acciones">' +
+                        '<button class="btn btn-ver" onclick="verFicha(' + ficha.id + ')" title="Ver detalles">' +
+                            '<i class="bi bi-eye"></i>' +
+                        '</button>' +
+                        '<button class="btn btn-editar" onclick="abrirModalEditar(' + ficha.id + ')" title="Editar">' +
+                            '<i class="bi bi-pencil"></i>' +
+                        '</button>' +
+                        '<button class="btn btn-eliminar" onclick="eliminarFicha(' + ficha.id + ')" title="Eliminar">' +
+                            '<i class="bi bi-trash"></i>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        grid.appendChild(col);
+    }
+
+    document.getElementById('contadorResultados').textContent =
+        fichas.length + (fichas.length === 1 ? ' ficha encontrada' : ' fichas encontradas');
+}
+
+// ==========================
+// Ver detalle
+// ==========================
+function verFicha(id) {
+    var fichas = cargarFichas();
+    var ficha = buscarPorId(fichas, id);
+    if (!ficha) return;
+
+    var body = document.getElementById('detalleBodyContent');
+    var footer = document.getElementById('detalleFooterContent');
+
+    body.innerHTML =
+        '<h3 style="font-weight:700; margin-bottom:6px;">Ficha ' + ficha.numero + '</h3>' +
+        '<span class="badge-estado ' + claseBadgeEstado(ficha.estado) + '">' + ficha.estado + '</span>' +
+        '<hr>' +
+        '<p><i class="bi bi-mortarboard"></i> <strong>Programa:</strong>&nbsp;' + ficha.programa + '</p>' +
+        '<p><i class="bi bi-bar-chart-steps"></i> <strong>Nivel:</strong>&nbsp;' + ficha.nivel + '</p>' +
+        '<p><i class="bi bi-sun"></i> <strong>Jornada:</strong>&nbsp;' + ficha.jornada + '</p>' +
+        '<p><i class="bi bi-calendar-event"></i> <strong>Inicio:</strong>&nbsp;' + formatearFecha(ficha.fechaInicio) + '</p>' +
+        '<p><i class="bi bi-calendar-check"></i> <strong>Fin:</strong>&nbsp;' + formatearFecha(ficha.fechaFin) + '</p>' +
+        '<p><i class="bi bi-people"></i> <strong>Aprendices:</strong>&nbsp;' + ficha.aprendices + '</p>';
+
+    footer.innerHTML =
+        '<button class="btn btn-success" onclick="bootstrap.Modal.getInstance(document.getElementById(\'modalDetalle\')).hide(); abrirModalEditar(' + ficha.id + ');">' +
+            '<i class="bi bi-pencil"></i> Editar' +
+        '</button>' +
+        '<button class="btn btn-danger" onclick="eliminarFicha(' + ficha.id + '); bootstrap.Modal.getInstance(document.getElementById(\'modalDetalle\')).hide();">' +
+            '<i class="bi bi-trash"></i> Eliminar' +
+        '</button>';
+
+    var modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+    modal.show();
+}
+
+function buscarPorId(fichas, id) {
+    for (var i = 0; i < fichas.length; i++) {
+        if (fichas[i].id === id) return fichas[i];
+    }
+    return null;
+}
+
+// ==========================
+// Crear / Editar (modal formulario)
+// ==========================
+function limpiarFormulario() {
+    document.getElementById('formFicha').reset();
+    document.getElementById('fichaIdInput').value = '';
+    document.getElementById('estadoInput').value = 'En ejecución';
+}
+
+function abrirModalCrear() {
+    limpiarFormulario();
+    document.getElementById('tituloModalFormulario').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nueva Ficha';
+    document.getElementById('btnSubmitFicha').innerHTML = '<i class="bi bi-check-circle"></i> Crear Ficha';
+    var modal = new bootstrap.Modal(document.getElementById('modalFormulario'));
+    modal.show();
+}
+
+function abrirModalEditar(id) {
+    var fichas = cargarFichas();
+    var ficha = buscarPorId(fichas, id);
+    if (!ficha) return;
+
+    document.getElementById('fichaIdInput').value = ficha.id;
+    document.getElementById('numeroInput').value = ficha.numero;
+    document.getElementById('programaInput').value = ficha.programa;
+    document.getElementById('nivelInput').value = ficha.nivel;
+    document.getElementById('jornadaInput').value = ficha.jornada;
+    document.getElementById('fechaInicioInput').value = ficha.fechaInicio;
+    document.getElementById('fechaFinInput').value = ficha.fechaFin;
+    document.getElementById('estadoInput').value = ficha.estado;
+    document.getElementById('aprendicesInput').value = ficha.aprendices;
+
+    document.getElementById('tituloModalFormulario').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Ficha';
+    document.getElementById('btnSubmitFicha').innerHTML = '<i class="bi bi-check-circle"></i> Guardar Cambios';
+
+    var modal = new bootstrap.Modal(document.getElementById('modalFormulario'));
+    modal.show();
+}
+
+function guardarFicha(e) {
+    e.preventDefault();
+
+    var idInput = document.getElementById('fichaIdInput').value;
+    var numero = document.getElementById('numeroInput').value.trim();
+    var programa = document.getElementById('programaInput').value.trim();
+    var nivel = document.getElementById('nivelInput').value;
+    var jornada = document.getElementById('jornadaInput').value;
+    var fechaInicio = document.getElementById('fechaInicioInput').value;
+    var fechaFin = document.getElementById('fechaFinInput').value;
+    var estado = document.getElementById('estadoInput').value;
+    var aprendicesRaw = document.getElementById('aprendicesInput').value;
+
+    // Validación explícita con mensajes claros (además del "required" del navegador)
+    if (!numero) { alert('Por favor ingresa el número de ficha.'); return false; }
+    if (!programa) { alert('Por favor ingresa el programa de formación.'); return false; }
+    if (!nivel) { alert('Por favor selecciona el nivel de formación.'); return false; }
+    if (!jornada) { alert('Por favor selecciona la jornada.'); return false; }
+    if (!fechaInicio) { alert('Por favor ingresa la fecha de inicio.'); return false; }
+    if (!fechaFin) { alert('Por favor ingresa la fecha de fin.'); return false; }
+    if (aprendicesRaw === '') { alert('Por favor ingresa el número de aprendices.'); return false; }
+    if (fechaFin < fechaInicio) {
+        alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+        return false;
+    }
+
+    var fichas = cargarFichas();
+
+    var datosFicha = {
+        numero: numero,
+        programa: programa,
+        nivel: nivel,
+        jornada: jornada,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        estado: estado,
+        aprendices: parseInt(aprendicesRaw, 10)
+    };
+
+    if (idInput) {
+        // Editar
+        var index = -1;
+        for (var i = 0; i < fichas.length; i++) {
+            if (fichas[i].id === parseInt(idInput, 10)) {
+                index = i;
+                break;
+            }
+        }
+        if (index !== -1) {
+            datosFicha.id = fichas[index].id;
+            fichas[index] = datosFicha;
+        }
+    } else {
+        // Crear
+        var nuevoId = fichas.length > 0 ? Math.max.apply(null, fichas.map(function(f) { return f.id; })) + 1 : 1;
+        datosFicha.id = nuevoId;
+        fichas.push(datosFicha);
+    }
+
+    guardarFichas(fichas);
+    bootstrap.Modal.getInstance(document.getElementById('modalFormulario')).hide();
+
+    // Limpiamos los filtros activos para que la ficha guardada sea siempre visible
+    document.getElementById('buscadorFichas').value = '';
+    document.getElementById('filtroEstado').value = '';
+    aplicarFiltros();
+    return false;
+}
+
+// ==========================
+// Eliminar
+// ==========================
+function eliminarFicha(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta ficha? Esta acción no se puede deshacer.')) return;
+
+    var fichas = cargarFichas();
+    var nuevasFichas = [];
+    for (var i = 0; i < fichas.length; i++) {
+        if (fichas[i].id !== id) {
+            nuevasFichas.push(fichas[i]);
+        }
+    }
+    guardarFichas(nuevasFichas);
+    aplicarFiltros();
+}
+
+// ==========================
+// Filtrado (texto + estado)
+// ==========================
+function aplicarFiltros() {
+    var query = document.getElementById('buscadorFichas').value.toLowerCase().trim();
+    var estadoSeleccionado = document.getElementById('filtroEstado').value;
+
+    var fichas = cargarFichas();
+
+    var filtradas = fichas.filter(function(ficha) {
+        var coincideTexto = !query ||
+            ficha.numero.toLowerCase().indexOf(query) !== -1 ||
+            ficha.programa.toLowerCase().indexOf(query) !== -1;
+        var coincideEstado = !estadoSeleccionado || ficha.estado === estadoSeleccionado;
+        return coincideTexto && coincideEstado;
+    });
+
+    renderizarFichas(filtradas);
+
+    document.getElementById('sinResultados').style.display = filtradas.length === 0 ? 'block' : 'none';
+    document.getElementById('gridFichas').style.display = filtradas.length === 0 ? 'none' : '';
+}
+
+// ==========================
+// Inicialización
+// ==========================
+document.addEventListener('DOMContentLoaded', function() {
+    var fichas = cargarFichas();
+    renderizarFichas(fichas);
+
+    document.getElementById('buscadorFichas').addEventListener('input', aplicarFiltros);
+    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+});
+</script>
 {% endblock %}
