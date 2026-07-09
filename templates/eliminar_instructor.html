@@ -1,0 +1,126 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+Eliminar Instructor
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles_instructores.css') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="pagina-formulario">
+
+    <div class="encabezado">
+        <div>
+            <h1 class="titulo-rojo">Eliminar Instructor</h1>
+            <p class="subtitulo">Elimina permanentemente un instructor del sistema</p>
+        </div>
+        <a href="{{ url_for('instructores') }}" class="btn-cancel-form" style="width: auto; padding: 12px 24px;">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <div class="form-container" style="max-width: 500px;">
+        <div class="form-header">
+            <i class="bi bi-trash-fill" style="color: #dc3545;"></i>
+            <h2>Confirmar Eliminación</h2>
+            <p>Selecciona el instructor que deseas eliminar</p>
+        </div>
+
+        <form id="formEliminarInstructor" onsubmit="return eliminarInstructor(event)">
+            
+            <label class="form-label"><i class="bi bi-person-x"></i> Seleccione Instructor</label>
+            <select class="form-select-form" id="selectInstructor" required>
+                <option value="" disabled selected>Selecciona un instructor</option>
+            </select>
+
+            <div class="alerta-eliminacion">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div>
+                    <strong>Advertencia</strong>
+                    <p>Esta acción eliminará permanentemente al instructor seleccionado. No se puede deshacer.</p>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit-form" style="background: #dc3545; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);">
+                <i class="bi bi-trash"></i> Eliminar Instructor
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<input type="hidden" id="urlInstructores" value="{{ url_for('instructores') }}">
+{% endblock %}
+
+{% block scripts %}
+<script>
+var URL_INSTRUCTORES = document.getElementById('urlInstructores').value;
+
+function cargarInstructores() {
+    var instructores = localStorage.getItem('instructores');
+    if (!instructores) {
+        return [];
+    }
+    return JSON.parse(instructores);
+}
+
+function cargarSelect() {
+    var instructores = cargarInstructores();
+    var select = document.getElementById('selectInstructor');
+    
+    for (var i = 0; i < instructores.length; i++) {
+        var option = document.createElement('option');
+        option.value = instructores[i].id;
+        option.textContent = instructores[i].nombre + ' - ' + instructores[i].competencia;
+        select.appendChild(option);
+    }
+}
+
+function eliminarInstructor(e) {
+    e.preventDefault();
+    
+    var select = document.getElementById('selectInstructor');
+    var id = parseInt(select.value);
+    
+    if (!id) {
+        alert('Por favor selecciona un instructor');
+        return false;
+    }
+    
+    var instructores = cargarInstructores();
+    var nombreInstructor = '';
+    
+    for (var i = 0; i < instructores.length; i++) {
+        if (instructores[i].id === id) {
+            nombreInstructor = instructores[i].nombre;
+            break;
+        }
+    }
+    
+    if (!confirm('¿Estás seguro de eliminar a "' + nombreInstructor + '"? Esta acción no se puede deshacer.')) {
+        return false;
+    }
+    
+    var nuevosInstructores = [];
+    for (var i = 0; i < instructores.length; i++) {
+        if (instructores[i].id !== id) {
+            nuevosInstructores.push(instructores[i]);
+        }
+    }
+    
+    localStorage.setItem('instructores', JSON.stringify(nuevosInstructores));
+    
+    window.location.href = URL_INSTRUCTORES;
+    return false;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    cargarSelect();
+});
+</script>
+{% endblock %}

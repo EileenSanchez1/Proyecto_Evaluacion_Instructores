@@ -1,0 +1,118 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+Login
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles_login.css') }}">
+<style>
+/* Esto elimina los márgenes y barras de layout.html para que el login ocupe la pantalla limpia sin cortarse */
+.main-area {
+    width: 100% !important;
+    margin-left: 0 !important;
+    padding: 0 !important;
+}
+
+.page-content {
+    padding: 0 !important;
+}
+
+/* Oculta la barra de arriba solo en la pantalla de login para que la tarjeta blanca no se baje ni se corte */
+.topbar {
+    display: none !important;
+}
+
+/* Estilos extra para el campo de la ficha */
+.lado-formulario select {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #dcdcdc;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    font-family: 'Work Sans', sans-serif;
+    background-color: white;
+}
+.lado-formulario select:focus {
+    outline: none;
+    border-color: #39A900;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contenedor-login">
+
+    <div class="tarjeta-login">
+
+        <div class="lado-imagen">
+            <img src="{{ url_for('static', filename='imgs/img_logo.png') }}" alt="Logo SENA" class="logo-sena">
+            <h2>Bienvenido/a</h2>
+            <p>Plataforma de acceso</p>
+        </div>
+
+        <div class="lado-formulario">
+
+            <h1>Login</h1>
+            <p class="subtitulo">Ingresa tus credenciales para continuar</p>
+
+            {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST">
+                <div>
+                    <label>Correo</label>
+                    <input type="email" name="correo" id="correoInput" placeholder="Ingrese su correo" required>
+                </div>
+
+                <div id="campoFicha" style="display: none;">
+                    <label>Ficha de Formación</label>
+                    <select name="ficha">
+                        <option value="3407184">3407184 - ADSO (Diurna)</option>
+                        <option value="2503412">2503412 - ADSO (Nocturna)</option>
+                        <option value="2619843">2619843 - Animación Digital</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Contraseña</label>
+                    <input type="password" name="password" placeholder="Ingrese su contraseña" required>
+                </div>
+
+                <button type="submit">Ingresar</button>
+            </form>
+
+            <div class="registro-link" style="text-align: center; margin-top: 20px;">
+                <p style="color: #666666; font-size: 0.9rem; margin-bottom: 0;">
+                    ¿No tienes una cuenta? 
+                    <a href="#" style="color:#39A900; text-decoration:none; font-weight: 600;">Regístrate aquí</a>
+                </p>
+            </div>
+
+            <div class="recuperar">
+                <a href="#" style="color:#39A900; text-decoration:none;">¿Olvidaste tu contraseña?</a>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+document.getElementById('correoInput').addEventListener('input', function() {
+    const correo = this.value.toLowerCase();
+    const campoFicha = document.getElementById('campoFicha');
+    
+    // Si el correo contiene "aprendiz", muestra el selector de fichas
+    if (correo.includes('aprendiz')) {
+        campoFicha.style.display = 'block';
+    } else {
+        campoFicha.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
