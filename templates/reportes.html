@@ -1,12 +1,37 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 
-{% block title %}
-Evaluaciones
-{% endblock %}
-
+{% block title %}Reportes{% endblock %}
 
 {% block content %}
 
-<h1>Hola</h1>
+<div class="container mt-5">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-success text-white">
+            <h3 class="mb-0">Reportes de Evaluaciones</h3>
+        </div>
+
+        <div class="card-body text-center">
+
+            <p class="mb-4">
+                Descargue los reportes de las evaluaciones realizadas a los instructores.
+            </p>
+
+            <a href="{{ url_for('descargar_excel') }}"
+               class="btn btn-success btn-lg me-3">
+                📊 Descargar Excel
+            </a>
+
+            <a href="{{ url_for('descargar_pdf') }}"
+               class="btn btn-danger btn-lg">
+                📄 Descargar PDF
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
 
 {% endblock %}
