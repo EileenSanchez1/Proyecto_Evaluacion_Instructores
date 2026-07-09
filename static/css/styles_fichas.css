@@ -1,0 +1,527 @@
+/* ============================================
+   ESTILOS SENA - MÓDULO DE FICHAS
+   ============================================ */
+
+:root {
+    --sena-verde: #39A900;
+    --sena-verde-oscuro: #1a472a;
+    --sena-verde-hover: #2d8600;
+    --sena-gris-bg: #f4f6f8;
+    --sena-texto: #333333;
+    --sena-texto-claro: #6c757d;
+    --sena-blanco: #ffffff;
+    --sena-sombra: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --sena-sombra-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+    --sena-radio: 16px;
+    --sena-radio-sm: 12px;
+}
+
+.pagina-fichas {
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: 'Poppins', sans-serif;
+}
+
+.encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.titulo {
+    color: var(--sena-verde-oscuro);
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.subtitulo {
+    color: var(--sena-texto-claro);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.btn-nuevo {
+    background: var(--sena-verde);
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--sena-radio-sm);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: white;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    box-shadow: 0 4px 15px rgba(57, 169, 0, 0.3);
+}
+
+.btn-nuevo:hover {
+    background: var(--sena-verde-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(57, 169, 0, 0.4);
+    color: white;
+}
+
+/* Barra de filtros */
+.barra-superior {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.buscador {
+    max-width: 500px;
+    flex: 1 1 300px;
+}
+
+.buscador .input-group-text {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-right: none;
+    border-radius: var(--sena-radio-sm) 0 0 var(--sena-radio-sm);
+    padding: 12px 15px;
+    color: var(--sena-texto-claro);
+}
+
+.buscador .form-control {
+    border: 1px solid #e9ecef;
+    border-left: none;
+    border-radius: 0 var(--sena-radio-sm) var(--sena-radio-sm) 0;
+    padding: 12px 15px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+    box-shadow: none;
+}
+
+.buscador .form-control:focus {
+    border-color: #e9ecef;
+    box-shadow: none;
+}
+
+.filtro-estado {
+    flex: 0 1 220px;
+}
+
+.filtro-estado select {
+    border: 1px solid #e9ecef;
+    border-radius: var(--sena-radio-sm);
+    padding: 12px 15px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+    width: 100%;
+    background-color: white;
+}
+
+.filtro-estado select:focus {
+    border-color: var(--sena-verde);
+    box-shadow: 0 0 0 4px rgba(57, 169, 0, 0.1);
+    outline: none;
+}
+
+.contador-resultados {
+    color: var(--sena-texto-claro);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+/* Tarjetas de fichas */
+.ficha-card {
+    border: none;
+    border-radius: var(--sena-radio);
+    box-shadow: var(--sena-sombra);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    background: var(--sena-blanco);
+    height: 100%;
+    border-top: 5px solid var(--sena-verde);
+}
+
+.ficha-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--sena-sombra-hover);
+}
+
+.ficha-card .card-body {
+    padding: 25px;
+}
+
+.ficha-encabezado-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.ficha-numero {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--sena-verde-oscuro);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ficha-programa {
+    color: var(--sena-texto);
+    font-weight: 500;
+    font-size: 0.95rem;
+    margin: 4px 0 15px;
+}
+
+.badge-estado {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-en-ejecucion {
+    background: rgba(57, 169, 0, 0.15);
+    color: var(--sena-verde-oscuro);
+}
+
+.badge-finalizada {
+    background: rgba(108, 117, 125, 0.15);
+    color: #495057;
+}
+
+.badge-suspendida {
+    background: rgba(255, 193, 7, 0.2);
+    color: #856404;
+}
+
+.badge-cancelada {
+    background: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+}
+
+.ficha-card hr {
+    margin: 15px 0;
+    border-color: #e9ecef;
+    opacity: 1;
+}
+
+.ficha-card p {
+    margin-bottom: 10px;
+    color: var(--sena-texto-claro);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ficha-card p i {
+    color: var(--sena-verde);
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
+
+.acciones {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.acciones .btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+    transition: all 0.3s;
+    font-size: 1rem;
+}
+
+.btn-ver {
+    background: #f8f9fa;
+    color: var(--sena-texto-claro);
+}
+
+.btn-ver:hover {
+    background: #e9ecef;
+    color: var(--sena-texto);
+}
+
+.btn-editar {
+    background: var(--sena-verde);
+    color: white;
+}
+
+.btn-editar:hover {
+    background: var(--sena-verde-hover);
+    transform: translateY(-2px);
+}
+
+.btn-eliminar {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-eliminar:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+}
+
+/* Sin resultados */
+#sinResultados {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+#sinResultados i {
+    font-size: 3.5rem;
+    color: #dee2e6;
+}
+
+#sinResultados h4 {
+    color: var(--sena-texto-claro);
+    font-weight: 600;
+    margin-top: 20px;
+}
+
+#sinResultados p {
+    color: #adb5bd;
+}
+
+/* ============================================
+   MODAL - VER DETALLE
+   ============================================ */
+
+.modal-content {
+    border: none;
+    border-radius: var(--sena-radio);
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.modal-header {
+    background: var(--sena-verde);
+    color: white;
+    border: none;
+    padding: 20px 25px;
+}
+
+.modal-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+.btn-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 35px 30px;
+}
+
+.modal-body.detalle-body {
+    text-align: center;
+}
+
+.modal-body .badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.modal-body hr {
+    margin: 20px auto;
+    width: 60px;
+    border: 2px solid var(--sena-verde);
+    opacity: 1;
+    border-radius: 2px;
+}
+
+.detalle-body p {
+    font-size: 1rem;
+    margin: 12px 0;
+    color: var(--sena-texto-claro);
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detalle-body p i {
+    color: var(--sena-verde);
+    width: 20px;
+}
+
+.detalle-body p strong {
+    color: var(--sena-texto);
+}
+
+.modal-footer {
+    border: none;
+    padding: 0 30px 30px;
+    gap: 10px;
+    justify-content: center;
+}
+
+.modal-footer .btn {
+    padding: 10px 25px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    border: none;
+    transition: all 0.3s;
+}
+
+/* ============================================
+   MODAL - FORMULARIO (CREAR / EDITAR)
+   ============================================ */
+
+.form-label {
+    font-weight: 600;
+    color: var(--sena-texto);
+    margin-bottom: 8px;
+    display: block;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+}
+
+.form-label i {
+    color: var(--sena-verde);
+    margin-right: 6px;
+}
+
+.form-control-form,
+.form-select-form {
+    border-radius: var(--sena-radio-sm);
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    font-family: 'Poppins', sans-serif;
+    width: 100%;
+    margin-bottom: 18px;
+    outline: none;
+    transition: all 0.3s;
+    font-size: 0.95rem;
+    color: var(--sena-texto);
+    background: white;
+}
+
+.form-control-form::placeholder {
+    color: #adb5bd;
+}
+
+.form-control-form:focus,
+.form-select-form:focus {
+    border-color: var(--sena-verde);
+    box-shadow: 0 0 0 4px rgba(57, 169, 0, 0.1);
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.btn-submit-form {
+    background: var(--sena-verde);
+    border: none;
+    border-radius: var(--sena-radio-sm);
+    padding: 12px 25px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: 'Poppins', sans-serif;
+    box-shadow: 0 4px 15px rgba(57, 169, 0, 0.3);
+}
+
+.btn-submit-form:hover {
+    background: var(--sena-verde-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(57, 169, 0, 0.4);
+}
+
+.btn-cancel-form {
+    border-radius: var(--sena-radio-sm);
+    padding: 12px 25px;
+    font-weight: 600;
+    background: #6c757d;
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+}
+
+.btn-cancel-form:hover {
+    background: #5a6268;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ============================================
+   ANIMACIONES
+   ============================================ */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ficha-item {
+    animation: fadeIn 0.5s ease forwards;
+    opacity: 0;
+}
+
+.ficha-item:nth-child(1) { animation-delay: 0.05s; }
+.ficha-item:nth-child(2) { animation-delay: 0.1s; }
+.ficha-item:nth-child(3) { animation-delay: 0.15s; }
+.ficha-item:nth-child(4) { animation-delay: 0.2s; }
+.ficha-item:nth-child(5) { animation-delay: 0.25s; }
+.ficha-item:nth-child(6) { animation-delay: 0.3s; }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .pagina-fichas {
+        padding: 20px;
+    }
+
+    .encabezado {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .titulo {
+        font-size: 1.6rem;
+    }
+
+    .form-row-2 {
+        grid-template-columns: 1fr;
+    }
+}
