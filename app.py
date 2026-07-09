@@ -1,4 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, json, render_template, request, redirect, url_for, session, send_file
+import pandas as pd
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from openpyxl.styles import Font, PatternFill, Alignment
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "sena2026"
@@ -17,6 +22,33 @@ usuarios = {
         "ficha": "3407184"  # <-- Le asignamos una ficha fija para que tenga lógica de roles
     }
 }
+
+# ==========================
+# Reportes de prueba (Simulados con predeterminados)
+# ==========================
+datos_evaluaciones = [
+    {
+        "Instructor": "Carlos Pérez",
+        "Programa": "ADSO",
+        "Ficha": "2876541",
+        "Puntaje": 4.8,
+        "Comentario": "Excelente dominio del tema"
+    },
+    {
+        "Instructor": "Ana Torres",
+        "Programa": "Contabilidad",
+        "Ficha": "2987654",
+        "Puntaje": 4.5,
+        "Comentario": "Muy buena metodología"
+    },
+    {
+        "Instructor": "Luis Gómez",
+        "Programa": "Diseño",
+        "Ficha": "3054789",
+        "Puntaje": 4.2,
+        "Comentario": "Explica claramente"
+    }
+]
 
 # ==========================
 # Home
@@ -134,6 +166,132 @@ def reportes():
         return redirect(url_for("home"))
     return render_template('reportes.html')
 
+@app.route("/descargar_excel")
+def descargar_excel():
+
+    df = pd.DataFrame(datos_evaluaciones)
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(archivo, engine="openpyxl") as writer:
+
+        df.to_excel(writer, startrow=2, index=False)
+
+        hoja = writer.sheets["Sheet1"]
+
+        hoja["A1"] = "REPORTE DE EVALUACIONES DE INSTRUCTORES"
+        hoja["A1"].font = Font(size=16, bold=True)
+        hoja["A1"].alignment = Alignment(horizontal="center")
+
+        hoja.merge_cells("A1:E1")
+
+        hoja["A2"] = f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+
+        verde = PatternFill(fill_type="solid", fgColor="00843D")
+
+        for celda in hoja[3]:
+            celda.fill = verde
+            celda.font = Font(color="FFFFFF", bold=True)
+            celda.alignment = Alignment(horizontal="center")
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="Reporte_Evaluaciones.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.route("/descargar_pdf")
+def descargar_pdf():
+
+    archivo = BytesIO()
+    pdf = canvas.Canvas(archivo)
+
+    # Título del documento
+    pdf.setTitle("Reporte de Evaluaciones")
+
+    # Encabezado
+    pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(120, 810, "REPORTE DE EVALUACIONES")
+
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(40, 790, "Sistema de Evaluación de Instructores")
+    pdf.drawString(40, 775, "Servicio Nacional de Aprendizaje - SENA")
+    pdf.drawString(
+        40,
+        760,
+        f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    )
+
+    # Línea separadora
+    pdf.line(40, 750, 560, 750)
+
+    # Encabezados de la tabla
+    pdf.setFont("Helvetica-Bold", 10)
+
+    pdf.drawString(40, 730, "Instructor")
+    pdf.drawString(170, 730, "Programa")
+    pdf.drawString(290, 730, "Ficha")
+    pdf.drawString(360, 730, "Puntaje")
+    pdf.drawString(430, 730, "Comentario")
+
+    pdf.line(40, 720, 560, 720)
+
+    # Posición inicial
+    y = 700
+
+    pdf.setFont("Helvetica", 10)
+
+    # Datos
+    for e in datos_evaluaciones:
+
+        pdf.drawString(40, y, str(e["Instructor"]))
+        pdf.drawString(170, y, str(e["Programa"]))
+        pdf.drawString(290, y, str(e["Ficha"]))
+        pdf.drawString(360, y, str(e["Puntaje"]))
+        pdf.drawString(430, y, str(e["Comentario"]))
+
+        y -= 25
+
+        # Nueva página si se acaba el espacio
+        if y < 70:
+            pdf.showPage()
+
+            pdf.setFont("Helvetica-Bold", 10)
+
+            pdf.drawString(40, 800, "Instructor")
+            pdf.drawString(170, 800, "Programa")
+            pdf.drawString(290, 800, "Ficha")
+            pdf.drawString(360, 800, "Puntaje")
+            pdf.drawString(430, 800, "Comentario")
+
+            pdf.line(40, 790, 560, 790)
+
+            pdf.setFont("Helvetica", 10)
+
+            y = 770
+
+    # Pie de página
+    pdf.setFont("Helvetica-Oblique", 9)
+    pdf.drawString(
+        40,
+        40,
+        "Documento generado automáticamente por el Sistema de Evaluación de Instructores."
+    )
+
+    # Guardar el PDF
+    pdf.save()
+
+    # Regresar al inicio del archivo
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="Reporte_Evaluaciones.pdf",
+        mimetype="application/pdf"
+    )
 
 # ==========================
 # Ejecutar aplicación
