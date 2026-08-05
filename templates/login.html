@@ -7,7 +7,6 @@ Login
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles_login.css') }}">
 <style>
-/* Esto elimina los márgenes y barras de layout.html para que el login ocupe la pantalla limpia sin cortarse */
 .main-area {
     width: 100% !important;
     margin-left: 0 !important;
@@ -18,12 +17,10 @@ Login
     padding: 0 !important;
 }
 
-/* Oculta la barra de arriba solo en la pantalla de login para que la tarjeta blanca no se baje ni se corte */
-.topbar {
     display: none !important;
 }
 
-/* Estilos extra para el campo de la ficha */
+
 .lado-formulario select {
     width: 100%;
     padding: 14px;
