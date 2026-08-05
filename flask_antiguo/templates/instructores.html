@@ -1,0 +1,280 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+Instructores
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles_instructores.css') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="pagina-instructores">
+
+    <div class="encabezado">
+        <div>
+            <h1 class="titulo">Gestión de Instructores</h1>
+            <p class="subtitulo">Administra, consulta y actualiza los instructores registrados</p>
+        </div>
+
+        {% if session.get('rol') == 'admin' %}
+        <div>
+            <a href="{{ url_for('crear_instructor') }}" class="btn-nuevo">
+                <i class="bi bi-plus-circle"></i>
+                Nuevo Instructor
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="barra-superior">
+        <div class="input-group buscador">
+            <span class="input-group-text">
+                <i class="bi bi-search"></i>
+            </span>
+            <input
+                type="text"
+                id="buscadorInstructores"
+                class="form-control"
+                placeholder="Buscar instructor..."
+            >
+        </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="gridInstructores">
+    </div>
+
+    <div id="sinResultados" style="display: none;">
+        <i class="bi bi-search"></i>
+        <h4>No se encontraron instructores</h4>
+        <p>Intenta con otro término de búsqueda</p>
+    </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="modalInstructor" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-vcard me-2"></i>Información del Instructor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBodyContent">
+            </div>
+            <div class="modal-footer" id="modalFooterContent">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Variable oculta para pasar datos al JS sin conflictos Jinja2 -->
+<input type="hidden" id="rolUsuario" value="{{ session.get('rol', '') }}">
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variables globales con URLs de Flask (definidas fuera de cualquier función)
+var URL_ACTUALIZAR_INSTRUCTOR = "{{ url_for('actualizar_instructor') }}";
+var URL_STATIC_IMGS = "{{ url_for('static', filename='imgs/') }}";
+var URL_STATIC_DEFAULT = "{{ url_for('static', filename='imgs/default.png') }}";
+
+// Rol del usuario obtenido del input hidden
+var esAdmin = document.getElementById('rolUsuario').value === 'admin';
+
+var instructoresIniciales = [
+    {
+        id: 1,
+        nombre: "Carlos Rodríguez",
+        competencia: "Python",
+        dia: "Miércoles",
+        ficha: "2845110",
+        imagen: "instructor1.png"
+    },
+    {
+        id: 2,
+        nombre: "Ana Torres",
+        competencia: "Base de Datos",
+        dia: "Lunes",
+        ficha: "2845110",
+        imagen: "instructor2.png"
+    },
+    {
+        id: 3,
+        nombre: "Laura Gómez",
+        competencia: "HTML y CSS",
+        dia: "Viernes",
+        ficha: "2845111",
+        imagen: "instructor3.png"
+    }
+];
+
+function cargarInstructores() {
+    var instructores = localStorage.getItem('instructores');
+    if (!instructores) {
+        localStorage.setItem('instructores', JSON.stringify(instructoresIniciales));
+        return instructoresIniciales;
+    }
+    return JSON.parse(instructores);
+}
+
+function guardarInstructores(instructores) {
+    localStorage.setItem('instructores', JSON.stringify(instructores));
+}
+
+function renderizarInstructores(instructores) {
+    var grid = document.getElementById('gridInstructores');
+    grid.innerHTML = '';
+    
+    for (var i = 0; i < instructores.length; i++) {
+        var instructor = instructores[i];
+        var col = document.createElement('div');
+        col.className = 'col instructor-item';
+        col.setAttribute('data-nombre', instructor.nombre.toLowerCase());
+        col.setAttribute('data-competencia', instructor.competencia.toLowerCase());
+        col.setAttribute('data-ficha', instructor.ficha);
+        
+        var accionesAdmin = '';
+        if (esAdmin) {
+            accionesAdmin = 
+                '<a href="' + URL_ACTUALIZAR_INSTRUCTOR + '?id=' + instructor.id + '" class="btn btn-editar" title="Editar">' +
+                    '<i class="bi bi-pencil"></i>' +
+                '</a>' +
+                '<button class="btn btn-eliminar" onclick="eliminarInstructor(' + instructor.id + ')" title="Eliminar">' +
+                    '<i class="bi bi-trash"></i>' +
+                '</button>';
+        }
+        
+        var imgSrc = instructor.imagen;
+        if (!imgSrc.startsWith('data:')) {
+            imgSrc = URL_STATIC_IMGS + instructor.imagen;
+        }
+        
+        col.innerHTML = 
+            '<div class="card instructor-card">' +
+                '<div class="card-body">' +
+                    '<div class="perfil">' +
+                        '<img src="' + imgSrc + '"' +
+                             ' alt="' + instructor.nombre + '"' +
+                             ' class="foto"' +
+                             ' onerror="this.src=\'' + URL_STATIC_DEFAULT + '\'">' +
+                        '<div>' +
+                            '<h4>' + instructor.nombre + '</h4>' +
+                            '<span class="badge badge-competencia">' + instructor.competencia + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<hr>' +
+                    '<p><i class="bi bi-book"></i> Competencia: ' + instructor.competencia + '</p>' +
+                    '<p><i class="bi bi-calendar3"></i> Día: ' + instructor.dia + '</p>' +
+                    '<p><i class="bi bi-mortarboard"></i> Ficha: ' + instructor.ficha + '</p>' +
+                    '<div class="acciones">' +
+                        '<button class="btn btn-ver" onclick="verModal(' + instructor.id + ')" title="Ver detalles">' +
+                            '<i class="bi bi-eye"></i>' +
+                        '</button>' +
+                        accionesAdmin +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        
+        grid.appendChild(col);
+    }
+}
+
+function verModal(id) {
+    var instructores = cargarInstructores();
+    var instructor = null;
+    for (var i = 0; i < instructores.length; i++) {
+        if (instructores[i].id === id) {
+            instructor = instructores[i];
+            break;
+        }
+    }
+    if (!instructor) return;
+    
+    var modalBody = document.getElementById('modalBodyContent');
+    var modalFooter = document.getElementById('modalFooterContent');
+    
+    var footerAdmin = '';
+    if (esAdmin) {
+        footerAdmin = 
+            '<a href="' + URL_ACTUALIZAR_INSTRUCTOR + '?id=' + instructor.id + '" class="btn btn-success">' +
+                '<i class="bi bi-pencil"></i> Editar' +
+            '</a>' +
+            '<button class="btn btn-danger" onclick="eliminarInstructor(' + instructor.id + '); bootstrap.Modal.getInstance(document.getElementById(\'modalInstructor\')).hide();">' +
+                '<i class="bi bi-trash"></i> Eliminar' +
+            '</button>';
+    }
+    
+    var imgSrc = instructor.imagen;
+    if (!imgSrc.startsWith('data:')) {
+        imgSrc = URL_STATIC_IMGS + instructor.imagen;
+    }
+    
+    modalBody.innerHTML = 
+        '<img src="' + imgSrc + '"' +
+             ' class="foto-modal"' +
+             ' alt="' + instructor.nombre + '"' +
+             ' onerror="this.src=\'' + URL_STATIC_DEFAULT + '\'">' +
+        '<h3>' + instructor.nombre + '</h3>' +
+        '<span class="badge bg-success">' + instructor.competencia + '</span>' +
+        '<hr>' +
+        '<p><strong>Competencia:</strong> ' + instructor.competencia + '</p>' +
+        '<p><strong>Día:</strong> ' + instructor.dia + '</p>' +
+        '<p><strong>Ficha:</strong> ' + instructor.ficha + '</p>' +
+        '<p><strong>ID:</strong> #' + instructor.id + '</p>';
+    
+    modalFooter.innerHTML = footerAdmin;
+    
+    var modal = new bootstrap.Modal(document.getElementById('modalInstructor'));
+    modal.show();
+}
+
+function eliminarInstructor(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este instructor?')) return;
+    
+    var instructores = cargarInstructores();
+    var nuevosInstructores = [];
+    for (var i = 0; i < instructores.length; i++) {
+        if (instructores[i].id !== id) {
+            nuevosInstructores.push(instructores[i]);
+        }
+    }
+    guardarInstructores(nuevosInstructores);
+    renderizarInstructores(nuevosInstructores);
+    filtrarInstructores();
+}
+
+function filtrarInstructores() {
+    var query = document.getElementById('buscadorInstructores').value.toLowerCase().trim();
+    var items = document.querySelectorAll('.instructor-item');
+    var sinResultados = document.getElementById('sinResultados');
+    var visibles = 0;
+    
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var nombre = item.getAttribute('data-nombre');
+        var competencia = item.getAttribute('data-competencia');
+        var ficha = item.getAttribute('data-ficha');
+        
+        if (nombre.indexOf(query) !== -1 || competencia.indexOf(query) !== -1 || ficha.indexOf(query) !== -1) {
+            item.style.display = '';
+            visibles++;
+        } else {
+            item.style.display = 'none';
+        }
+    }
+    
+    sinResultados.style.display = visibles === 0 ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var instructores = cargarInstructores();
+    renderizarInstructores(instructores);
+    
+    document.getElementById('buscadorInstructores').addEventListener('input', filtrarInstructores);
+});
+</script>
+{% endblock %}

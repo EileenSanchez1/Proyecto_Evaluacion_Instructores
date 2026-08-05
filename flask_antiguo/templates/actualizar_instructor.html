@@ -1,0 +1,168 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+Actualizar Instructor
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles_instructores.css') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <div class="form-header">
+            <i class="bi bi-pencil-square" style="color: #198754;"></i>
+            <h2>Actualizar Instructor</h2>
+            <p id="subtituloEditar">Cargando...</p>
+        </div>
+
+        <form id="formEditarInstructor" onsubmit="return guardarCambios(event)">
+            
+            <p style="text-align: center; color: #6c757d; font-size: 0.9rem; margin-bottom: 10px;">Foto actual del instructor</p>
+            <div class="preview-container" id="previewContainer">
+                <img id="previewImage" alt="Foto del instructor" style="display: block;">
+                <span class="placeholder" id="placeholderIcon" style="display: none;"><i class="bi bi-camera"></i></span>
+            </div>
+            
+            <div class="input-file-wrapper">
+                <div class="input-file-btn">
+                    <i class="bi bi-upload"></i> Cambiar foto (opcional)
+                </div>
+                <input type="file" id="imagenInput" accept="image/*">
+            </div>
+
+            <label class="form-label"><i class="bi bi-person"></i> Nombre completo</label>
+            <input type="text" id="nombreInput" class="form-control-form" required>
+
+            <label class="form-label"><i class="bi bi-book"></i> Competencia</label>
+            <select id="competenciaInput" class="form-select-form" required>
+                <option value="Python">Python</option>
+                <option value="Java">Java</option>
+                <option value="JavaScript">JavaScript</option>
+                <option value="HTML y CSS">HTML y CSS</option>
+                <option value="Base de Datos">Base de Datos</option>
+                <option value="Redes">Redes</option>
+                <option value="Seguridad Informática">Seguridad Informática</option>
+                <option value="Desarrollo Web">Desarrollo Web</option>
+                <option value="Análisis de Datos">Análisis de Datos</option>
+            </select>
+
+            <label class="form-label"><i class="bi bi-calendar3"></i> Día de clase</label>
+            <select id="diaInput" class="form-select-form" required>
+                <option value="Lunes">Lunes</option>
+                <option value="Martes">Martes</option>
+                <option value="Miércoles">Miércoles</option>
+                <option value="Jueves">Jueves</option>
+                <option value="Viernes">Viernes</option>
+                <option value="Sábado">Sábado</option>
+            </select>
+
+            <label class="form-label"><i class="bi bi-mortarboard"></i> Número de Ficha</label>
+            <input type="text" id="fichaInput" class="form-control-form" required>
+
+            <div class="row g-3 mt-1">
+                <div class="col-6">
+                    <a href="{{ url_for('instructores') }}" class="btn-cancel-form">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                </div>
+                <div class="col-6">
+                    <button type="submit" class="btn-submit-form" style="background: #198754;">
+                        <i class="bi bi-check-circle"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var URL_INSTRUCTORES = "{{ url_for('instructores') }}";
+var URL_STATIC_IMGS = "{{ url_for('static', filename='imgs/') }}";
+
+var urlParams = new URLSearchParams(window.location.search);
+var instructorId = parseInt(urlParams.get('id'));
+
+var imagenBase64 = '';
+var instructorActual = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    var instructores = JSON.parse(localStorage.getItem('instructores') || '[]');
+    
+    for (var i = 0; i < instructores.length; i++) {
+        if (instructores[i].id === instructorId) {
+            instructorActual = instructores[i];
+            break;
+        }
+    }
+    
+    if (!instructorActual) {
+        window.location.href = URL_INSTRUCTORES;
+        return;
+    }
+    
+    document.getElementById('subtituloEditar').innerHTML = 'Editando a <strong>' + instructorActual.nombre + '</strong>';
+    document.getElementById('nombreInput').value = instructorActual.nombre;
+    document.getElementById('competenciaInput').value = instructorActual.competencia;
+    document.getElementById('diaInput').value = instructorActual.dia;
+    document.getElementById('fichaInput').value = instructorActual.ficha;
+    
+    var previewImage = document.getElementById('previewImage');
+    if (instructorActual.imagen && instructorActual.imagen.startsWith('data:')) {
+        previewImage.src = instructorActual.imagen;
+    } else {
+        previewImage.src = URL_STATIC_IMGS + instructorActual.imagen;
+    }
+});
+
+document.getElementById('imagenInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (file) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImage').src = e.target.result;
+            imagenBase64 = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+function guardarCambios(e) {
+    e.preventDefault();
+    
+    var instructores = JSON.parse(localStorage.getItem('instructores') || '[]');
+    var index = -1;
+    
+    for (var i = 0; i < instructores.length; i++) {
+        if (instructores[i].id === instructorId) {
+            index = i;
+            break;
+        }
+    }
+    
+    if (index === -1) {
+        window.location.href = URL_INSTRUCTORES;
+        return false;
+    }
+    
+    instructores[index].nombre = document.getElementById('nombreInput').value;
+    instructores[index].competencia = document.getElementById('competenciaInput').value;
+    instructores[index].dia = document.getElementById('diaInput').value;
+    instructores[index].ficha = document.getElementById('fichaInput').value;
+    
+    if (imagenBase64) {
+        instructores[index].imagen = imagenBase64;
+    }
+    
+    localStorage.setItem('instructores', JSON.stringify(instructores));
+    window.location.href = URL_INSTRUCTORES;
+    return false;
+}
+</script>
+{% endblock %}

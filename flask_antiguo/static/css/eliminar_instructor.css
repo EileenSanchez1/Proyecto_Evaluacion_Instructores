@@ -1,0 +1,55 @@
+body{
+    background:#f4f6f8;
+    font-family:'Poppins',sans-serif;
+}
+
+.pagina-formulario{
+    padding:40px;
+}
+
+.encabezado{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.titulo-rojo{
+    color:#dc3545;
+    font-weight:700;
+}
+
+.subtitulo{
+    color:#6c757d;
+}
+
+.formulario-card{
+    border:none;
+    border-radius:20px;
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+.card-body{
+    padding:30px;
+}
+
+.form-label{
+    font-weight:600;
+}
+
+.form-select{
+    border-radius:12px;
+    padding:12px;
+}
+
+.alert{
+    border-radius:12px;
+}
+
+.btn-eliminar{
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    font-weight:600;
+}
