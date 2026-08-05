@@ -1,0 +1,81 @@
+{% extends "layout.html" %}
+
+{% block title %}Editar Preguntas{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/evaluaciones.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <div class="evaluation-header mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-pencil-square"></i> 
+                Editor de Cuestionarios
+            </h2>
+            <p>Modifique, agregue o elimine los reactivos que componen la evaluación de instructores.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('evaluaciones') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver a Evaluaciones
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-task"></i> Preguntas del Sistema (Simulado)</h5>
+            <button class="btn btn-success btn-sm">
+                <i class="bi bi-plus-circle"></i> Agregar nueva pregunta
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 8%">Bloque</th>
+                            <th>Enunciado de la Pregunta</th>
+                            <th style="width: 20%" class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge bg-primary">Planeación</span></td>
+                            <td>1. ¿El instructor presentó y explicó la guía de aprendizaje al iniciar la competencia?</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-warning me-1"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-primary">Planeación</span></td>
+                            <td>2. ¿Explicó claramente los resultados de aprendizaje y los criterios de evaluación?</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-warning me-1"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-success">Desarrollo</span></td>
+                            <td>3. ¿Demostró dominio de la competencia durante el proceso formativo?</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-warning me-1"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-warning">
+        <h5><i class="bi bi-exclamation-triangle-fill"></i> Nota de desarrollo</h5>
+        <p class="mb-0">Esta vista es la estructura base de la interfaz. La conexión dinámica para guardar cambios reales en una base de datos requiere la integración de modelos de persistencia.</p>
+    </div>
+
+</div>
+{% endblock %}

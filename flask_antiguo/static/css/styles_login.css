@@ -1,0 +1,141 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Work Sans', sans-serif;
+    background: #f5f5f5;
+}
+
+.contenedor-login{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    padding:20px;
+}
+
+.tarjeta-login {
+    width: 1100px;
+    max-width: 95%;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+}
+
+.lado-imagen {
+    width: 50%;
+    background: 
+    linear-gradient(
+        rgba(0,120,50,0.55),
+        rgba(0,120,50,0.55)
+    ),
+    url("../imgs/img_fondo.png");
+
+    background-size: cover;
+    background-position: center;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 40px;
+}
+
+.logo-sena {
+    width: 120px;
+    margin-bottom: 25px;
+}
+
+.lado-imagen h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.lado-imagen p {
+    font-size: 1rem;
+}
+
+.lado-formulario {
+    width: 50%;
+    padding: 60px;
+}
+
+.lado-formulario h1 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #212529;
+}
+
+.subtitulo {
+    color: #666666;
+    margin-bottom: 30px;
+}
+
+.lado-formulario label {
+    display: block;
+    margin-bottom: 8px;
+    margin-top: 15px;
+    font-weight: 600;
+}
+
+.lado-formulario input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #dcdcdc;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    font-family: 'Work Sans', sans-serif;
+}
+
+.lado-formulario input:focus {
+    outline: none;
+    border-color: #39A900;
+}
+
+.lado-formulario button {
+    width: 100%;
+    background: #39A900;
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 15px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.lado-formulario button:hover {
+    background: #007832;
+}
+
+.recuperar {
+    text-align: center;
+    margin-top: 20px;
+    color: #39A900;
+    font-weight: 600;
+}
+
+/* Responsividad para tabletas y dispositivos móviles */
+@media (max-width: 900px) {
+    .tarjeta-login {
+        flex-direction: column;
+    }
+
+    .lado-imagen,
+    .lado-formulario {
+        width: 100%;
+    }
+    
+    .lado-formulario {
+        padding: 40px 20px;
+    }
+}
