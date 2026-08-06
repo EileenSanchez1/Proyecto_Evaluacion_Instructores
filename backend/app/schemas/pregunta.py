@@ -3,17 +3,18 @@ from typing import Optional
 from sqlmodel import SQLModel
 
 
-class PreguntaCreate(SQLModel):
+class PreguntaBase(SQLModel):
     descripcion: str
     orden: int
     estado: bool = True
 
 
-class PreguntaRead(SQLModel):
+class PreguntaCreate(PreguntaBase):
+    pass
+
+
+class PreguntaRead(PreguntaBase):
     id_pregunta: int
-    descripcion: str
-    orden: int
-    estado: bool
 
 
 class PreguntaUpdate(SQLModel):

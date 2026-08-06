@@ -3,15 +3,17 @@ from typing import Optional
 from sqlmodel import SQLModel
 
 
-class FichaInstructorCreate(SQLModel):
+class FichaInstructorBase(SQLModel):
     id_ficha: int
     id_instructor: int
 
 
-class FichaInstructorRead(SQLModel):
+class FichaInstructorCreate(FichaInstructorBase):
+    pass
+
+
+class FichaInstructorRead(FichaInstructorBase):
     id: int
-    id_ficha: int
-    id_instructor: int
 
 
 class FichaInstructorUpdate(SQLModel):
