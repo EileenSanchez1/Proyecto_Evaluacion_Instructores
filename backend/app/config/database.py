@@ -2,6 +2,8 @@ from sqlmodel import SQLModel, Session, create_engine
 from dotenv import load_dotenv
 import os
 
+from app.models import *
+
 # Cargar variables del archivo .env
 load_dotenv()
 
