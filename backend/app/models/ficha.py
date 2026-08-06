@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+from typing import Optional, List
+
+from sqlmodel import SQLModel, Field, Relationship
+
+
+class Ficha(SQLModel, table=True):
+    __tablename__ = "fichas"
+
+    id_ficha: Optional[int] = Field(default=None, primary_key=True)
+
+    numero_ficha: str = Field(
+        max_length=20,
+        unique=True,
+        index=True
+    )
+
+    programa: str = Field(max_length=120)
+
+    descripcion: Optional[str] = Field(
+        default=None,
+        max_length=255
+    )
+
+    # Relaciones
+    aprendices: List["Aprendiz"] = Relationship(back_populates="ficha")
+
+    ficha_instructores: List["FichaInstructor"] = Relationship(
+        back_populates="ficha"
+    )
