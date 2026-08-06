@@ -3,7 +3,7 @@ from typing import Optional
 from sqlmodel import SQLModel
 
 
-class InstructorCreate(SQLModel):
+class InstructorBase(SQLModel):
     nombre: str
     apellido: str
     correo: str
@@ -12,14 +12,12 @@ class InstructorCreate(SQLModel):
     foto: Optional[str] = None
 
 
-class InstructorRead(SQLModel):
+class InstructorCreate(InstructorBase):
+    pass
+
+
+class InstructorRead(InstructorBase):
     id_instructor: int
-    nombre: str
-    apellido: str
-    correo: str
-    telefono: str
-    competencia: str
-    foto: Optional[str]
 
 
 class InstructorUpdate(SQLModel):

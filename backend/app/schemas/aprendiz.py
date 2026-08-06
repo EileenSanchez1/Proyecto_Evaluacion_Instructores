@@ -3,20 +3,19 @@ from typing import Optional
 from sqlmodel import SQLModel
 
 
-class AprendizCreate(SQLModel):
+class AprendizBase(SQLModel):
     nombre: str
     apellido: str
     correo: str
+    id_ficha: int
+
+
+class AprendizCreate(AprendizBase):
     contrasena: str
-    id_ficha: int
 
 
-class AprendizRead(SQLModel):
+class AprendizRead(AprendizBase):
     id_aprendiz: int
-    nombre: str
-    apellido: str
-    correo: str
-    id_ficha: int
 
 
 class AprendizUpdate(SQLModel):

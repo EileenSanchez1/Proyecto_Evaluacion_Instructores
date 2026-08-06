@@ -8,27 +8,48 @@ from sqlmodel import SQLModel, Field, Relationship
 class Instructor(SQLModel, table=True):
     __tablename__ = "instructores"
 
-    id_instructor: Optional[int] = Field(default=None, primary_key=True)
+    id_instructor: Optional[int] = Field(
+        default=None,
+        primary_key=True
+    )
 
-    nombre: str = Field(max_length=80)
+    nombre: str = Field(
+        max_length=80,
+        nullable=False
+    )
 
-    apellido: str = Field(max_length=80)
+    apellido: str = Field(
+        max_length=80,
+        nullable=False
+    )
 
     correo: str = Field(
         max_length=120,
-        unique=True
+        unique=True,
+        index=True,
+        nullable=False
     )
 
-    telefono: str = Field(max_length=20)
+    telefono: str = Field(
+        max_length=20,
+        nullable=False
+    )
 
-    competencia: str = Field(max_length=120)
+    competencia: str = Field(
+        max_length=120,
+        nullable=False
+    )
 
     foto: Optional[str] = Field(
         default=None,
         max_length=255
     )
 
+
+    # =====================
     # Relaciones
+    # =====================
+
     ficha_instructores: List["FichaInstructor"] = Relationship(
         back_populates="instructor"
     )
@@ -36,3 +57,7 @@ class Instructor(SQLModel, table=True):
     respuestas: List["Respuesta"] = Relationship(
         back_populates="instructor"
     )
+
+
+    def __repr__(self):
+        return f"<Instructor {self.nombre} {self.apellido}>"

@@ -3,17 +3,18 @@ from typing import Optional
 from sqlmodel import SQLModel
 
 
-class FichaCreate(SQLModel):
+class FichaBase(SQLModel):
     numero_ficha: str
     programa: str
     descripcion: Optional[str] = None
 
 
-class FichaRead(SQLModel):
+class FichaCreate(FichaBase):
+    pass
+
+
+class FichaRead(FichaBase):
     id_ficha: int
-    numero_ficha: str
-    programa: str
-    descripcion: Optional[str]
 
 
 class FichaUpdate(SQLModel):
