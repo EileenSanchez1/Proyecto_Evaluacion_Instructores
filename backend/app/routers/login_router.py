@@ -3,6 +3,7 @@ from sqlmodel import Session
 
 from app.config.database import get_session
 from app.schemas.login import LoginRequest
+from app.schemas.aprendiz import AprendizRead
 from app.services.login_service import LoginService
 
 
@@ -12,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.post("/")
+@router.post("/", response_model=dict)
 def login(
     datos: LoginRequest,
     session: Session = Depends(get_session)
@@ -29,7 +30,11 @@ def login(
             detail=mensaje
         )
 
+    aprendiz_data = AprendizRead.model_validate(
+        aprendiz
+    )
+
     return {
         "mensaje": mensaje,
-        "aprendiz": aprendiz
+        "aprendiz": aprendiz_data
     }
