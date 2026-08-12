@@ -13,7 +13,6 @@ class AprendizRepository:
         session: Session,
         aprendiz: AprendizCreate
     ) -> Aprendiz:
-        """Crea un nuevo aprendiz."""
 
         db_aprendiz = Aprendiz(
             **aprendiz.model_dump()
@@ -30,16 +29,17 @@ class AprendizRepository:
         session: Session,
         aprendiz_id: int
     ) -> Optional[Aprendiz]:
-        """Busca un aprendiz por su ID."""
 
-        return session.get(Aprendiz, aprendiz_id)
+        return session.get(
+            Aprendiz,
+            aprendiz_id
+        )
 
     @staticmethod
     def buscar_por_correo(
         session: Session,
         correo: str
     ) -> Optional[Aprendiz]:
-        """Busca un aprendiz por su correo."""
 
         statement = select(Aprendiz).where(
             Aprendiz.correo == correo
@@ -48,12 +48,38 @@ class AprendizRepository:
         return session.exec(statement).first()
 
     @staticmethod
+    def listar(
+        session: Session,
+        offset: int = 0,
+        limit: int = 100
+    ) -> List[Aprendiz]:
+
+        statement = (
+            select(Aprendiz)
+            .offset(offset)
+            .limit(limit)
+        )
+
+        return session.exec(statement).all()
+
+    @staticmethod
+    def listar_por_ficha(
+        session: Session,
+        id_ficha: int
+    ) -> List[Aprendiz]:
+
+        statement = select(Aprendiz).where(
+            Aprendiz.id_ficha == id_ficha
+        )
+
+        return session.exec(statement).all()
+
+    @staticmethod
     def actualizar(
         session: Session,
         aprendiz_id: int,
         aprendiz_update: AprendizUpdate
     ) -> Optional[Aprendiz]:
-        """Actualiza un aprendiz existente."""
 
         db_aprendiz = session.get(
             Aprendiz,
@@ -81,7 +107,6 @@ class AprendizRepository:
         session: Session,
         aprendiz_id: int
     ) -> bool:
-        """Elimina un aprendiz por su ID."""
 
         db_aprendiz = session.get(
             Aprendiz,
@@ -95,32 +120,3 @@ class AprendizRepository:
         session.commit()
 
         return True
-
-    @staticmethod
-    def listar(
-        session: Session,
-        offset: int = 0,
-        limit: int = 100
-    ) -> List[Aprendiz]:
-        """Lista los aprendices."""
-
-        statement = (
-            select(Aprendiz)
-            .offset(offset)
-            .limit(limit)
-        )
-
-        return session.exec(statement).all()
-
-    @staticmethod
-    def listar_por_ficha(
-        session: Session,
-        ficha_id: int
-    ) -> List[Aprendiz]:
-        """Lista los aprendices pertenecientes a una ficha."""
-
-        statement = select(Aprendiz).where(
-            Aprendiz.id_ficha == ficha_id
-        )
-
-        return session.exec(statement).all()
