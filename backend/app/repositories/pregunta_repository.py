@@ -13,7 +13,6 @@ class PreguntaRepository:
         session: Session,
         pregunta: PreguntaCreate
     ) -> Pregunta:
-        """Crea una nueva pregunta."""
 
         db_pregunta = Pregunta(
             **pregunta.model_dump()
@@ -30,7 +29,6 @@ class PreguntaRepository:
         session: Session,
         pregunta_id: int
     ) -> Optional[Pregunta]:
-        """Busca una pregunta por su ID."""
 
         return session.get(
             Pregunta,
@@ -38,12 +36,39 @@ class PreguntaRepository:
         )
 
     @staticmethod
+    def listar(
+        session: Session,
+        offset: int = 0,
+        limit: int = 100
+    ) -> List[Pregunta]:
+
+        statement = (
+            select(Pregunta)
+            .offset(offset)
+            .limit(limit)
+        )
+
+        return session.exec(statement).all()
+
+    @staticmethod
+    def listar_activas(
+        session: Session
+    ) -> List[Pregunta]:
+
+        statement = (
+            select(Pregunta)
+            .where(Pregunta.estado == True)
+            .order_by(Pregunta.orden)
+        )
+
+        return session.exec(statement).all()
+
+    @staticmethod
     def actualizar(
         session: Session,
         pregunta_id: int,
         pregunta_update: PreguntaUpdate
     ) -> Optional[Pregunta]:
-        """Actualiza una pregunta existente."""
 
         db_pregunta = session.get(
             Pregunta,
@@ -71,7 +96,6 @@ class PreguntaRepository:
         session: Session,
         pregunta_id: int
     ) -> bool:
-        """Elimina una pregunta por su ID."""
 
         db_pregunta = session.get(
             Pregunta,
@@ -85,34 +109,3 @@ class PreguntaRepository:
         session.commit()
 
         return True
-
-    @staticmethod
-    def listar(
-        session: Session,
-        offset: int = 0,
-        limit: int = 100
-    ) -> List[Pregunta]:
-        """Lista todas las preguntas."""
-
-        statement = (
-            select(Pregunta)
-            .order_by(Pregunta.orden)
-            .offset(offset)
-            .limit(limit)
-        )
-
-        return session.exec(statement).all()
-
-    @staticmethod
-    def listar_activas(
-        session: Session
-    ) -> List[Pregunta]:
-        """Lista las preguntas activas."""
-
-        statement = (
-            select(Pregunta)
-            .where(Pregunta.estado == True)
-            .order_by(Pregunta.orden)
-        )
-
-        return session.exec(statement).all()
