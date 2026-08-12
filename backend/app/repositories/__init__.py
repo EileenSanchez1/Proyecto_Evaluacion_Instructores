@@ -1,0 +1,6 @@
+from app.repositories.ficha_repository import FichaRepository
+from app.repositories.instructor_repository import InstructorRepository
+from app.repositories.aprendiz_repository import AprendizRepository
+from app.repositories.pregunta_repository import PreguntaRepository
+from app.repositories.evaluacion_repository import EvaluacionRepository
+from app.repositories.respuesta_repository import RespuestaRepository

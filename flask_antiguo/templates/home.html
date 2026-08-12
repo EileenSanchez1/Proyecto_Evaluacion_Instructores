@@ -1,0 +1,200 @@
+{% extends "layout.html" %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles_home.css') }}">
+
+<div class="dashboard-content">
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <h1>¡Bienvenido!</h1>
+        <p>Este es el resumen general del sistema.</p>
+    </div>
+
+    <!-- Hero Banner -->
+    <section class="hero-banner">
+        <div class="hero-text">
+            <h2>Evalúa. Aprende.<br>Mejora juntos.</h2>
+            <p>Tu opinión ayuda a fortalecer la calidad de nuestros instructores.</p>
+            
+            {% if session.get('usuario') %}
+
+    {% if session.get('rol') == 'aprendiz' %}
+
+    <a href="{{ url_for('evaluaciones') }}" class="btn-primary">
+        <i class="fas fa-play"></i>
+        Realizar evaluación
+    </a>
+
+    {% endif %}
+
+{% else %}
+
+    <a href="{{ url_for('login') }}" class="btn-primary">
+        <i class="fas fa-play"></i>
+        Iniciar sesión para evaluar
+    </a>
+
+{% endif %}
+        </div>
+        <div class="hero-image">
+            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=500&h=300&fit=crop" alt="Estudiantes colaborando">
+        </div>
+    </section>
+
+    <!-- Info Section -->
+    <section class="info-section">
+        <div class="info-row">
+            <div class="info-card">
+                <h2>Bienvenido/a</h2>
+                <p>
+                    Bienvenido al sistema institucional de evaluación
+                    de instructores del SENA. Esta plataforma permite
+                    gestionar evaluaciones académicas de forma organizada,
+                    segura y eficiente mediante acceso por roles.
+                </p>
+            </div>
+            <div class="info-card">
+                <h2>Descripción del Sistema</h2>
+                <p>
+                    El sistema permite que los aprendices evalúen
+                    únicamente a los instructores correspondientes
+                    a su ficha de formación, garantizando
+                    confiabilidad en los resultados, control
+                    de acceso y administración académica centralizada.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Cards -->
+    <section class="stats-section">
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon green">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <span class="stat-label">Evaluaciones realizadas</span>
+            </div>
+            <div class="stat-number">150</div>
+            <div class="stat-trend up">
+                <i class="fas fa-arrow-trend-up"></i>
+                <span>+12% desde el mes pasado</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon blue">
+                    <i class="fas fa-chalkboard-user"></i>
+                </div>
+                <span class="stat-label">Instructores registrados</span>
+            </div>
+            <div class="stat-number">25</div>
+            <div class="stat-trend up">
+                <i class="fas fa-arrow-trend-up"></i>
+                <span>+8% desde el mes pasado</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon teal">
+                    <i class="fas fa-address-card"></i>
+                </div>
+                <span class="stat-label">Fichas activas</span>
+            </div>
+            <div class="stat-number">12</div>
+            <div class="stat-trend up">
+                <i class="fas fa-arrow-trend-up"></i>
+                <span>+5% desde el mes pasado</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon orange">
+                    <i class="fas fa-file-lines"></i>
+                </div>
+                <span class="stat-label">Reportes generados</span>
+            </div>
+            <div class="stat-number">18</div>
+            <div class="stat-trend up">
+                <i class="fas fa-arrow-trend-up"></i>
+                <span>+15% desde el mes pasado</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-section">
+        <div class="chart-card bar-chart">
+            <div class="chart-header">
+                <h3>Resumen de evaluaciones</h3>
+                <div class="chart-filter">
+                    <span>Este año</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+            <div class="chart-body">
+                <div class="bar-chart-container">
+                    <div class="y-axis">
+                        <span>100</span>
+                        <span>80</span>
+                        <span>60</span>
+                        <span>40</span>
+                        <span>20</span>
+                        <span>0</span>
+                    </div>
+                    <div class="bars-container">
+                        <div class="bar-group"><div class="bar" style="height: 45%;"><span class="bar-tooltip">45</span></div><span class="bar-label">Ene</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 60%;"><span class="bar-tooltip">60</span></div><span class="bar-label">Feb</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 55%;"><span class="bar-tooltip">55</span></div><span class="bar-label">Mar</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 75%;"><span class="bar-tooltip">75</span></div><span class="bar-label">Abr</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 65%;"><span class="bar-tooltip">65</span></div><span class="bar-label">May</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 85%;"><span class="bar-tooltip">85</span></div><span class="bar-label">Jun</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 70%;"><span class="bar-tooltip">70</span></div><span class="bar-label">Jul</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 90%;"><span class="bar-tooltip">90</span></div><span class="bar-label">Ago</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 80%;"><span class="bar-tooltip">80</span></div><span class="bar-label">Sep</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 95%;"><span class="bar-tooltip">95</span></div><span class="bar-label">Oct</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 85%;"><span class="bar-tooltip">85</span></div><span class="bar-label">Nov</span></div>
+                        <div class="bar-group"><div class="bar" style="height: 70%;"><span class="bar-tooltip">70</span></div><span class="bar-label">Dic</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-card donut-chart">
+            <div class="chart-header">
+                <h3>Promedio general</h3>
+            </div>
+            <div class="chart-body">
+                <div class="donut-container">
+                    <svg viewBox="0 0 200 200" class="donut-svg">
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#e8e8e8" stroke-width="18"/>
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#ffc107" stroke-width="18"
+                                stroke-dasharray="60 502" stroke-dashoffset="0" stroke-linecap="round"
+                                transform="rotate(-90 100 100)"/>
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#4caf50" stroke-width="18"
+                                stroke-dasharray="380 502" stroke-dashoffset="-60" stroke-linecap="round"
+                                transform="rotate(-90 100 100)"/>
+                    </svg>
+                    <div class="donut-center">
+                        <span class="donut-score">4.6</span>
+                        <span class="donut-total">de 5</span>
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot green"></span><span>Excelente</span></div>
+                    <div class="legend-item"><span class="legend-dot light-green"></span><span>Bueno</span></div>
+                    <div class="legend-item"><span class="legend-dot yellow"></span><span>Regular</span></div>
+                    <div class="legend-item"><span class="legend-dot red"></span><span>Deficiente</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
