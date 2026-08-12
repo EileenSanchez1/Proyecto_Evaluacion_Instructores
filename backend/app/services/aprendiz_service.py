@@ -5,6 +5,7 @@ from sqlmodel import Session
 from app.models.aprendiz import Aprendiz
 from app.schemas.aprendiz import AprendizCreate, AprendizUpdate
 from app.repositories.aprendiz_repository import AprendizRepository
+from app.services.login_service import LoginService
 
 
 class AprendizService:
@@ -15,6 +16,7 @@ class AprendizService:
         aprendiz: AprendizCreate
     ) -> Aprendiz:
 
+        # Verificar si ya existe un aprendiz con ese correo
         existente = AprendizRepository.buscar_por_correo(
             session,
             aprendiz.correo
@@ -25,9 +27,22 @@ class AprendizService:
                 "Ya existe un aprendiz con ese correo."
             )
 
+        # Convertir los datos recibidos a un diccionario
+        datos = aprendiz.model_dump()
+
+        # Hashear la contraseña antes de guardarla
+        datos["contrasena"] = LoginService.hash_password(
+            aprendiz.contrasena
+        )
+
+        # Crear un nuevo objeto AprendizCreate
+        aprendiz_con_hash = AprendizCreate(
+            **datos
+        )
+
         return AprendizRepository.crear(
             session,
-            aprendiz
+            aprendiz_con_hash
         )
 
     @staticmethod
