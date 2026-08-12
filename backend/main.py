@@ -5,7 +5,7 @@ from app.config.database import create_db_and_tables
 app = FastAPI(
     title="Sistema de Evaluación de Instructores",
     version="1.0.0"
-)
+) 
 
 
 @app.on_event("startup")
