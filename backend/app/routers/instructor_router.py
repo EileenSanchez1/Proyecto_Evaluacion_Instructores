@@ -8,7 +8,8 @@ from app.schemas.instructor import (
     InstructorRead,
     InstructorUpdate
 )
-from app.repositories.instructor_repository import InstructorRepository
+from app.services.instructor_service import InstructorService
+
 
 router = APIRouter(
     prefix="/instructores",
@@ -21,7 +22,7 @@ def crear_instructor(
     instructor: InstructorCreate,
     session: Session = Depends(get_session)
 ):
-    return InstructorRepository.crear(
+    return InstructorService.crear(
         session,
         instructor
     )
@@ -33,7 +34,7 @@ def listar_instructores(
     limit: int = Query(100, ge=1, le=1000),
     session: Session = Depends(get_session)
 ):
-    return InstructorRepository.listar(
+    return InstructorService.listar(
         session,
         offset,
         limit
@@ -45,7 +46,7 @@ def buscar_instructor(
     instructor_id: int,
     session: Session = Depends(get_session)
 ):
-    instructor = InstructorRepository.buscar(
+    instructor = InstructorService.buscar(
         session,
         instructor_id
     )
@@ -65,7 +66,7 @@ def actualizar_instructor(
     instructor_update: InstructorUpdate,
     session: Session = Depends(get_session)
 ):
-    instructor = InstructorRepository.actualizar(
+    instructor = InstructorService.actualizar(
         session,
         instructor_id,
         instructor_update
@@ -85,7 +86,7 @@ def eliminar_instructor(
     instructor_id: int,
     session: Session = Depends(get_session)
 ):
-    eliminado = InstructorRepository.eliminar(
+    eliminado = InstructorService.eliminar(
         session,
         instructor_id
     )

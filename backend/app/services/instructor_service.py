@@ -31,6 +31,13 @@ class InstructorService:
         )
 
     @staticmethod
+    def listar(
+        session: Session
+    ) -> List[Instructor]:
+
+        return InstructorRepository.listar(session)
+
+    @staticmethod
     def buscar(
         session: Session,
         instructor_id: int
@@ -39,30 +46,6 @@ class InstructorService:
         return InstructorRepository.buscar(
             session,
             instructor_id
-        )
-
-    @staticmethod
-    def buscar_por_correo(
-        session: Session,
-        correo: str
-    ) -> Optional[Instructor]:
-
-        return InstructorRepository.buscar_por_correo(
-            session,
-            correo
-        )
-
-    @staticmethod
-    def listar(
-        session: Session,
-        offset: int = 0,
-        limit: int = 100
-    ) -> List[Instructor]:
-
-        return InstructorRepository.listar(
-            session,
-            offset,
-            limit
         )
 
     @staticmethod
