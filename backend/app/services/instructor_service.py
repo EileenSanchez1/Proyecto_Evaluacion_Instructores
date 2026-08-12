@@ -2,52 +2,52 @@ from typing import List, Optional
 
 from sqlmodel import Session
 
-from app.models.aprendiz import Aprendiz
-from app.schemas.aprendiz import AprendizCreate, AprendizUpdate
-from app.repositories.aprendiz_repository import AprendizRepository
+from app.models.instructor import Instructor
+from app.schemas.instructor import InstructorCreate, InstructorUpdate
+from app.repositories.instructor_repository import InstructorRepository
 
 
-class AprendizService:
+class InstructorService:
 
     @staticmethod
     def crear(
         session: Session,
-        aprendiz: AprendizCreate
-    ) -> Aprendiz:
+        instructor: InstructorCreate
+    ) -> Instructor:
 
-        existente = AprendizRepository.buscar_por_correo(
+        existente = InstructorRepository.buscar_por_correo(
             session,
-            aprendiz.correo
+            instructor.correo
         )
 
         if existente:
             raise ValueError(
-                "Ya existe un aprendiz con ese correo."
+                "Ya existe un instructor con ese correo."
             )
 
-        return AprendizRepository.crear(
+        return InstructorRepository.crear(
             session,
-            aprendiz
+            instructor
         )
 
     @staticmethod
     def buscar(
         session: Session,
-        aprendiz_id: int
-    ) -> Optional[Aprendiz]:
+        instructor_id: int
+    ) -> Optional[Instructor]:
 
-        return AprendizRepository.buscar(
+        return InstructorRepository.buscar(
             session,
-            aprendiz_id
+            instructor_id
         )
 
     @staticmethod
     def buscar_por_correo(
         session: Session,
         correo: str
-    ) -> Optional[Aprendiz]:
+    ) -> Optional[Instructor]:
 
-        return AprendizRepository.buscar_por_correo(
+        return InstructorRepository.buscar_por_correo(
             session,
             correo
         )
@@ -57,68 +57,57 @@ class AprendizService:
         session: Session,
         offset: int = 0,
         limit: int = 100
-    ) -> List[Aprendiz]:
+    ) -> List[Instructor]:
 
-        return AprendizRepository.listar(
+        return InstructorRepository.listar(
             session,
             offset,
             limit
         )
 
     @staticmethod
-    def listar_por_ficha(
-        session: Session,
-        id_ficha: int
-    ) -> List[Aprendiz]:
-
-        return AprendizRepository.listar_por_ficha(
-            session,
-            id_ficha
-        )
-
-    @staticmethod
     def actualizar(
         session: Session,
-        aprendiz_id: int,
-        aprendiz_update: AprendizUpdate
-    ) -> Optional[Aprendiz]:
+        instructor_id: int,
+        instructor_update: InstructorUpdate
+    ) -> Optional[Instructor]:
 
-        aprendiz = AprendizRepository.buscar(
+        instructor = InstructorRepository.buscar(
             session,
-            aprendiz_id
+            instructor_id
         )
 
-        if not aprendiz:
+        if not instructor:
             return None
 
-        if aprendiz_update.correo:
+        if instructor_update.correo:
 
-            existente = AprendizRepository.buscar_por_correo(
+            existente = InstructorRepository.buscar_por_correo(
                 session,
-                aprendiz_update.correo
+                instructor_update.correo
             )
 
             if (
                 existente
-                and existente.id_aprendiz != aprendiz_id
+                and existente.id_instructor != instructor_id
             ):
                 raise ValueError(
-                    "Ya existe otro aprendiz con ese correo."
+                    "Ya existe otro instructor con ese correo."
                 )
 
-        return AprendizRepository.actualizar(
+        return InstructorRepository.actualizar(
             session,
-            aprendiz_id,
-            aprendiz_update
+            instructor_id,
+            instructor_update
         )
 
     @staticmethod
     def eliminar(
         session: Session,
-        aprendiz_id: int
+        instructor_id: int
     ) -> bool:
 
-        return AprendizRepository.eliminar(
+        return InstructorRepository.eliminar(
             session,
-            aprendiz_id
+            instructor_id
         )
