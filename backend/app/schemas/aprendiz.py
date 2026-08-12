@@ -10,12 +10,19 @@ class AprendizBase(SQLModel):
     id_ficha: int
 
 
-class AprendizCreate(AprendizBase):
+class AprendizCreate(SQLModel):
+    nombre: str
+    apellido: str
+    correo: str
     contrasena: str
+    id_ficha: int
 
-
-class AprendizRead(AprendizBase):
+class AprendizRead(SQLModel):
     id_aprendiz: int
+    nombre: str
+    apellido: str
+    correo: str
+    id_ficha: int
 
 
 class AprendizUpdate(SQLModel):
