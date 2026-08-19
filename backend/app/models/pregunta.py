@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Optional, List
+from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -28,15 +26,9 @@ class Pregunta(SQLModel, table=True):
         nullable=False
     )
 
-
-    # =====================
-    # Relaciones
-    # =====================
-
-    respuestas: List["Respuesta"] = Relationship(
+    respuestas: list["Respuesta"] = Relationship(
         back_populates="pregunta"
     )
-
 
     def __repr__(self):
         return f"<Pregunta {self.orden}>"

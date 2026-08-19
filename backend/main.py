@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.database import create_db_and_tables
 
@@ -19,10 +20,34 @@ app = FastAPI(
 )
 
 
+# =========================
+# CORS
+# =========================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# =========================
+# STARTUP
+# =========================
+
 @app.on_event("startup")
 def startup():
     create_db_and_tables()
 
+
+# =========================
+# RUTA PRINCIPAL
+# =========================
 
 @app.get("/")
 def inicio():
@@ -31,12 +56,24 @@ def inicio():
     }
 
 
+# =========================
+# ROUTERS
+# =========================
+
 app.include_router(aprendiz_router)
+
 app.include_router(evaluacion_router)
+
 app.include_router(ficha_router)
+
 app.include_router(ficha_instructor_router)
+
 app.include_router(instructor_router)
+
 app.include_router(login_router)
+
 app.include_router(pregunta_router)
+
 app.include_router(reporte_router)
+
 app.include_router(respuesta_router)

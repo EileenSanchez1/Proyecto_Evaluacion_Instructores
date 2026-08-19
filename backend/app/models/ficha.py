@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Optional, List
+from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -30,15 +28,11 @@ class Ficha(SQLModel, table=True):
         max_length=255
     )
 
-    # =====================
-    # Relaciones
-    # =====================
-
-    aprendices: List["Aprendiz"] = Relationship(
+    aprendices: list["Aprendiz"] = Relationship(
         back_populates="ficha"
     )
 
-    ficha_instructores: List["FichaInstructor"] = Relationship(
+    ficha_instructores: list["FichaInstructor"] = Relationship(
         back_populates="ficha"
     )
 
