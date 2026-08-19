@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Optional, List
+from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -45,19 +43,13 @@ class Instructor(SQLModel, table=True):
         max_length=255
     )
 
-
-    # =====================
-    # Relaciones
-    # =====================
-
-    ficha_instructores: List["FichaInstructor"] = Relationship(
+    ficha_instructores: list["FichaInstructor"] = Relationship(
         back_populates="instructor"
     )
 
-    respuestas: List["Respuesta"] = Relationship(
+    respuestas: list["Respuesta"] = Relationship(
         back_populates="instructor"
     )
-
 
     def __repr__(self):
         return f"<Instructor {self.nombre} {self.apellido}>"

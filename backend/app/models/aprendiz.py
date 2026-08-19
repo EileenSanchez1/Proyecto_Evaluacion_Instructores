@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Optional, List
+from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -40,19 +38,13 @@ class Aprendiz(SQLModel, table=True):
         nullable=False
     )
 
-
-    # =====================
-    # Relaciones
-    # =====================
-
     ficha: "Ficha" = Relationship(
         back_populates="aprendices"
     )
 
-    evaluaciones: List["Evaluacion"] = Relationship(
+    evaluaciones: list["Evaluacion"] = Relationship(
         back_populates="aprendiz"
     )
-
 
     def __repr__(self):
         return f"<Aprendiz {self.nombre} {self.apellido}>"

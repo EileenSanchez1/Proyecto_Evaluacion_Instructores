@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
@@ -9,7 +7,6 @@ from sqlalchemy import UniqueConstraint
 class FichaInstructor(SQLModel, table=True):
     __tablename__ = "ficha_instructor"
 
-
     __table_args__ = (
         UniqueConstraint(
             "id_ficha",
@@ -18,38 +15,32 @@ class FichaInstructor(SQLModel, table=True):
         ),
     )
 
-
     id: Optional[int] = Field(
         default=None,
         primary_key=True
     )
-
 
     id_ficha: int = Field(
         foreign_key="fichas.id_ficha",
         nullable=False
     )
 
-
     id_instructor: int = Field(
         foreign_key="instructores.id_instructor",
         nullable=False
     )
 
-
-    # =====================
-    # Relaciones
-    # =====================
-
     ficha: "Ficha" = Relationship(
         back_populates="ficha_instructores"
     )
-
 
     instructor: "Instructor" = Relationship(
         back_populates="ficha_instructores"
     )
 
-
     def __repr__(self):
-        return f"<FichaInstructor ficha={self.id_ficha} instructor={self.id_instructor}>"
+        return (
+            f"<FichaInstructor "
+            f"ficha={self.id_ficha} "
+            f"instructor={self.id_instructor}>"
+        )
