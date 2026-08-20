@@ -24,7 +24,7 @@ const Home = ({ usuario, rol }) => {
       </Link>
     );
   };
-
+{/* commit */}
   const barData = [
     { month: 'Ene', value: 45 },
     { month: 'Feb', value: 60 },

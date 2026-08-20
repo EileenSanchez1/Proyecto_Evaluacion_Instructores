@@ -70,3 +70,4 @@ function Sidebar() {
 }
 
 export default Sidebar;
+{/* Meses */}
