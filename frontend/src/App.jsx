@@ -1,14 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
+import Home from "./pages/Home";
+import Contacto from "./pages/Contacto";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-
-function Home() {
-  return (
-    <h1>Sistema de Evaluación de Instructores</h1>
-  );
-}
 
 function Instructores() {
   return <h1>Instructores</h1>;
@@ -30,28 +26,16 @@ function Reportes() {
   return <h1>Reportes</h1>;
 }
 
-function Contacto() {
-  return <h1>Contacto</h1>;
-}
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* =========================
-            RUTA PÚBLICA
-        ========================= */}
-
+        {/* RUTA PÚBLICA */}
         <Route path="/login" element={<Login />} />
 
-
-        {/* =========================
-            RUTAS PROTEGIDAS
-        ========================= */}
-
+        {/* RUTAS PROTEGIDAS */}
         <Route element={<ProtectedRoute />}>
-
           <Route element={<Layout />}>
 
             <Route path="/" element={<Home />} />
@@ -87,7 +71,6 @@ function App() {
             />
 
           </Route>
-
         </Route>
 
       </Routes>
