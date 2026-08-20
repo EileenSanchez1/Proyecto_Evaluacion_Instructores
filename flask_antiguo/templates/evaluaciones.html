@@ -1,0 +1,241 @@
+{% extends "layout.html" %}
+
+{% block title %}Evaluaciones{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/evaluaciones.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="evaluation-header">
+        <div>
+            {% if session.get('rol') == 'admin' %}
+                <h2>
+                    <i class="bi bi-gear-fill"></i> Administración de Evaluaciones
+                </h2>
+                <p>
+                    Desde aquí puede administrar las preguntas de la evaluación y revisar su estructura.
+                </p>
+            {% else %}
+                <h2>
+                    <i class="bi bi-clipboard-check"></i> Evaluación del Instructor
+                </h2>
+                <p>
+                    Diligencie la siguiente evaluación de acuerdo con el desarrollo de la formación recibida.
+                </p>
+            {% endif %}
+        </div>
+
+        {% if session.get('rol') == 'admin' %}
+        <div>
+            <a href="{{ url_for('editar_preguntas') }}" class="btn btn-success">
+                <i class="bi bi-pencil-square"></i> Editar preguntas
+            </a>
+        </div>
+        {% else %}
+        <span id="estadoBadge" class="badge bg-warning text-dark px-3 py-2">Pendiente</span>
+        {% endif %}
+    </div>
+
+    <div class="card instructor-card shadow-sm">
+        <div class="row align-items-center">
+            <div class="col-md-2 text-center">
+                <img src="{{ url_for('static', filename='img/instructor.png') }}" class="instructor-photo">
+            </div>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label>Instructor</label>
+                        <h5>Carlos Pérez Martínez</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Competencia</label>
+                        <h5>Programación de Software</h5>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Programa</label>
+                        <h6>ADSO</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Ficha</label>
+                        <h6>3407184</h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Fecha</label>
+                        <h6>07/07/2026</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if session.get('rol') == 'admin' %}
+    <div class="alert alert-info mt-4">
+        <h5>
+            <i class="bi bi-info-circle-fill"></i> Modo administrador
+        </h5>
+        <p class="mb-0">
+            El administrador no diligencia evaluaciones. Desde aquí podrá editar,
+            agregar o eliminar preguntas cuando esa funcionalidad sea implementada.
+        </p>
+    </div>
+    {% else %}
+    <form id="evalForm">
+        <div class="evaluation-section">
+            <h4><i class="bi bi-journal-bookmark-fill"></i> Planeación de la formación</h4>
+            <div class="question-card">
+                <p>1. ¿El instructor presentó y explicó la guía de aprendizaje al iniciar la competencia?</p>
+                <div class="options">
+                    <label><input type="radio" name="p1"> Cumple totalmente</label>
+                    <label><input type="radio" name="p1"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p1"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p1"> No cumple</label>
+                </div>
+            </div>
+            <div class="question-card">
+                <p>2. ¿Explicó claramente los resultados de aprendizaje y los criterios de evaluación?</p>
+                <div class="options">
+                    <label><input type="radio" name="p2"> Cumple totalmente</label>
+                    <label><input type="radio" name="p2"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p2"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p2"> No cumple</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="evaluation-section">
+            <h4><i class="bi bi-laptop"></i> Desarrollo de la formación</h4>
+            <div class="question-card">
+                <p>3. ¿Demostró dominio de la competencia durante el proceso formativo?</p>
+                <div class="options">
+                    <label><input type="radio" name="p3"> Cumple totalmente</label>
+                    <label><input type="radio" name="p3"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p3"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p3"> No cumple</label>
+                </div>
+            </div>
+            <div class="question-card">
+                <p>4. ¿Explicó claramente los temas desarrollados?</p>
+                <div class="options">
+                    <label><input type="radio" name="p4"> Cumple totalmente</label>
+                    <label><input type="radio" name="p4"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p4"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p4"> No cumple</label>
+                </div>
+            </div>
+            <div class="question-card">
+                <p>5. ¿Resolvió las dudas de manera clara y oportuna?</p>
+                <div class="options">
+                    <label><input type="radio" name="p5"> Cumple totalmente</label>
+                    <label><input type="radio" name="p5"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p5"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p5"> No cumple</label>
+                </div>
+            </div>
+            <div class="question-card">
+                <p>6. ¿Relacionó los conceptos teóricos con actividades prácticas que facilitaron el aprendizaje?</p>
+                <div class="options">
+                    <label><input type="radio" name="p6"> Cumple totalmente</label>
+                    <label><input type="radio" name="p6"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p6"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p6"> No cumple</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="evaluation-section">
+            <h4><i class="bi bi-people-fill"></i> Ambiente de aprendizaje</h4>
+            <div class="question-card">
+                <p>7. ¿Promovió un ambiente de respeto y buena convivencia durante las clases?</p>
+                <div class="options">
+                    <label><input type="radio" name="p7"> Cumple totalmente</label>
+                    <label><input type="radio" name="p7"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p7"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p7"> No cumple</label>
+                </div>
+            </div>
+            <div class="question-card">
+                <p>8. ¿Incentivó la participación activa de los aprendices?</p>
+                <div class="options">
+                    <label><input type="radio" name="p8"> Cumple totalmente</label>
+                    <label><input type="radio" name="p8"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p8"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p8"> No cumple</label>
+                </div>
+            </div>
+            <div class="question-card">
+                <p>9. ¿Mostró disposición para escuchar opiniones y sugerencias?</p>
+                <div class="options">
+                    <label><input type="radio" name="p9"> Cumple totalmente</label>
+                    <label><input type="radio" name="p9"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p9"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p9"> No cumple</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="evaluation-section">
+            <h4><i class="bi bi-clipboard-data-fill"></i> Proceso de evaluación</h4>
+            <div class="question-card">
+                <p>10. ¿Los criterios de evaluación fueron claros y conocidos desde el inicio?</p>
+                <div class="options">
+                    <label><input type="radio" name="p10"> Cumple totalmente</label>
+                    <label><input type="radio" name="p10"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p10"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p10"> No cumple</label>
+                </div>
+            </div>
+            <div class="question-card">
+                <p>11. ¿La retroalimentación brindada por el instructor contribuyó a mejorar su aprendizaje?</p>
+                <div class="options">
+                    <label><input type="radio" name="p11"> Cumple totalmente</label>
+                    <label><input type="radio" name="p11"> Cumple parcialmente</label>
+                    <label><input type="radio" name="p11"> Cumple mínimamente</label>
+                    <label><input type="radio" name="p11"> No cumple</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm observations-card">
+            <div class="card-body">
+                <h5><i class="bi bi-chat-left-text-fill"></i> Observaciones</h5>
+                <textarea class="form-control" rows="5" placeholder="Escriba aquí alguna observación o sugerencia para el instructor (opcional)."></textarea>
+            </div>
+        </div>
+
+        <div class="text-end mt-4 mb-5">
+            <button type="submit" class="btn btn-success btn-lg px-5">
+                <i class="bi bi-send-fill"></i> Enviar evaluación
+            </button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+
+{% if session.get('rol') != 'admin' %}
+<script>
+document.getElementById("evalForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    for(let i=1;i<=11;i++){
+        if(!document.querySelector('input[name="p'+i+'"]:checked')){
+            alert("Debes responder todas las preguntas antes de enviar.");
+            return;
+        }
+    }
+    const badge = document.getElementById("estadoBadge");
+    badge.textContent = "Evaluado";
+    badge.classList.remove("bg-warning","text-dark");
+    badge.classList.add("bg-success","text-white");
+
+    const boton = document.querySelector("button[type='submit']");
+    boton.innerHTML = '<i class="bi bi-check-circle-fill"></i> Evaluación enviada';
+    boton.disabled = true;
+    boton.classList.remove("btn-success");
+    boton.classList.add("btn-secondary");
+
+    alert("La evaluación fue enviada correctamente.");
+});
+</script>
+{% endif %}
+{% endblock %}
