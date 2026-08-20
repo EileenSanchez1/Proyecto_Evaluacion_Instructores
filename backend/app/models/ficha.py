@@ -1,11 +1,44 @@
+<<<<<<< HEAD
 from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
+=======
+<<<<<<< HEAD
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, List
+from datetime import date
+=======
+from __future__ import annotations
+
+from typing import Optional, List
+
+from sqlmodel import SQLModel, Field, Relationship
+>>>>>>> 03a304607976fa9f108fb7359474d2faa00b321e
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
 
 
 class Ficha(SQLModel, table=True):
     __tablename__ = "fichas"
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    id: Optional[int] = Field(default=None, primary_key=True)
+    numero_ficha: str = Field(index=True, nullable=False)
+    programa: str = Field(nullable=False)
+    nivel: str = Field(nullable=False)  # Técnico, Tecnólogo, Complementaria
+    jornada: str = Field(nullable=False)  # Diurna, Mixta, Nocturna, Fin de semana
+    fecha_inicio: date = Field(nullable=False)
+    fecha_fin: date = Field(nullable=False)
+    estado: str = Field(default="En ejecución", nullable=False)  # En ejecución, Finalizada, Suspendida, Cancelada
+    numero_aprendices: int = Field(default=0, nullable=False)
+
+    # Relaciones
+    aprendices: List["Aprendiz"] = Relationship(back_populates="ficha")
+    evaluaciones: List["Evaluacion"] = Relationship(back_populates="ficha")
+    instructores: List["FichaInstructor"] = Relationship(back_populates="ficha")
+=======
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
     id_ficha: Optional[int] = Field(
         default=None,
         primary_key=True
@@ -28,13 +61,30 @@ class Ficha(SQLModel, table=True):
         max_length=255
     )
 
+<<<<<<< HEAD
     aprendices: list["Aprendiz"] = Relationship(
         back_populates="ficha"
     )
 
     ficha_instructores: list["FichaInstructor"] = Relationship(
+=======
+    # =====================
+    # Relaciones
+    # =====================
+
+    aprendices: List["Aprendiz"] = Relationship(
+        back_populates="ficha"
+    )
+
+    ficha_instructores: List["FichaInstructor"] = Relationship(
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
         back_populates="ficha"
     )
 
     def __repr__(self):
+<<<<<<< HEAD
         return f"<Ficha {self.numero_ficha}>"
+=======
+        return f"<Ficha {self.numero_ficha}>"
+>>>>>>> 03a304607976fa9f108fb7359474d2faa00b321e
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12

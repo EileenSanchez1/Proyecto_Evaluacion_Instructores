@@ -1,11 +1,44 @@
+<<<<<<< HEAD
 from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
 
+=======
+<<<<<<< HEAD
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, List
+
+=======
+from __future__ import annotations
+
+from typing import Optional, List
+
+from sqlmodel import SQLModel, Field, Relationship
+
+>>>>>>> 03a304607976fa9f108fb7359474d2faa00b321e
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
 
 class Instructor(SQLModel, table=True):
     __tablename__ = "instructores"
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_documento: str = Field(default="CC", nullable=False)
+    numero_documento: str = Field(unique=True, nullable=False, index=True)
+    nombre_completo: str = Field(nullable=False)
+    competencia: Optional[str] = Field(default=None)
+    dia: Optional[str] = Field(default=None)  # Miércoles, Lunes, etc.
+    correo_electronico: Optional[str] = Field(default=None)
+    imagen: Optional[str] = Field(default="default.png")
+    estado: str = Field(default="activo", nullable=False)
+
+    # Relaciones
+    evaluaciones: List["Evaluacion"] = Relationship(back_populates="instructor")
+    fichas: List["FichaInstructor"] = Relationship(back_populates="instructor")
+=======
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
     id_instructor: Optional[int] = Field(
         default=None,
         primary_key=True
@@ -43,6 +76,7 @@ class Instructor(SQLModel, table=True):
         max_length=255
     )
 
+<<<<<<< HEAD
     ficha_instructores: list["FichaInstructor"] = Relationship(
         back_populates="instructor"
     )
@@ -53,3 +87,22 @@ class Instructor(SQLModel, table=True):
 
     def __repr__(self):
         return f"<Instructor {self.nombre} {self.apellido}>"
+=======
+
+    # =====================
+    # Relaciones
+    # =====================
+
+    ficha_instructores: List["FichaInstructor"] = Relationship(
+        back_populates="instructor"
+    )
+
+    respuestas: List["Respuesta"] = Relationship(
+        back_populates="instructor"
+    )
+
+
+    def __repr__(self):
+        return f"<Instructor {self.nombre} {self.apellido}>"
+>>>>>>> 03a304607976fa9f108fb7359474d2faa00b321e
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12

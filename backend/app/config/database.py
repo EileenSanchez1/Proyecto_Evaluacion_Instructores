@@ -1,3 +1,22 @@
+<<<<<<< HEAD
+=======
+from sqlmodel import create_engine, Session, SQLModel
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "evaluacion_instructores")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+engine = create_engine(DATABASE_URL, echo=False)
+
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
 from sqlmodel import SQLModel, Session, create_engine
 from dotenv import load_dotenv
 import os
@@ -22,10 +41,18 @@ engine = create_engine(
 )
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
 def get_session():
     with Session(engine) as session:
         yield session
 
 
 def create_db_and_tables():
+<<<<<<< HEAD
     SQLModel.metadata.create_all(engine)
+=======
+    SQLModel.metadata.create_all(engine)
+>>>>>>> a9d292cd55282d2a8b29a8837da25c88e549fd12
