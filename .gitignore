@@ -1,0 +1,68 @@
+# =========================
+# PYTHON
+# =========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# =========================
+# FASTAPI / PYTHON
+# =========================
+
+*.log
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# REACT / NODE
+# =========================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Build
+dist/
+build/
+
+# Vite
+.vite/
+
+# =========================
+# EDITOR
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+# SISTEMA OPERATIVO
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# ARCHIVOS TEMPORALES
+# =========================
+
+*.tmp
+*.temp
+*.bak

@@ -22,6 +22,7 @@ function Login() {
         contrasena,
       };
 
+     console.log("Datos enviados:", datos);
       const respuesta = await login(datos);
 
       console.log("Respuesta del backend:", respuesta);

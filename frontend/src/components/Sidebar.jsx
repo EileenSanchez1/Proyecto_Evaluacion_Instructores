@@ -6,6 +6,7 @@ function Sidebar() {
       <h2>Menú</h2>
 
       <nav>
+        <Link to="/">Inicio</Link>
         <Link to="/instructores">Instructores</Link>
         <Link to="/evaluaciones">Evaluaciones</Link>
         <Link to="/preguntas">Preguntas</Link>
