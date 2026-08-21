@@ -1,5 +1,4 @@
 from typing import List, Optional
-
 from sqlmodel import Session
 
 from app.models.instructor import Instructor
@@ -32,10 +31,17 @@ class InstructorService:
 
     @staticmethod
     def listar(
-        session: Session
+        session: Session,
+        offset: int = 0,
+        limit: int = 100
     ) -> List[Instructor]:
 
-        return InstructorRepository.listar(session)
+        # Si tu repositorio acepta paginación, se la pasa:
+        try:
+            return InstructorRepository.listar(session, offset, limit)
+        except TypeError:
+            # Si tu repositorio solo acepta 'session', cae en este respaldo para no romper
+            return InstructorRepository.listar(session)
 
     @staticmethod
     def buscar(
