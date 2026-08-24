@@ -1,469 +1,280 @@
 # Sistema de Evaluación de Instructores
 
-## Requisitos
+## Ejecución del proyecto
 
-Para ejecutar el proyecto se necesita tener instalado:
-
-- Python
-- PostgreSQL
-- Git
-
-Para comprobar si ya están instalados:
-
-```bash
-python --version
-````
-
-```bash
-git --version
-```
-
-```bash
-psql --version
-```
-
-Si alguno ya está instalado, no es necesario instalarlo nuevamente.
+Sigue estos pasos en orden para ejecutar el proyecto correctamente.
 
 ---
 
-# 1. Clonar el proyecto
+## 1. Clonar el repositorio
 
-Abrir Git Bash y ubicarse en la carpeta donde se guardará el proyecto.
-
-```bash
-git clone URL_DEL_REPOSITORIO
-```
-
-Entrar al proyecto:
+Desde una consola:
 
 ```bash
-cd Proyecto_Evaluacion_Instructores
-```
+git clone <URL_DEL_REPOSITORIO>
+cd Proyecto_Evaluacion_Instructores/backend
 
-Entrar al backend:
+Si el repositorio ya está clonado, entra directamente a la carpeta backend.
 
-```bash
-cd backend
-```
+2. Crear y activar el entorno virtual
 
----
+En Windows:
 
-# 2. Crear el entorno virtual
-
-Dentro de `backend` ejecutar:
-
-```bash
 python -m venv venv
-```
-
-Activar el entorno virtual.
-
-En Git Bash:
-
-```bash
+Activar en Git Bash
 source venv/Scripts/activate
-```
-
-En CMD:
-
-```cmd
+Activar en CMD
 venv\Scripts\activate
-```
 
-Debe aparecer:
+Cuando esté activado debe aparecer:
 
-```text
 (venv)
-```
 
 al inicio de la consola.
 
----
+3. Instalar las dependencias
 
-# 3. Instalar las dependencias
+Con el entorno virtual activado:
 
-Con el entorno virtual activo:
-
-```bash
 pip install -r requirements.txt
-```
+Si las dependencias ya están instaladas
 
-Si las dependencias ya están instaladas, no es necesario instalarlas nuevamente.
+No es necesario volver a instalarlas.
 
-Para comprobarlas:
+Se pueden comprobar con:
 
-```bash
 pip list
-```
 
----
+Si falta alguna dependencia:
 
-# 4. PostgreSQL
+pip install -r requirements.txt
+4. Configurar el archivo .env
 
-PostgreSQL debe estar instalado y ejecutándose.
+NO OLVIDAR EL ARCHIVO .env.
 
-Comprobar:
+El archivo .env debe estar dentro de la carpeta backend, al mismo nivel que main.py.
 
-```bash
-psql --version
-```
+El archivo contiene la configuración necesaria para conectarse a PostgreSQL.
 
-Si `psql` no aparece como comando, se puede utilizar la ruta de instalación de PostgreSQL.
+Ejemplo:
 
-Por ejemplo:
+DATABASE_URL=postgresql+psycopg2://postgres:CONTRASEÑA@localhost:5432/evaluacion_instructores
 
-```cmd
-"C:\Program Files\PostgreSQL\17\bin\psql.exe" --version
-```
+Se debe reemplazar CONTRASEÑA por la contraseña configurada para el usuario de PostgreSQL.
 
-También se puede comprobar que el servicio esté funcionando:
+Importante
 
-```cmd
+El archivo .env es necesario para que la aplicación pueda conectarse correctamente a la base de datos.
+
+Ejecución con 3 consolas
+
+Para ejecutar el proyecto se recomienda utilizar 3 consolas.
+
+CONSOLA 1 — PostgreSQL
+
+Primero se debe verificar que PostgreSQL esté funcionando.
+
+Desde CMD:
+
 sc query postgresql-x64-17
-```
 
 Debe aparecer:
 
-```text
-ESTADO : 4 RUNNING
-```
+ESTADO : 4  RUNNING
 
-> El número de versión puede cambiar dependiendo de la instalación.
+Si el servicio está detenido:
 
----
+net start postgresql-x64-17
 
-# 5. Crear la base de datos
+Después se puede entrar a PostgreSQL con:
 
-Abrir PostgreSQL:
-
-```cmd
-psql -U postgres
-```
-
-Si `psql` no está configurado en el PATH:
-
-```cmd
 "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres
-```
 
-Ingresar la contraseña de PostgreSQL.
+Ingresar la contraseña de PostgreSQL que cada quien tenga en su dispositivo.
 
-Debe aparecer:
+Entrar a la base de datos del proyecto:
 
-```text
-postgres=#
-```
-
-Crear la base de datos:
-
-```sql
-CREATE DATABASE evaluacion_instructores;
-```
-
-Después ingresar a ella:
-
-```sql
 \c evaluacion_instructores
-```
 
-Debe aparecer:
+Comprobar la base de datos:
 
-```text
-evaluacion_instructores=#
-```
+SELECT current_database();
 
-Las tablas del proyecto se crean automáticamente cuando se inicia la API.
+Para ver las tablas:
 
----
+\dt
 
-# 6. EJECUCIÓN DEL PROYECTO
+Para salir de PostgreSQL:
 
-Para trabajar correctamente se utilizan tres consolas.
-
----
-
-## CONSOLA 1 - PostgreSQL
-
-Abrir la primera consola y ejecutar:
-
-```cmd
-psql -U postgres
-```
-
-Entrar a la base de datos:
-
-```sql
-\c evaluacion_instructores
-```
-
-Esta consola se mantiene abierta mientras se trabaja con el proyecto.
-
----
-
-## CONSOLA 2 - API
+\q
+CONSOLA 2 — Backend / FastAPI
 
 Abrir una segunda consola.
 
 Entrar a la carpeta del backend:
 
-```bash
 cd Proyecto_Evaluacion_Instructores/backend
-```
 
 Activar el entorno virtual:
 
-```bash
 source venv/Scripts/activate
-```
 
 Ejecutar FastAPI:
 
-```bash
 uvicorn main:app --reload
-```
 
-Si todo funciona correctamente aparecerá:
+Si todo funciona correctamente aparecerá algo parecido a:
 
-```text
 Uvicorn running on http://127.0.0.1:8000
-```
 
-No cerrar esta consola.
+La documentación de la API estará disponible en:
 
----
-
-## CONSOLA 3 - Git / comandos
+http://127.0.0.1:8000/docs
+CONSOLA 3 — Verificar la base de datos
 
 Abrir una tercera consola.
 
-Entrar al backend:
+Entrar a PostgreSQL:
 
-```bash
-cd Proyecto_Evaluacion_Instructores/backend
-```
+"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres
 
-Activar el entorno virtual:
+Entrar a la base de datos:
 
-```bash
-source venv/Scripts/activate
-```
+\c evaluacion_instructores
 
-Esta consola se utiliza para ejecutar comandos adicionales sin detener la API.
+Ver las tablas:
 
-Por ejemplo:
+\dt
 
-```bash
-git status
-```
+Las tablas se crean automáticamente al iniciar la API mediante:
 
-Para actualizar los cambios del repositorio:
+create_db_and_tables()
+5. Crear una Ficha
 
-```bash
-git pull
-```
+Antes de iniciar sesión debe existir una Ficha.
 
----
+Abrir Swagger:
 
-# 7. Comprobar que la API funciona
-
-Abrir el navegador:
-
-```text
-http://127.0.0.1:8000
-```
-
-Debe aparecer:
-
-```json
-{
-    "mensaje": "API funcionando correctamente"
-}
-```
-
-También se puede abrir Swagger:
-
-```text
 http://127.0.0.1:8000/docs
-```
-
-Desde Swagger se pueden realizar las pruebas del proyecto.
-
----
-
-# 8. CREAR UNA FICHA
-
-Para poder iniciar sesión primero debe existir una ficha.
-
-En Swagger:
-
-```text
-http://127.0.0.1:8000/docs
-```
 
 Buscar:
 
-```text
-Fichas
-```
+Fichas → POST /fichas/
 
-Seleccionar:
+Crear una ficha utilizando los campos solicitados por FichaCreate.
 
-```text
-POST /fichas/
-```
+Por ejemplo, si el esquema utiliza un número de ficha:
 
-Presionar:
+{
+  "numero_ficha": 2876543
+}
 
-```text
-Try it out
-```
+Los campos exactos dependen del esquema actual del proyecto.
 
-Ingresar los datos solicitados por `FichaCreate`.
+Después se puede comprobar con:
 
-Ejecutar con:
+Fichas → GET /fichas/
 
-```text
-Execute
-```
+6. Crear un Aprendiz
 
-La ficha quedará almacenada en PostgreSQL.
+También debe existir un Aprendiz asociado a una Ficha para poder iniciar sesión.
 
----
+En Swagger:
 
-# 9. CREAR EL APRENDIZ
+Aprendices → POST /aprendices/
 
-Después de crear la ficha se debe crear un aprendiz asociado a esa ficha.
+Crear el aprendiz utilizando los campos solicitados por AprendizCreate.
 
-En Swagger buscar:
+Por ejemplo:
 
-```text
-Aprendices
-```
+{
+  "nombre": "Eileen",
+  "apellido": "Sanchez",
+  "correo": "eileen@gmail.com",
+  "contrasena": "123456",
+  "id_ficha": 1
+}
 
-Seleccionar:
+Los campos exactos deben coincidir con el AprendizCreate actual del proyecto.
 
-```text
-POST /aprendices/
-```
+Después se puede comprobar con:
 
-Presionar:
+Aprendices → GET /aprendices/
 
-```text
-Try it out
-```
+7. Iniciar sesión
 
-Ingresar los datos solicitados por `AprendizCreate`.
+Cuando ya exista:
 
-El aprendiz debe tener:
+La base de datos.
+Una Ficha.
+Un Aprendiz asociado a esa Ficha.
+El correo y contraseña del Aprendiz.
 
-* Sus datos personales
-* Correo
-* Contraseña
-* La ficha correspondiente
+Se puede utilizar:
 
-Ejecutar con:
-
-```text
-Execute
-```
-
-El aprendiz quedará guardado en PostgreSQL.
-
----
-
-# 10. PROBAR EL LOGIN
-
-Una vez creada la ficha y el aprendiz:
-
-En Swagger buscar:
-
-```text
-Login
-```
-
-Seleccionar:
-
-```text
-POST /login/
-```
-
-Presionar:
-
-```text
-Try it out
-```
-
-Ingresar el mismo correo y contraseña utilizados al crear el aprendiz.
+Login → POST /login/
 
 Ejemplo:
 
-```json
 {
-    "correo": "correo@ejemplo.com",
-    "contrasena": "123456"
+  "correo": "eileen@gmail.com",
+  "contrasena": "123456"
 }
-```
 
-Presionar:
+Si los datos son correctos, la API devolverá el mensaje de inicio de sesión y la información del aprendiz.
 
-```text
-Execute
-```
-
-Si los datos son correctos, el login será exitoso y se mostrará la información del aprendiz.
-
----
-
-# 11. Orden para ejecutar el proyecto
-
-El orden correcto es:
-
-```text
-1. Instalar Python, PostgreSQL y Git
-            ↓
-2. Clonar el repositorio
-            ↓
-3. Crear el entorno virtual
-            ↓
+Orden recomendado
+1. Iniciar PostgreSQL
+        ↓
+2. Verificar la base de datos evaluacion_instructores
+        ↓
+3. Verificar el archivo .env
+        ↓
 4. Activar el entorno virtual
-            ↓
-5. Instalar requirements.txt
-            ↓
-6. Crear la base de datos
-   evaluacion_instructores
-            ↓
-7. Abrir las 3 consolas
-            ↓
-8. Iniciar PostgreSQL
-            ↓
-9. Ejecutar FastAPI
-            ↓
-10. Abrir Swagger
-            ↓
-11. Crear una Ficha
-            ↓
-12. Crear un Aprendiz asociado a la Ficha
-            ↓
-13. Realizar Login
-```
+        ↓
+5. Instalar requirements.txt si hace falta
+        ↓
+6. Ejecutar FastAPI
+        ↓
+7. Abrir Swagger /docs
+        ↓
+8. Crear una Ficha
+        ↓
+9. Crear un Aprendiz asociado a la Ficha
+        ↓
+10. Iniciar sesión
+Comandos principales
+Crear entorno virtual
+python -m venv venv
+Activar entorno virtual en Git Bash
+source venv/Scripts/activate
+Instalar dependencias
+pip install -r requirements.txt
+Ejecutar FastAPI
+uvicorn main:app --reload
+Iniciar PostgreSQL
+net start postgresql-x64-17
+Entrar a PostgreSQL
+"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres
+Entrar a la base de datos
+\c evaluacion_instructores
+Ver tablas
+\dt
+Swagger
 
-## Importante
+Con FastAPI ejecutándose:
 
-No es necesario crear manualmente las tablas de PostgreSQL.
+http://127.0.0.1:8000/docs
 
-La aplicación las crea automáticamente al iniciar FastAPI mediante:
+Desde Swagger se pueden probar los endpoints de la API.
 
-```python
-create_db_and_tables()
-```
-
-La base de datos que debe existir previamente es:
-
-```text
-evaluacion_instructores
-```
-
-```
-
-**Así sí queda limpio:** instalación → PostgreSQL → 3 consolas → API → crear ficha → crear aprendiz → login. Nada de meter Instructores, Ficha-Instructor, Reportes, etc.
-```
+Importante
+Verificar que PostgreSQL esté iniciado antes de ejecutar la API.
+Verificar que exista la base de datos evaluacion_instructores.
+No olvidar el archivo .env.
+El .env debe estar dentro de backend.
+Activar el entorno virtual antes de ejecutar FastAPI.
+Si las dependencias ya están instaladas, no es necesario instalarlas nuevamente.
+Crear primero la Ficha.
+Después crear el Aprendiz asociado a esa Ficha.
+Para iniciar sesión se utiliza el correo y contraseña del Aprendiz creado.
