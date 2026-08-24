@@ -16,7 +16,7 @@ cd Proyecto_Evaluacion_Instructores/backend
 
 Si el repositorio ya está clonado, entra directamente a la carpeta backend.
 
-2. Crear y activar el entorno virtual
+## 2. Crear y activar el entorno virtual
 
 En Windows:
 
@@ -32,7 +32,7 @@ Cuando esté activado debe aparecer:
 
 al inicio de la consola.
 
-3. Instalar las dependencias
+## 3. Instalar las dependencias
 
 Con el entorno virtual activado:
 
@@ -48,7 +48,7 @@ pip list
 Si falta alguna dependencia:
 
 pip install -r requirements.txt
-4. Configurar el archivo .env
+## 4. Configurar el archivo .env
 
 NO OLVIDAR EL ARCHIVO .env.
 
@@ -149,7 +149,7 @@ Ver las tablas:
 Las tablas se crean automáticamente al iniciar la API mediante:
 
 create_db_and_tables()
-5. Crear una Ficha
+## 5. Crear una Ficha
 
 Antes de iniciar sesión debe existir una Ficha.
 
@@ -175,7 +175,7 @@ Después se puede comprobar con:
 
 Fichas → GET /fichas/
 
-6. Crear un Aprendiz
+## 6. Crear un Aprendiz
 
 También debe existir un Aprendiz asociado a una Ficha para poder iniciar sesión.
 
@@ -201,7 +201,7 @@ Después se puede comprobar con:
 
 Aprendices → GET /aprendices/
 
-7. Iniciar sesión
+## 7. Iniciar sesión
 
 Cuando ya exista:
 
