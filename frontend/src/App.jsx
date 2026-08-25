@@ -22,10 +22,6 @@ function Preguntas() {
   return <h1>Preguntas</h1>;
 }
 
-function Fichas() {
-  return <h1>Fichas</h1>;
-}
-
 function Reportes() {
   return <h1>Reportes</h1>;
 }
