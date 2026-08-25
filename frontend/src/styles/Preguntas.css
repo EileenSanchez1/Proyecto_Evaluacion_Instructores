@@ -1,0 +1,19 @@
+/* Complementa las clases de Bootstrap para que la tabla de preguntas
+   se vea igual que editar_preguntas.html en el sistema Flask. */
+
+.preguntas-orden-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  color: #198754;
+  font-weight: 700;
+  font-size: .85rem;
+}
+
+.preguntas-table tbody tr:hover {
+  background: #f8f9fa;
+}
