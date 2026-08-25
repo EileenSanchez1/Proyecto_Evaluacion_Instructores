@@ -9,6 +9,8 @@ import CrearInstructor from "./pages/CrearInstructor";
 import ActualizarInstructor from "./pages/ActualizarInstructor";
 import EliminarInstructor from "./pages/EliminarInstructor";
 
+import Fichas from "./pages/Fichas";
+
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
