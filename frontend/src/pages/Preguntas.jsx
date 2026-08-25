@@ -1,20 +1,20 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Login from "./pages/Login";
-import Home from "./pages/Home";
-import Contacto from "./pages/Contacto";
+import Login from "../pages/Login";
+import Home from "../pages/Home";
+import Contacto from "../pages/Contacto";
 
-import Instructores from "./pages/Instructores";
-import CrearInstructor from "./pages/CrearInstructor";
-import ActualizarInstructor from "./pages/ActualizarInstructor";
-import EliminarInstructor from "./pages/EliminarInstructor";
+import Instructores from "../pages/Instructores";
+import CrearInstructor from "../pages/CrearInstructor";
+import ActualizarInstructor from "../pages/ActualizarInstructor";
+import EliminarInstructor from "../pages/EliminarInstructor";
 
-import Evaluaciones from "./pages/Evaluaciones";
-import ResponderEvaluacion from "./pages/ResponderEvaluacion";
-import Preguntas from "./pages/Preguntas";
+import Evaluaciones from "../pages/Evaluaciones";
+import ResponderEvaluacion from "../pages/ResponderEvaluacion";
+import Preguntas from "../pages/Preguntas";
 
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "../components/Layout";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 function Fichas() {
   return <h1>Fichas</h1>;
