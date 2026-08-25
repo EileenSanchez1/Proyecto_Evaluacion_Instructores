@@ -9,16 +9,12 @@ import CrearInstructor from "./pages/CrearInstructor";
 import ActualizarInstructor from "./pages/ActualizarInstructor";
 import EliminarInstructor from "./pages/EliminarInstructor";
 
+import Evaluaciones from "./pages/Evaluaciones";
+import ResponderEvaluacion from "./pages/ResponderEvaluacion";
+import Preguntas from "./pages/Preguntas";
+
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-
-function Evaluaciones() {
-  return <h1>Evaluaciones</h1>;
-}
-
-function Preguntas() {
-  return <h1>Preguntas</h1>;
-}
 
 function Fichas() {
   return <h1>Fichas</h1>;
@@ -68,6 +64,11 @@ function App() {
             <Route
               path="/evaluaciones"
               element={<Evaluaciones />}
+            />
+
+            <Route
+              path="/evaluaciones/:id"
+              element={<ResponderEvaluacion />}
             />
 
             {/* PREGUNTAS */}
