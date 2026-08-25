@@ -1,0 +1,201 @@
+/* Estilos propios de Evaluaciones y Responder Evaluación,
+   portados del evaluaciones.css del sistema Flask original. */
+
+.page-content-eval {
+  background: #f5f7fa;
+}
+
+.evaluation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.evaluation-header h2 {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.evaluation-header p {
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+.instructor-card {
+  border: none;
+  border-radius: 18px;
+  margin-bottom: 30px;
+}
+
+.instructor-card .row {
+  padding: 25px;
+}
+
+.instructor-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 5px solid #198754;
+}
+
+.instructor-card label {
+  color: #6b7280;
+  font-size: .85rem;
+  margin-bottom: 2px;
+}
+
+.instructor-card h5,
+.instructor-card h6 {
+  font-weight: 600;
+  color: #212529;
+}
+
+.evaluation-section {
+  margin-top: 35px;
+}
+
+.evaluation-section h4 {
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #198754;
+}
+
+.question-card {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, .05);
+  transition: .3s;
+}
+
+.question-card:hover {
+  transform: translateY(-3px);
+}
+
+.question-card p.pregunta-texto {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.rating-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.rating-card {
+  border: 2px solid #dee2e6;
+  border-radius: 15px;
+  padding: 18px;
+  cursor: pointer;
+  text-align: center;
+  transition: .25s;
+  background: white;
+}
+
+.rating-card i {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.rating-card span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rating-card.cumple {
+  color: #198754;
+}
+
+.rating-card.no-cumple {
+  color: #dc3545;
+}
+
+.rating-card:hover {
+  transform: scale(1.04);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, .10);
+}
+
+.rating-card.seleccionada.cumple {
+  background: #198754;
+  color: white;
+  border-color: #198754;
+}
+
+.rating-card.seleccionada.no-cumple {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+.observations-card {
+  border: none;
+  border-radius: 16px;
+  margin-top: 35px;
+}
+
+.observations-card textarea {
+  border-radius: 12px;
+  resize: none;
+}
+
+.btn-success-eval {
+  border-radius: 30px;
+  padding: 12px 40px;
+  font-weight: 600;
+  background: #198754;
+  border-color: #198754;
+}
+
+.evaluaciones-table thead th {
+  color: #6b7280;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border-bottom-width: 1px;
+}
+
+.badge-pendiente {
+  background: #ffc107;
+  color: #212529;
+}
+
+.badge-evaluado {
+  background: #198754;
+  color: white;
+}
+
+.instructor-tab {
+  border-radius: 30px;
+}
+
+.instructor-tab.activo {
+  background: #198754;
+  border-color: #198754;
+  color: white;
+}
+
+@media (max-width: 992px) {
+  .rating-group {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .instructor-photo {
+    width: 90px;
+    height: 90px;
+  }
+
+  .evaluation-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

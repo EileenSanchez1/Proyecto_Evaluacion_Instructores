@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   obtenerEvaluacion,
   cambiarEstadoEvaluacion,
-} from "../services/evaluacionService";
+} from "../services/Evaluacionservice";
 import { obtenerAprendiz } from "../services/Aprendizservice";
 import { listarInstructoresPorFicha } from "../services/Fichainstructorservice";
 import { obtenerInstructor } from "../services/instructorService";
@@ -18,6 +18,7 @@ import {
   obtenerReporteEvaluacion,
   obtenerReportePorInstructor,
 } from "../services/Reporteservice";
+import "../styles/Evaluaciones.css";
 
 function claveRespuesta(idPregunta, idInstructor) {
   return `${idPregunta}-${idInstructor}`;
@@ -303,11 +304,19 @@ function ResponderEvaluacion() {
   };
 
   if (cargando) {
-    return <p>Cargando evaluación...</p>;
+    return (
+      <div className="container-fluid page-content-eval py-4">
+        <p className="text-muted">Cargando evaluación...</p>
+      </div>
+    );
   }
 
   if (error && !evaluacion) {
-    return <p style={{ color: "red" }}>{error}</p>;
+    return (
+      <div className="container-fluid page-content-eval py-4">
+        <p className="text-danger">{error}</p>
+      </div>
+    );
   }
 
   if (!evaluacion) {
@@ -317,96 +326,159 @@ function ResponderEvaluacion() {
   const esEvaluada = evaluacion.estado === "Evaluado";
 
   return (
-    <div>
-      <button onClick={() => navigate("/evaluaciones")}>
-        &larr; Volver a evaluaciones
+    <div className="container-fluid page-content-eval py-4">
+      <button
+        className="btn btn-link text-decoration-none ps-0 mb-2"
+        onClick={() => navigate("/evaluaciones")}
+      >
+        <i className="bi bi-arrow-left"></i> Volver a evaluaciones
       </button>
 
-      <h1>Evaluación #{evaluacion.id_evaluacion}</h1>
+      <div className="evaluation-header">
+        <div>
+          <h2>
+            <i className="bi bi-clipboard-check"></i> Evaluación #{evaluacion.id_evaluacion}
+          </h2>
+          <p>
+            Diligencie la siguiente evaluación de acuerdo con el desarrollo de la
+            formación recibida.
+          </p>
+        </div>
 
-      <p>
-        <strong>Aprendiz:</strong>{" "}
-        {aprendiz ? `${aprendiz.nombre} ${aprendiz.apellido}` : "-"}
-        <br />
-        <strong>Estado:</strong>{" "}
         <span
-          style={{
-            color: esEvaluada ? "green" : "#b8860b",
-            fontWeight: "bold",
-          }}
+          className={`badge ${
+            esEvaluada ? "badge-evaluado" : "badge-pendiente"
+          } px-3 py-2`}
         >
           {evaluacion.estado}
         </span>
-      </p>
+      </div>
 
-      {mensaje && <p style={{ color: "green" }}>{mensaje}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className="card instructor-card shadow-sm">
+        <div className="row align-items-center">
+          <div className="col-md-2 text-center">
+            <i
+              className="bi bi-person-circle"
+              style={{ fontSize: "90px", color: "#198754" }}
+            ></i>
+          </div>
+          <div className="col-md-10">
+            <div className="row">
+              <div className="col-md-6">
+                <label>Aprendiz</label>
+                <h5>{aprendiz ? `${aprendiz.nombre} ${aprendiz.apellido}` : "-"}</h5>
+              </div>
+              <div className="col-md-6">
+                <label>Estado</label>
+                <h5>{evaluacion.estado}</h5>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {mensaje && (
+        <div className="alert alert-success">
+          <i className="bi bi-check-circle-fill me-1"></i>
+          {mensaje}
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-danger">
+          <i className="bi bi-exclamation-triangle-fill me-1"></i>
+          {error}
+        </div>
+      )}
 
       {instructores.length === 0 && (
-        <p>Esta ficha no tiene instructores asignados.</p>
+        <div className="alert alert-info">
+          Esta ficha no tiene instructores asignados.
+        </div>
       )}
 
       {esEvaluada && (
-        <div>
-          <h2>Resultado</h2>
-          <p>
-            <strong>Puntaje general:</strong>{" "}
-            {reporteGeneral ? `${reporteGeneral.reporte.toFixed(1)}%` : "-"}
+        <div className="evaluation-section">
+          <h4>
+            <i className="bi bi-bar-chart-fill"></i> Resultado
+          </h4>
+          <p className="mb-3">
+            Puntaje general:{" "}
+            <strong className="text-success fs-5">
+              {reporteGeneral ? `${reporteGeneral.reporte.toFixed(1)}%` : "-"}
+            </strong>
           </p>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Instructor</th>
-                <th>Competencia</th>
-                <th>Puntaje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {instructores.map((inst) => (
-                <tr key={inst.id_instructor}>
-                  <td>
-                    {inst.nombre} {inst.apellido}
-                  </td>
-                  <td>{inst.competencia}</td>
-                  <td>
-                    {reportesPorInstructor[inst.id_instructor]
-                      ? `${reportesPorInstructor[
-                          inst.id_instructor
-                        ].reporte.toFixed(1)}%`
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="card shadow-sm">
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Instructor</th>
+                      <th>Competencia</th>
+                      <th>Puntaje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {instructores.map((inst) => (
+                      <tr key={inst.id_instructor}>
+                        <td>
+                          {inst.nombre} {inst.apellido}
+                        </td>
+                        <td>{inst.competencia}</td>
+                        <td>
+                          {reportesPorInstructor[inst.id_instructor]
+                            ? `${reportesPorInstructor[
+                                inst.id_instructor
+                              ].reporte.toFixed(1)}%`
+                            : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {!esEvaluada && instructores.length > 0 && (
-        <div>
-          <h2>Instructores a evaluar</h2>
+        <div className="evaluation-section">
+          <h4>
+            <i className="bi bi-people-fill"></i> Instructores a evaluar
+          </h4>
 
-          <div>
+          <div className="d-flex flex-wrap gap-2 mb-4">
             {instructores.map((inst) => (
               <button
                 key={inst.id_instructor}
+                className={`btn instructor-tab ${
+                  inst.id_instructor === instructorSeleccionado
+                    ? "instructor-tab activo"
+                    : "btn-outline-secondary"
+                }`}
                 onClick={() => cambiarInstructor(inst.id_instructor)}
                 disabled={inst.id_instructor === instructorSeleccionado}
-                style={{ marginRight: "8px", marginBottom: "8px" }}
               >
                 {inst.nombre} {inst.apellido}{" "}
-                {instructorCompleto(inst.id_instructor) ? "✔" : "(pendiente)"}
+                {instructorCompleto(inst.id_instructor) ? (
+                  <i className="bi bi-check-circle-fill ms-1"></i>
+                ) : (
+                  <span className="ms-1">(pendiente)</span>
+                )}
               </button>
             ))}
           </div>
 
           {instructorSeleccionado && (
             <>
-              <h3>Preguntas</h3>
+              <h4>
+                <i className="bi bi-journal-bookmark-fill"></i> Preguntas
+              </h4>
 
               {preguntas.length === 0 && (
-                <p>No hay preguntas activas configuradas.</p>
+                <p className="text-muted">No hay preguntas activas configuradas.</p>
               )}
 
               <form onSubmit={manejarGuardarNuevas}>
@@ -422,24 +494,20 @@ function ResponderEvaluacion() {
                   const valorFormulario = formulario[pregunta.id_pregunta];
 
                   return (
-                    <div
-                      key={pregunta.id_pregunta}
-                      style={{
-                        border: "1px solid var(--border)",
-                        padding: "12px",
-                        marginBottom: "10px",
-                      }}
-                    >
-                      <p>
-                        <strong>{pregunta.orden}.</strong>{" "}
-                        {pregunta.descripcion}
+                    <div className="question-card" key={pregunta.id_pregunta}>
+                      <p className="pregunta-texto">
+                        {pregunta.orden}. {pregunta.descripcion}
                       </p>
 
                       {existente && !enEdicion && (
-                        <div>
-                          <p>
+                        <div className="d-flex align-items-center flex-wrap gap-3">
+                          <p className="mb-0">
                             Respuesta:{" "}
-                            <strong>
+                            <strong
+                              className={
+                                existente.respuesta ? "text-success" : "text-danger"
+                              }
+                            >
                               {existente.respuesta ? "Cumple" : "No cumple"}
                             </strong>
                             {existente.comentario
@@ -448,56 +516,76 @@ function ResponderEvaluacion() {
                           </p>
                           <button
                             type="button"
+                            className="btn btn-outline-secondary btn-sm"
                             onClick={() => iniciarEdicion(pregunta, existente)}
                           >
-                            Editar
+                            <i className="bi bi-pencil"></i> Editar
                           </button>
                         </div>
                       )}
 
                       {(!existente || enEdicion) && (
                         <div>
-                          <label>
-                            Respuesta *{" "}
-                            <select
-                              value={valorFormulario?.respuesta ?? ""}
-                              onChange={(e) =>
+                          <div className="rating-group mb-3">
+                            <div
+                              className={`rating-card cumple ${
+                                valorFormulario?.respuesta === "true"
+                                  ? "seleccionada cumple"
+                                  : ""
+                              }`}
+                              onClick={() =>
                                 manejarCambioCampo(
                                   pregunta.id_pregunta,
                                   "respuesta",
+                                  "true"
+                                )
+                              }
+                            >
+                              <i className="bi bi-check-circle"></i>
+                              <span>Cumple</span>
+                            </div>
+                            <div
+                              className={`rating-card no-cumple ${
+                                valorFormulario?.respuesta === "false"
+                                  ? "seleccionada no-cumple"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                manejarCambioCampo(
+                                  pregunta.id_pregunta,
+                                  "respuesta",
+                                  "false"
+                                )
+                              }
+                            >
+                              <i className="bi bi-x-circle"></i>
+                              <span>No cumple</span>
+                            </div>
+                          </div>
+
+                          <div className="mb-2">
+                            <label className="form-label small text-muted">
+                              Comentario (opcional)
+                            </label>
+                            <textarea
+                              className="form-control"
+                              rows={2}
+                              value={valorFormulario?.comentario ?? ""}
+                              onChange={(e) =>
+                                manejarCambioCampo(
+                                  pregunta.id_pregunta,
+                                  "comentario",
                                   e.target.value
                                 )
                               }
-                              required
-                            >
-                              <option value="">Seleccione...</option>
-                              <option value="true">Cumple</option>
-                              <option value="false">No cumple</option>
-                            </select>
-                          </label>
-
-                          <div>
-                            <label>
-                              Comentario (opcional)
-                              <br />
-                              <textarea
-                                rows={2}
-                                value={valorFormulario?.comentario ?? ""}
-                                onChange={(e) =>
-                                  manejarCambioCampo(
-                                    pregunta.id_pregunta,
-                                    "comentario",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </label>
+                            />
                           </div>
 
                           {enEdicion && (
-                            <div>
+                            <div className="d-flex gap-2">
                               <button
                                 type="button"
+                                className="btn btn-success btn-sm"
                                 disabled={guardando}
                                 onClick={() =>
                                   manejarGuardarEdicion(existente)
@@ -507,6 +595,7 @@ function ResponderEvaluacion() {
                               </button>
                               <button
                                 type="button"
+                                className="btn btn-outline-secondary btn-sm"
                                 onClick={() =>
                                   cancelarEdicion(pregunta.id_pregunta)
                                 }
@@ -522,7 +611,12 @@ function ResponderEvaluacion() {
                 })}
 
                 {preguntasNuevas.length > 0 && (
-                  <button type="submit" disabled={guardando}>
+                  <button
+                    type="submit"
+                    className="btn btn-success"
+                    disabled={guardando}
+                  >
+                    <i className="bi bi-save2 me-1"></i>
                     {guardando
                       ? "Guardando..."
                       : "Guardar respuestas de este instructor"}
@@ -532,19 +626,24 @@ function ResponderEvaluacion() {
             </>
           )}
 
-          <hr />
-
-          <button onClick={manejarFinalizar} disabled={guardando}>
-            {guardando ? "Enviando..." : "Enviar evaluación"}
-          </button>
-          {!evaluacionCompleta && (
-            <p>
-              <em>
-                Debes responder todas las preguntas de todos los instructores
-                para poder enviar la evaluación.
-              </em>
-            </p>
-          )}
+          <div className="text-end mt-4 mb-5">
+            <button
+              className="btn btn-success btn-lg btn-success-eval"
+              onClick={manejarFinalizar}
+              disabled={guardando}
+            >
+              <i className="bi bi-send-fill"></i>{" "}
+              {guardando ? "Enviando..." : "Enviar evaluación"}
+            </button>
+            {!evaluacionCompleta && (
+              <p className="mt-2 text-muted">
+                <em>
+                  Debes responder todas las preguntas de todos los instructores
+                  para poder enviar la evaluación.
+                </em>
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

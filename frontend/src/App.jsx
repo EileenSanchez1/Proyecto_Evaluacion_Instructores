@@ -10,7 +10,7 @@ import ActualizarInstructor from "./pages/ActualizarInstructor";
 import EliminarInstructor from "./pages/EliminarInstructor";
 
 import Evaluaciones from "./pages/Evaluaciones";
-import ResponderEvaluacion from "./pages/ResponderEvaluacion";
+import ResponderEvaluacion from "./pages/Responderevaluacion";
 import Preguntas from "./pages/Preguntas";
 
 import Layout from "./components/Layout";

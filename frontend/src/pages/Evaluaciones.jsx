@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listarEvaluaciones } from "../services/evaluacionService";
-import { obtenerAprendiz } from "../services/aprendizService";
+import { listarEvaluaciones } from "../services/Evaluacionservice";
+import { obtenerAprendiz } from "../services/Aprendizservice";
+import "../styles/Evaluaciones.css";
 
 function formatearFecha(fecha) {
   if (!fecha) return "-";
@@ -57,64 +58,81 @@ function Evaluaciones() {
   }, []);
 
   return (
-    <div>
-      <h1>Evaluaciones</h1>
+    <div className="container-fluid page-content-eval py-4">
+      <div className="evaluation-header">
+        <div>
+          <h2>
+            <i className="bi bi-clipboard-check"></i> Evaluaciones
+          </h2>
+          <p>Consulte y responda las evaluaciones de instructores asignadas.</p>
+        </div>
+      </div>
 
-      {cargando && <p>Cargando evaluaciones...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className="card shadow-sm">
+        <div className="card-body">
+          {cargando && <p className="text-muted mb-0">Cargando evaluaciones...</p>}
+          {error && <p className="text-danger mb-0">{error}</p>}
 
-      {!cargando && !error && evaluaciones.length === 0 && (
-        <p>No hay evaluaciones registradas.</p>
-      )}
+          {!cargando && !error && evaluaciones.length === 0 && (
+            <p className="text-muted mb-0">No hay evaluaciones registradas.</p>
+          )}
 
-      {!cargando && evaluaciones.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Aprendiz</th>
-              <th>Fecha</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {evaluaciones.map((ev) => {
-              const aprendiz = aprendices[ev.id_aprendiz];
-              return (
-                <tr key={ev.id_evaluacion}>
-                  <td>
-                    {aprendiz
-                      ? `${aprendiz.nombre} ${aprendiz.apellido}`
-                      : `Aprendiz #${ev.id_aprendiz}`}
-                  </td>
-                  <td>{formatearFecha(ev.fecha)}</td>
-                  <td>
-                    <span
-                      style={{
-                        color: ev.estado === "Evaluado" ? "green" : "#b8860b",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {ev.estado}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() =>
-                        navigate(`/evaluaciones/${ev.id_evaluacion}`)
-                      }
-                    >
-                      {ev.estado === "Evaluado"
-                        ? "Ver resultado"
-                        : "Responder"}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
+          {!cargando && evaluaciones.length > 0 && (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle evaluaciones-table">
+                <thead>
+                  <tr>
+                    <th>Aprendiz</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th className="text-end">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluaciones.map((ev) => {
+                    const aprendiz = aprendices[ev.id_aprendiz];
+                    const evaluado = ev.estado === "Evaluado";
+                    return (
+                      <tr key={ev.id_evaluacion}>
+                        <td>
+                          {aprendiz
+                            ? `${aprendiz.nombre} ${aprendiz.apellido}`
+                            : `Aprendiz #${ev.id_aprendiz}`}
+                        </td>
+                        <td>{formatearFecha(ev.fecha)}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              evaluado ? "badge-evaluado" : "badge-pendiente"
+                            } px-3 py-2`}
+                          >
+                            {ev.estado}
+                          </span>
+                        </td>
+                        <td className="text-end">
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={() =>
+                              navigate(`/evaluaciones/${ev.id_evaluacion}`)
+                            }
+                          >
+                            <i
+                              className={`bi ${
+                                evaluado ? "bi-eye" : "bi-pencil-square"
+                              } me-1`}
+                            ></i>
+                            {evaluado ? "Ver resultado" : "Responder"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
