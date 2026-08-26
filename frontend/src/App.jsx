@@ -10,6 +10,8 @@ import ActualizarInstructor from "./pages/ActualizarInstructor";
 import EliminarInstructor from "./pages/EliminarInstructor";
 
 import Evaluaciones from "./pages/Evaluaciones";
+import CrearEvaluacion from "./pages/CrearEvaluacion";
+import EditarEvaluacion from "./pages/Editarevaluacion";
 import ResponderEvaluacion from "./pages/ResponderEvaluacion";
 import Preguntas from "./pages/Preguntas";
 
@@ -64,6 +66,16 @@ function App() {
             <Route
               path="/evaluaciones"
               element={<Evaluaciones />}
+            />
+
+            <Route
+              path="/evaluaciones/crear"
+              element={<CrearEvaluacion />}
+            />
+
+            <Route
+              path="/evaluaciones/editar/:id"
+              element={<EditarEvaluacion />}
             />
 
             <Route

@@ -1,104 +1,103 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { crearEvaluacion } from "../services/evaluacionServices";
-import { listarInstructores } from "../services/instructorService";
-import { listarFichas } from "../services/FichaServices";
-import { listarAprendices } from "../services/Aprendizservice"; // ← Importar bien
+import { crearEvaluacion } from "../services/evaluacionService";
+import { listarAprendices } from "../services/Aprendizservice";
 
 function CrearEvaluacion() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    id_aprendiz: "",
-    fecha: "",
-    estado: "Pendiente",
-  });
+
   const [aprendices, setAprendices] = useState([]);
-  const [cargando, setCargando] = useState(false);
+  const [idAprendiz, setIdAprendiz] = useState("");
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     const cargarAprendices = async () => {
       try {
-        const data = await listarAprendices();
-        setAprendices(data);
+        setCargando(true);
+        const datos = await listarAprendices();
+        setAprendices(datos);
       } catch (err) {
-        setError("Error al cargar aprendices: " + err.message);
+        console.error("Error al cargar aprendices:", err);
+        setError("No se pudieron cargar los aprendices.");
+      } finally {
+        setCargando(false);
       }
     };
+
     cargarAprendices();
   }, []);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
+  const manejarEnvio = async (e) => {
     e.preventDefault();
-    setCargando(true);
     setError("");
 
+    if (!idAprendiz) {
+      setError("Debes seleccionar un aprendiz.");
+      return;
+    }
+
     try {
-      await crearEvaluacion(formData);
-      alert("✅ Evaluación creada exitosamente");
+      setGuardando(true);
+      await crearEvaluacion({ id_aprendiz: Number(idAprendiz) });
+      alert("Evaluación creada correctamente.");
       navigate("/evaluaciones");
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Error al crear";
-      setError(msg);
+      console.error("Error al crear evaluación:", err);
+      const detalle = err.response?.data?.detail;
+      setError(
+        typeof detalle === "string"
+          ? detalle
+          : "No se pudo crear la evaluación."
+      );
     } finally {
-      setCargando(false);
+      setGuardando(false);
     }
   };
 
   return (
     <div>
-      <h2>Crear Evaluación</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Aprendiz a evaluar:</label>
-          <select
-            name="id_aprendiz"
-            value={formData.id_aprendiz}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Selecciona un aprendiz...</option>
-            {aprendices.map((ap) => (
-              <option key={ap.id_aprendiz} value={ap.id_aprendiz}>
-                {ap.nombre} {ap.apellido} (Ficha: {ap.id_ficha})
-              </option>
-            ))}
-          </select>
-        </div>
+      <h1>Crear evaluación</h1>
 
-        <div>
-          <label>Fecha:</label>
-          <input
-            type="date"
-            name="fecha"
-            value={formData.fecha}
-            onChange={handleChange}
-            required
-          />
-        </div>
+      {cargando && <p>Cargando aprendices...</p>}
+      {error && <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>}
 
-        <div>
-          <label>Estado:</label>
-          <select
-            name="estado"
-            value={formData.estado}
-            onChange={handleChange}
-          >
-            <option value="Pendiente">Pendiente</option>
-            <option value="En progreso">En progreso</option>
-            <option value="Evaluada">Evaluada</option>
-          </select>
-        </div>
+      {!cargando && aprendices.length === 0 && !error && (
+        <p>
+          No hay aprendices registrados todavía. Debes crear al menos uno
+          antes de poder generar una evaluación.
+        </p>
+      )}
 
-        <button type="submit" disabled={cargando}>
-          {cargando ? "Creando..." : "Crear Evaluación"}
-        </button>
-      </form>
+      {!cargando && aprendices.length > 0 && (
+        <form onSubmit={manejarEnvio}>
+          <div>
+            <label>Aprendiz *</label>
+            <br />
+            <select
+              value={idAprendiz}
+              onChange={(e) => setIdAprendiz(e.target.value)}
+              required
+            >
+              <option value="">Seleccione un aprendiz...</option>
+              {aprendices.map((a) => (
+                <option key={a.id_aprendiz} value={a.id_aprendiz}>
+                  {a.nombre} {a.apellido}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button type="submit" disabled={guardando}>
+            {guardando ? "Guardando..." : "Crear evaluación"}
+          </button>
+
+          <button type="button" onClick={() => navigate("/evaluaciones")}>
+            Cancelar
+          </button>
+        </form>
+      )}
     </div>
   );
 }
