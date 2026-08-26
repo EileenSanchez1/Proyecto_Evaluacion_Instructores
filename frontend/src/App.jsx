@@ -15,12 +15,10 @@ import EditarEvaluacion from "./pages/Editarevaluacion";
 import ResponderEvaluacion from "./pages/ResponderEvaluacion";
 import Preguntas from "./pages/Preguntas";
 
+import Fichas from "./pages/Fichas";
+
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-
-function Fichas() {
-  return <h1>Fichas</h1>;
-}
 
 function Reportes() {
   return <h1>Reportes</h1>;
