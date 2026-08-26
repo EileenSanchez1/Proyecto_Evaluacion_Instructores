@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { crearInstructor } from "../services/instructorService";
+import "../styles/Instructores.css";
+
+const COMPETENCIAS = [
+  "Python",
+  "Java",
+  "JavaScript",
+  "HTML y CSS",
+  "Base de Datos",
+  "Redes",
+  "Seguridad Informática",
+  "Desarrollo Web",
+  "Análisis de Datos",
+];
 
 function CrearInstructor() {
   const navigate = useNavigate();
@@ -53,7 +66,6 @@ function CrearInstructor() {
         foto: formulario.foto.trim() || null,
       });
 
-      alert("Instructor creado correctamente.");
       navigate("/instructores");
     } catch (err) {
       console.error("Error al crear instructor:", err);
@@ -75,89 +87,135 @@ function CrearInstructor() {
   };
 
   return (
-    <div>
-      <h1>Crear instructor</h1>
-
-      {error && <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>}
-
-      <form onSubmit={manejarEnvio}>
-        <div>
-          <label>Nombre *</label>
-          <input
-            type="text"
-            name="nombre"
-            value={formulario.nombre}
-            onChange={manejarCambio}
-            required
-          />
+    <div className="pagina-formulario">
+      <div className="form-container">
+        <div className="form-header">
+          <i className="bi bi-person-plus-fill"></i>
+          <h2>Crear Nuevo Instructor</h2>
+          <p>Completa todos los campos para registrar un nuevo instructor</p>
         </div>
 
-        <div>
-          <label>Apellido *</label>
+        {error && <div className="form-mensaje-error">{error}</div>}
+
+        <form onSubmit={manejarEnvio}>
+          <div className="preview-container">
+            {formulario.foto ? (
+              <img src={formulario.foto} alt="Vista previa" />
+            ) : (
+              <span className="placeholder">
+                <i className="bi bi-camera"></i>
+              </span>
+            )}
+          </div>
+
+          <label className="form-label">
+            <i className="bi bi-image"></i> URL de la foto (opcional)
+          </label>
           <input
             type="text"
-            name="apellido"
-            value={formulario.apellido}
+            name="foto"
+            className="form-control-form"
+            placeholder="https://..."
+            value={formulario.foto}
             onChange={manejarCambio}
-            required
           />
-        </div>
 
-        <div>
-          <label>Correo *</label>
+          <div className="form-row">
+            <div>
+              <label className="form-label">
+                <i className="bi bi-person"></i> Nombre *
+              </label>
+              <input
+                type="text"
+                name="nombre"
+                className="form-control-form"
+                placeholder="Ej: Juan"
+                value={formulario.nombre}
+                onChange={manejarCambio}
+                required
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                <i className="bi bi-person"></i> Apellido *
+              </label>
+              <input
+                type="text"
+                name="apellido"
+                className="form-control-form"
+                placeholder="Ej: Pérez"
+                value={formulario.apellido}
+                onChange={manejarCambio}
+                required
+              />
+            </div>
+          </div>
+
+          <label className="form-label">
+            <i className="bi bi-envelope"></i> Correo *
+          </label>
           <input
             type="email"
             name="correo"
+            className="form-control-form"
+            placeholder="correo@ejemplo.com"
             value={formulario.correo}
             onChange={manejarCambio}
             required
           />
-        </div>
 
-        <div>
-          <label>Teléfono *</label>
+          <label className="form-label">
+            <i className="bi bi-telephone"></i> Teléfono *
+          </label>
           <input
             type="text"
             name="telefono"
+            className="form-control-form"
+            placeholder="Ej: 3001234567"
             value={formulario.telefono}
             onChange={manejarCambio}
             required
           />
-        </div>
 
-        <div>
-          <label>Competencia *</label>
-          <input
-            type="text"
+          <label className="form-label">
+            <i className="bi bi-book"></i> Competencia *
+          </label>
+          <select
             name="competencia"
+            className="form-select-form"
             value={formulario.competencia}
             onChange={manejarCambio}
             required
-          />
-        </div>
+          >
+            <option value="" disabled>
+              Selecciona una competencia
+            </option>
+            {COMPETENCIAS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
 
-        <div>
-          <label>Foto</label>
-          <input
-            type="text"
-            name="foto"
-            value={formulario.foto}
-            onChange={manejarCambio}
-            placeholder="URL de la foto (opcional)"
-          />
-        </div>
-
-        <button type="submit" disabled={guardando}>
-          {guardando ? "Guardando..." : "Crear instructor"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigate("/instructores")}
-        >
-          Cancelar
-        </button>
-      </form>
+          <div className="form-row" style={{ marginTop: "10px" }}>
+            <div>
+              <button
+                type="button"
+                className="btn-cancel-form"
+                onClick={() => navigate("/instructores")}
+              >
+                <i className="bi bi-x-circle"></i> Cancelar
+              </button>
+            </div>
+            <div>
+              <button type="submit" className="btn-submit-form" disabled={guardando}>
+                <i className="bi bi-check-circle"></i>{" "}
+                {guardando ? "Guardando..." : "Crear Instructor"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

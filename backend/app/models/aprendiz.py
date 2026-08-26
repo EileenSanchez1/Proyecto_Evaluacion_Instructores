@@ -38,6 +38,11 @@ class Aprendiz(SQLModel, table=True):
         nullable=False
     )
 
+    es_admin: bool = Field(
+        default=False,
+        nullable=False
+    )
+
     ficha: "Ficha" = Relationship(
         back_populates="aprendices"
     )

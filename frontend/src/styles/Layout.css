@@ -1,0 +1,260 @@
+/* Estilos del layout compartido (Sidebar + Navbar),
+   portados de flask_antiguo/static/css/layout.css */
+
+:root {
+  --sena-dark: #1a4a2e;
+  --sena-mid: #2d7a4f;
+  --sena-light: #4caf7d;
+  --sena-hover: rgba(255, 255, 255, 0.08);
+  --sena-border: rgba(255, 255, 255, 0.1);
+
+  --topbar-bg: #ffffff;
+  --topbar-h: 60px;
+  --sidebar-w: 224px;
+
+  --content-bg: #f4f5f7;
+  --border: #e5e7eb;
+  --text-muted: #6b7280;
+  --radius: 8px;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--content-bg);
+}
+
+.layout {
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ─────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--sena-dark);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-bottom: 1px solid var(--sena-border);
+  flex-shrink: 0;
+}
+
+.sidebar-logo .logo-mark {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
+  padding: 3px;
+}
+
+.sidebar-logo .logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar-logo .logo-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+
+.sidebar-logo .logo-text span {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.3;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 10px 0;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+
+.nav-item i {
+  font-size: 15px;
+  width: 18px;
+  text-align: center;
+}
+
+.nav-item:hover {
+  background: var(--sena-hover);
+  color: #ffffff;
+}
+
+.nav-item.active {
+  background: var(--sena-mid);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.sidebar-footer {
+  padding: 8px 0;
+  border-top: 1px solid var(--sena-border);
+  flex-shrink: 0;
+}
+
+.nav-logout {
+  color: rgba(255, 255, 255, 0.55);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.nav-logout:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── NAVBAR / TOPBAR ─────────────────────── */
+.layout-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: var(--sidebar-w);
+}
+
+.navbar {
+  position: sticky;
+  top: 0;
+  height: var(--topbar-h);
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 90;
+}
+
+.navbar-logo {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar-logo i {
+  color: var(--sena-mid);
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-user .user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sena-mid);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.navbar-user .user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  text-align: right;
+}
+
+.navbar-user .user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111;
+  line-height: 1.2;
+}
+
+.navbar-user .user-role {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.navbar-user .btn-logout {
+  background: none;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.navbar-user .btn-logout:hover {
+  background: #dc3545;
+  color: #fff;
+}
+
+.main-content {
+  flex: 1;
+  min-height: calc(100vh - var(--topbar-h));
+}
+
+/* Responsive: en pantallas chicas la sidebar se oculta detrás de un toggle */
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+
+  .layout-body {
+    margin-left: 0;
+  }
+
+  .navbar-hamburger {
+    display: inline-flex !important;
+  }
+}
+
+.navbar-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #1a1a1a;
+  cursor: pointer;
+  margin-right: 10px;
+}

@@ -57,3 +57,35 @@ class LoginService:
             return None, "Correo o contraseña incorrectos"
 
         return aprendiz, "Inicio de sesión exitoso"
+
+    @staticmethod
+    def resetear_password(
+        session: Session,
+        correo: str,
+        nueva_contrasena: str
+    ):
+        """
+        Busca al aprendiz por correo y, si existe,
+        reemplaza su contraseña por una nueva (hasheada).
+        """
+
+        aprendiz = session.exec(
+            select(Aprendiz).where(
+                Aprendiz.correo == correo
+            )
+        ).first()
+
+        if not aprendiz:
+            return None, (
+                "No existe ninguna cuenta registrada con ese correo."
+            )
+
+        aprendiz.contrasena = LoginService.hash_password(
+            nueva_contrasena
+        )
+
+        session.add(aprendiz)
+        session.commit()
+        session.refresh(aprendiz)
+
+        return aprendiz, "Contraseña actualizada correctamente."
