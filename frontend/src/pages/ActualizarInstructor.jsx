@@ -4,6 +4,19 @@ import {
   obtenerInstructor,
   actualizarInstructor,
 } from "../services/instructorService";
+import "../styles/Instructores.css";
+
+const COMPETENCIAS = [
+  "Python",
+  "Java",
+  "JavaScript",
+  "HTML y CSS",
+  "Base de Datos",
+  "Redes",
+  "Seguridad Informática",
+  "Desarrollo Web",
+  "Análisis de Datos",
+];
 
 function ActualizarInstructor() {
   const { id } = useParams();
@@ -64,8 +77,7 @@ function ActualizarInstructor() {
       return "Todos los campos obligatorios deben estar completos.";
     }
 
-    const correoValido =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formulario.correo);
+    const correoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formulario.correo);
 
     if (!correoValido) {
       return "Ingrese un correo electrónico válido.";
@@ -110,89 +122,136 @@ function ActualizarInstructor() {
   };
 
   if (cargando) {
-    return <p>Cargando instructor...</p>;
+    return (
+      <div className="pagina-formulario">
+        <p className="text-muted">Cargando instructor...</p>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Actualizar Instructor</h1>
-
-      {mensaje && <p>{mensaje}</p>}
-      {error && <p>{error}</p>}
-
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Nombre *</label>
-          <input
-            type="text"
-            name="nombre"
-            value={formulario.nombre}
-            onChange={handleChange}
-          />
+    <div className="pagina-formulario">
+      <div className="form-container">
+        <div className="form-header">
+          <i className="bi bi-pencil-square" style={{ color: "#198754" }}></i>
+          <h2>Actualizar Instructor</h2>
+          <p>
+            Editando a <strong>{formulario.nombre} {formulario.apellido}</strong>
+          </p>
         </div>
 
-        <div>
-          <label>Apellido *</label>
-          <input
-            type="text"
-            name="apellido"
-            value={formulario.apellido}
-            onChange={handleChange}
-          />
-        </div>
+        {mensaje && <div className="form-mensaje-exito">{mensaje}</div>}
+        {error && <div className="form-mensaje-error">{error}</div>}
 
-        <div>
-          <label>Correo *</label>
-          <input
-            type="email"
-            name="correo"
-            value={formulario.correo}
-            onChange={handleChange}
-          />
-        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="preview-container">
+            {formulario.foto ? (
+              <img src={formulario.foto} alt="Foto del instructor" />
+            ) : (
+              <span className="placeholder">
+                <i className="bi bi-camera"></i>
+              </span>
+            )}
+          </div>
 
-        <div>
-          <label>Teléfono *</label>
-          <input
-            type="text"
-            name="telefono"
-            value={formulario.telefono}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div>
-          <label>Competencia *</label>
-          <input
-            type="text"
-            name="competencia"
-            value={formulario.competencia}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div>
-          <label>Foto</label>
+          <label className="form-label">
+            <i className="bi bi-image"></i> URL de la foto (opcional)
+          </label>
           <input
             type="text"
             name="foto"
+            className="form-control-form"
+            placeholder="https://..."
             value={formulario.foto}
             onChange={handleChange}
-            placeholder="URL de la foto (opcional)"
           />
-        </div>
 
-        <button type="submit">
-          Guardar cambios
-        </button>
+          <div className="form-row">
+            <div>
+              <label className="form-label">
+                <i className="bi bi-person"></i> Nombre *
+              </label>
+              <input
+                type="text"
+                name="nombre"
+                className="form-control-form"
+                value={formulario.nombre}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                <i className="bi bi-person"></i> Apellido *
+              </label>
+              <input
+                type="text"
+                name="apellido"
+                className="form-control-form"
+                value={formulario.apellido}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => navigate("/instructores")}
-        >
-          Cancelar
-        </button>
-      </form>
+          <label className="form-label">
+            <i className="bi bi-envelope"></i> Correo *
+          </label>
+          <input
+            type="email"
+            name="correo"
+            className="form-control-form"
+            value={formulario.correo}
+            onChange={handleChange}
+          />
+
+          <label className="form-label">
+            <i className="bi bi-telephone"></i> Teléfono *
+          </label>
+          <input
+            type="text"
+            name="telefono"
+            className="form-control-form"
+            value={formulario.telefono}
+            onChange={handleChange}
+          />
+
+          <label className="form-label">
+            <i className="bi bi-book"></i> Competencia *
+          </label>
+          <select
+            name="competencia"
+            className="form-select-form"
+            value={formulario.competencia}
+            onChange={handleChange}
+          >
+            <option value="" disabled>
+              Selecciona una competencia
+            </option>
+            {COMPETENCIAS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          <div className="form-row" style={{ marginTop: "10px" }}>
+            <div>
+              <button
+                type="button"
+                className="btn-cancel-form"
+                onClick={() => navigate("/instructores")}
+              >
+                <i className="bi bi-x-circle"></i> Cancelar
+              </button>
+            </div>
+            <div>
+              <button type="submit" className="btn-submit-form">
+                <i className="bi bi-check-circle"></i> Guardar Cambios
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

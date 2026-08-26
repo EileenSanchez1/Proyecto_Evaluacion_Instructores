@@ -5,6 +5,7 @@ import {
   obtenerInstructor,
   eliminarInstructor,
 } from "../services/instructorService";
+import "../styles/Instructores.css";
 
 function EliminarInstructor() {
   const { id } = useParams();
@@ -38,15 +39,12 @@ function EliminarInstructor() {
 
       await eliminarInstructor(id);
 
-      alert("Instructor eliminado correctamente.");
-
       navigate("/instructores");
     } catch (error) {
       console.error(error);
 
       setError(
-        error.response?.data?.detail ||
-        "No se pudo eliminar el instructor."
+        error.response?.data?.detail || "No se pudo eliminar el instructor."
       );
     } finally {
       setEliminando(false);
@@ -54,52 +52,93 @@ function EliminarInstructor() {
   };
 
   if (cargando) {
-    return <p>Cargando instructor...</p>;
+    return (
+      <div className="pagina-formulario">
+        <p className="text-muted">Cargando instructor...</p>
+      </div>
+    );
   }
 
   if (!instructor) {
     return (
-      <div>
-        <p>{error || "Instructor no encontrado."}</p>
-
-        <button onClick={() => navigate("/instructores")}>
-          Volver
-        </button>
+      <div className="pagina-formulario">
+        <div className="form-container tarjeta-confirmar">
+          <p className="form-mensaje-error">
+            {error || "Instructor no encontrado."}
+          </p>
+          <button className="btn-cancel-form" onClick={() => navigate("/instructores")}>
+            <i className="bi bi-arrow-left"></i> Volver
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1>Eliminar instructor</h1>
+    <div className="pagina-formulario">
+      <div className="encabezado">
+        <div>
+          <h1 className="titulo-rojo">Eliminar Instructor</h1>
+          <p className="subtitulo">Elimina permanentemente un instructor del sistema</p>
+        </div>
+        <button className="btn-volver" onClick={() => navigate("/instructores")}>
+          <i className="bi bi-arrow-left"></i> Volver
+        </button>
+      </div>
 
-      <p>
-        ¿Está seguro de eliminar este instructor?
-      </p>
+      <div className="form-container tarjeta-confirmar">
+        <div className="form-header">
+          <i className="bi bi-trash-fill" style={{ color: "#dc3545" }}></i>
+          <h2>Confirmar Eliminación</h2>
+          <p>Esta acción no se puede deshacer</p>
+        </div>
 
-      <p>
-        <strong>
-          {instructor.nombre} {instructor.apellido}
-        </strong>
-      </p>
+        <div className="perfil">
+          {instructor.foto ? (
+            <img src={instructor.foto} alt={instructor.nombre} className="foto" />
+          ) : (
+            <div className="foto-placeholder">
+              <i className="bi bi-person-fill"></i>
+            </div>
+          )}
+          <div>
+            <h4>
+              {instructor.nombre} {instructor.apellido}
+            </h4>
+            <span className="badge-competencia">{instructor.competencia}</span>
+          </div>
+        </div>
 
-      <p>{instructor.correo}</p>
+        <p style={{ textAlign: "center", color: "#6c757d" }}>{instructor.correo}</p>
 
-      {error && <p>{error}</p>}
+        <div className="alerta-eliminacion">
+          <i className="bi bi-exclamation-triangle-fill"></i>
+          <div>
+            <strong>Advertencia</strong>
+            <p>Esta acción eliminará permanentemente al instructor seleccionado. No se puede deshacer.</p>
+          </div>
+        </div>
 
-      <button
-        onClick={confirmarEliminacion}
-        disabled={eliminando}
-      >
-        {eliminando ? "Eliminando..." : "Sí, eliminar"}
-      </button>
+        {error && <div className="form-mensaje-error">{error}</div>}
 
-      <button
-        onClick={() => navigate("/instructores")}
-        disabled={eliminando}
-      >
-        Cancelar
-      </button>
+        <div className="acciones-eliminar">
+          <button
+            className="btn-cancel-form"
+            onClick={() => navigate("/instructores")}
+            disabled={eliminando}
+          >
+            Cancelar
+          </button>
+          <button
+            className="btn-submit-form btn-rojo"
+            onClick={confirmarEliminacion}
+            disabled={eliminando}
+          >
+            <i className="bi bi-trash"></i>{" "}
+            {eliminando ? "Eliminando..." : "Sí, eliminar"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

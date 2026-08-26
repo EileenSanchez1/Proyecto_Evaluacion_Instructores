@@ -121,6 +121,11 @@ class AprendizService:
                     "Ya existe otro aprendiz con ese correo."
                 )
 
+        if aprendiz_update.contrasena:
+            aprendiz_update.contrasena = LoginService.hash_password(
+                aprendiz_update.contrasena
+            )
+
         return AprendizRepository.actualizar(
             session,
             aprendiz_id,

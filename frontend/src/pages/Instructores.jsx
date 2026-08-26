@@ -1,19 +1,41 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listarInstructores, eliminarInstructor } from "../services/instructorService";
+import { listarInstructores, eliminarInstructor, obtenerInstructor } from "../services/instructorService";
+import { listarInstructoresPorFicha } from "../services/Fichainstructorservice";
+import { obtenerAprendizSesion } from "../utils/sesion";
+import "../styles/Instructores.css";
 
 function Instructores() {
   const navigate = useNavigate();
+  const aprendiz = obtenerAprendizSesion();
+  const esAdmin = Boolean(aprendiz?.es_admin);
+
   const [instructores, setInstructores] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [busqueda, setBusqueda] = useState("");
 
   const cargarInstructores = async () => {
     try {
       setCargando(true);
       setError("");
-      const datos = await listarInstructores();
-      setInstructores(datos);
+
+      if (esAdmin) {
+        // El admin ve todos los instructores registrados
+        const datos = await listarInstructores();
+        setInstructores(datos);
+      } else {
+        // El aprendiz solo ve los instructores asignados a su ficha
+        const asignaciones = await listarInstructoresPorFicha(aprendiz.id_ficha);
+
+        const detalles = await Promise.all(
+          asignaciones.map((asignacion) =>
+            obtenerInstructor(asignacion.id_instructor).catch(() => null)
+          )
+        );
+
+        setInstructores(detalles.filter(Boolean));
+      }
     } catch (err) {
       console.error(err);
       setError("No se pudieron cargar los instructores.");
@@ -24,6 +46,7 @@ function Instructores() {
 
   useEffect(() => {
     cargarInstructores();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const manejarEliminar = async (id) => {
@@ -38,53 +61,107 @@ function Instructores() {
     }
   };
 
+  const texto = busqueda.toLowerCase().trim();
+  const instructoresFiltrados = instructores.filter((inst) => {
+    if (!texto) return true;
+    return (
+      `${inst.nombre} ${inst.apellido}`.toLowerCase().includes(texto) ||
+      (inst.competencia || "").toLowerCase().includes(texto) ||
+      (inst.correo || "").toLowerCase().includes(texto)
+    );
+  });
+
   return (
-    <div>
-      <h1>Instructores</h1>
+    <div className="pagina-instructores">
+      <div className="encabezado">
+        <div>
+          <h1 className="titulo">Gestión de Instructores</h1>
+          <p className="subtitulo">
+            Administra, consulta y actualiza los instructores registrados
+          </p>
+        </div>
 
-      <button onClick={() => navigate("/instructores/crear")}>
-        Crear nuevo instructor
-      </button>
+        {esAdmin && (
+          <button className="btn-nuevo" onClick={() => navigate("/instructores/crear")}>
+            <i className="bi bi-plus-circle"></i>
+            Nuevo Instructor
+          </button>
+        )}
+      </div>
 
-      {cargando && <p>Cargando instructores...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className="barra-superior">
+        <div className="buscador">
+          <span className="buscador-icono">
+            <i className="bi bi-search"></i>
+          </span>
+          <input
+            type="text"
+            placeholder="Buscar instructor..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+      </div>
 
-      {!cargando && !error && instructores.length === 0 && (
-        <p>No hay instructores registrados.</p>
+      {cargando && <p className="text-muted">Cargando instructores...</p>}
+      {error && <p className="form-mensaje-error">{error}</p>}
+
+      {!cargando && !error && instructoresFiltrados.length === 0 && (
+        <div className="estado-vacio">
+          <i className="bi bi-search"></i>
+          <h4>No se encontraron instructores</h4>
+          <p>{instructores.length === 0 ? "Aún no hay instructores registrados." : "Intenta con otro término de búsqueda"}</p>
+        </div>
       )}
 
-      {!cargando && instructores.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Correo</th>
-              <th>Teléfono</th>
-              <th>Competencia</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {instructores.map((ins) => (
-              <tr key={ins.id_instructor}>
-                <td>{ins.nombre}</td>
-                <td>{ins.apellido}</td>
-                <td>{ins.correo}</td>
-                <td>{ins.telefono}</td>
-                <td>{ins.competencia}</td>
-                <td>
-                  <button onClick={() => navigate(`/instructores/editar/${ins.id_instructor}`)}>
-                    Editar
+      {!cargando && instructoresFiltrados.length > 0 && (
+        <div className="grid-instructores">
+          {instructoresFiltrados.map((inst) => (
+            <div className="instructor-card" key={inst.id_instructor}>
+              <div className="perfil">
+                {inst.foto ? (
+                  <img src={inst.foto} alt={inst.nombre} className="foto" />
+                ) : (
+                  <div className="foto-placeholder">
+                    <i className="bi bi-person-fill"></i>
+                  </div>
+                )}
+                <div>
+                  <h4>
+                    {inst.nombre} {inst.apellido}
+                  </h4>
+                  <span className="badge-competencia">{inst.competencia}</span>
+                </div>
+              </div>
+              <hr />
+              <p>
+                <i className="bi bi-envelope"></i> {inst.correo}
+              </p>
+              <p>
+                <i className="bi bi-telephone"></i> {inst.telefono}
+              </p>
+
+              {esAdmin && (
+                <div className="acciones">
+                  <button
+                    className="btn-editar"
+                    title="Editar"
+                    onClick={() => navigate(`/instructores/editar/${inst.id_instructor}`)}
+                  >
+                    <i className="bi bi-pencil"></i>
                   </button>
-                  <button onClick={() => manejarEliminar(ins.id_instructor)}>
-                    Eliminar
+                  <button
+                    className="btn-eliminar-icon"
+                    title="Eliminar"
+                    onClick={() => manejarEliminar(inst.id_instructor)}
+                  >
+                    <i className="bi bi-trash"></i>
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

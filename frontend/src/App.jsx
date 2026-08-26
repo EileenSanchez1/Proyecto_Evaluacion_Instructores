@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
+import Registro from "./pages/Registro";
+import RecuperarContrasena from "./pages/RecuperarContrasena";
 import Home from "./pages/Home";
 import Contacto from "./pages/Contacto";
 
@@ -12,13 +14,11 @@ import EliminarInstructor from "./pages/EliminarInstructor";
 import Evaluaciones from "./pages/Evaluaciones";
 import ResponderEvaluacion from "./pages/Responderevaluacion";
 import Preguntas from "./pages/Preguntas";
+import Fichas from "./pages/Fichas";
 
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-
-function Fichas() {
-  return <h1>Fichas</h1>;
-}
+import AdminRoute from "./components/AdminRoute";
 
 function Reportes() {
   return <h1>Reportes</h1>;
@@ -29,8 +29,10 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* RUTA PÚBLICA */}
+        {/* RUTAS PÚBLICAS */}
         <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
+        <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
 
         {/* RUTAS PROTEGIDAS */}
         <Route element={<ProtectedRoute />}>
@@ -45,20 +47,23 @@ function App() {
               element={<Instructores />}
             />
 
-            <Route
-              path="/instructores/crear"
-              element={<CrearInstructor />}
-            />
+            {/* Solo el admin puede crear/editar/eliminar instructores */}
+            <Route element={<AdminRoute />}>
+              <Route
+                path="/instructores/crear"
+                element={<CrearInstructor />}
+              />
 
-            <Route
-              path="/instructores/editar/:id"
-              element={<ActualizarInstructor />}
-            />
+              <Route
+                path="/instructores/editar/:id"
+                element={<ActualizarInstructor />}
+              />
 
-            <Route
-              path="/instructores/eliminar/:id"
-              element={<EliminarInstructor />}
-            />
+              <Route
+                path="/instructores/eliminar/:id"
+                element={<EliminarInstructor />}
+              />
+            </Route>
 
             {/* EVALUACIONES */}
             <Route
@@ -71,23 +76,27 @@ function App() {
               element={<ResponderEvaluacion />}
             />
 
-            {/* PREGUNTAS */}
-            <Route
-              path="/preguntas"
-              element={<Preguntas />}
-            />
+            {/* En el Flask original, /evaluaciones/editar (editar preguntas),
+                /fichas y /reportes eran exclusivos del admin. Se replica igual aquí. */}
+            <Route element={<AdminRoute />}>
+              {/* PREGUNTAS */}
+              <Route
+                path="/preguntas"
+                element={<Preguntas />}
+              />
 
-            {/* FICHAS */}
-            <Route
-              path="/fichas"
-              element={<Fichas />}
-            />
+              {/* FICHAS */}
+              <Route
+                path="/fichas"
+                element={<Fichas />}
+              />
 
-            {/* REPORTES */}
-            <Route
-              path="/reportes"
-              element={<Reportes />}
-            />
+              {/* REPORTES */}
+              <Route
+                path="/reportes"
+                element={<Reportes />}
+              />
+            </Route>
 
             {/* CONTACTO */}
             <Route
