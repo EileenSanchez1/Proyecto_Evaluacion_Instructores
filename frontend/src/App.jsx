@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import RecuperarContrasena from "./pages/RecuperarContrasena";
+import RestablecerContrasena from "./pages/RestablecerContrasena";
 import Home from "./pages/Home";
 import Contacto from "./pages/Contacto";
 
@@ -33,6 +34,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
+        <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
 
         {/* RUTAS PROTEGIDAS */}
         <Route element={<ProtectedRoute />}>

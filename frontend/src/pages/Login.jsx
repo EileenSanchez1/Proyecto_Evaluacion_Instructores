@@ -23,8 +23,10 @@ function Login() {
       const datos = { correo, contrasena };
       const respuesta = await login(datos);
 
-      // Guardar la sesión del usuario
-      localStorage.setItem("usuario", JSON.stringify(respuesta));
+      // El token va aparte: axiosConfig ya lo toma de "token"
+      // para mandarlo como Authorization: Bearer <token>.
+      localStorage.setItem("token", respuesta.access_token);
+      localStorage.setItem("usuario", JSON.stringify(respuesta.usuario));
 
       setMensaje("Inicio de sesión exitoso");
 

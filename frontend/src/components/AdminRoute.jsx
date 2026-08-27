@@ -1,10 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { esAdmin } from "../utils/sesion";
+import { tieneRol } from "../utils/sesion";
 
-// Igual que ProtectedRoute, pero además exige que el usuario sea admin.
-// Si un aprendiz intenta entrar por URL directa, lo devolvemos a Instructores.
-function AdminRoute() {
-  if (!esAdmin()) {
+// Ojo: esto es solo conveniencia de UI (ocultar/redirigir en React).
+// La protección real vive en el backend con require_roles(...),
+// así que aunque alguien manipule el localStorage no puede hacer
+// nada porque FastAPI vuelve a validar el rol con cada request.
+function AdminRoute({ roles = ["Administrador"] }) {
+  if (!tieneRol(...roles)) {
     return <Navigate to="/instructores" replace />;
   }
 

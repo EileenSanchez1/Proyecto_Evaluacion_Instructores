@@ -43,6 +43,14 @@ class Instructor(SQLModel, table=True):
         max_length=255
     )
 
+    id_usuario: Optional[int] = Field(
+        default=None,
+        foreign_key="usuarios.id_usuario",
+        unique=True,
+        nullable=True,
+        index=True
+    )
+
     ficha_instructores: list["FichaInstructor"] = Relationship(
         back_populates="instructor"
     )

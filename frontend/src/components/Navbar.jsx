@@ -1,18 +1,18 @@
 import { useNavigate } from "react-router-dom";
-import { obtenerAprendizSesion } from "../utils/sesion";
+import { obtenerUsuarioSesion, cerrarSesion } from "../utils/sesion";
 import "../styles/Layout.css";
 
 function Navbar() {
   const navigate = useNavigate();
-  const aprendiz = obtenerAprendizSesion();
+  const usuario = obtenerUsuarioSesion();
 
-  const nombreCompleto = aprendiz
-    ? `${aprendiz.nombre} ${aprendiz.apellido}`
+  const nombreCompleto = usuario
+    ? `${usuario.nombre} ${usuario.apellido}`
     : "Usuario";
-  const inicial = aprendiz?.nombre ? aprendiz.nombre[0].toUpperCase() : "U";
+  const inicial = usuario?.nombre ? usuario.nombre[0].toUpperCase() : "U";
 
   const manejarLogout = () => {
-    localStorage.removeItem("usuario");
+    cerrarSesion();
     navigate("/login");
   };
 
@@ -36,9 +36,7 @@ function Navbar() {
         <div className="user-avatar">{inicial}</div>
         <div className="user-info">
           <span className="user-name">{nombreCompleto}</span>
-          <span className="user-role">
-            {aprendiz?.es_admin ? "Administrador" : "Aprendiz"}
-          </span>
+          <span className="user-role">{usuario?.rol || "Aprendiz"}</span>
         </div>
         <button className="btn-logout" onClick={manejarLogout}>
           Cerrar sesión

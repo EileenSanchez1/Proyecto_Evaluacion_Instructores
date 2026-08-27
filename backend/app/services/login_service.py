@@ -1,7 +1,8 @@
 from sqlmodel import Session, select
 from pwdlib import PasswordHash
 
-from app.models.aprendiz import Aprendiz
+from app.models.usuario import Usuario
+from app.models.rol import Rol
 
 
 password_hash = PasswordHash.recommended()
@@ -37,55 +38,54 @@ class LoginService:
         contrasena: str
     ):
         """
-        Busca al aprendiz por correo y verifica
-        la contraseña utilizando su hash.
+        Busca al usuario por correo (Administrador, Coordinador,
+        Instructor o Aprendiz -- los 4 roles viven en Usuario) y
+        verifica la contraseña con su hash.
         """
 
-        aprendiz = session.exec(
-            select(Aprendiz).where(
-                Aprendiz.correo == correo
+        usuario = session.exec(
+            select(Usuario).where(
+                Usuario.correo == correo
             )
         ).first()
 
-        if not aprendiz:
+        if not usuario:
             return None, "Correo o contraseña incorrectos"
+
+        if not usuario.activo:
+            return None, "Esta cuenta se encuentra inactiva"
 
         if not LoginService.verificar_password(
             contrasena,
-            aprendiz.contrasena
+            usuario.contrasena
         ):
             return None, "Correo o contraseña incorrectos"
 
-        return aprendiz, "Inicio de sesión exitoso"
+        return usuario, "Inicio de sesión exitoso"
 
     @staticmethod
-    def resetear_password(
+    def buscar_por_correo(
         session: Session,
-        correo: str,
-        nueva_contrasena: str
+        correo: str
     ):
-        """
-        Busca al aprendiz por correo y, si existe,
-        reemplaza su contraseña por una nueva (hasheada).
-        """
-
-        aprendiz = session.exec(
-            select(Aprendiz).where(
-                Aprendiz.correo == correo
+        return session.exec(
+            select(Usuario).where(
+                Usuario.correo == correo
             )
         ).first()
 
-        if not aprendiz:
-            return None, (
-                "No existe ninguna cuenta registrada con ese correo."
-            )
-
-        aprendiz.contrasena = LoginService.hash_password(
+    @staticmethod
+    def restablecer_password(
+        session: Session,
+        usuario: Usuario,
+        nueva_contrasena: str
+    ):
+        usuario.contrasena = LoginService.hash_password(
             nueva_contrasena
         )
 
-        session.add(aprendiz)
+        session.add(usuario)
         session.commit()
-        session.refresh(aprendiz)
+        session.refresh(usuario)
 
-        return aprendiz, "Contraseña actualizada correctamente."
+        return usuario, "Contraseña actualizada correctamente."

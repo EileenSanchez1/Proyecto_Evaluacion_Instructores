@@ -2,13 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarInstructores, eliminarInstructor, obtenerInstructor } from "../services/instructorService";
 import { listarInstructoresPorFicha } from "../services/Fichainstructorservice";
-import { obtenerAprendizSesion } from "../utils/sesion";
+import { esAdmin as esAdminSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
 
 function Instructores() {
   const navigate = useNavigate();
-  const aprendiz = obtenerAprendizSesion();
-  const esAdmin = Boolean(aprendiz?.es_admin);
+  const esAdmin = esAdminSesion();
 
   const [instructores, setInstructores] = useState([]);
   const [cargando, setCargando] = useState(true);

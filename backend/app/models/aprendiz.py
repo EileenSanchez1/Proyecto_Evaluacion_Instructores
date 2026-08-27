@@ -43,6 +43,14 @@ class Aprendiz(SQLModel, table=True):
         nullable=False
     )
 
+    id_usuario: Optional[int] = Field(
+        default=None,
+        foreign_key="usuarios.id_usuario",
+        unique=True,
+        nullable=True,
+        index=True
+    )
+
     ficha: "Ficha" = Relationship(
         back_populates="aprendices"
     )
