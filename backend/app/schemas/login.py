@@ -6,6 +6,16 @@ class LoginRequest(BaseModel):
     contrasena: str
 
 
-class RecuperarPasswordRequest(BaseModel):
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    usuario: dict
+
+
+class SolicitarRecuperacionRequest(BaseModel):
     correo: EmailStr
+
+
+class RestablecerPasswordRequest(BaseModel):
+    token: str
     nueva_contrasena: str

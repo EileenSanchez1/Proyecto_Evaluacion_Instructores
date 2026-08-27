@@ -1,3 +1,6 @@
+from .rol import Rol
+from .usuario import Usuario
+
 from .ficha import Ficha
 from .aprendiz import Aprendiz
 from .instructor import Instructor
