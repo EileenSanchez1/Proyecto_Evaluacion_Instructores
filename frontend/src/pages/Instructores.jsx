@@ -63,9 +63,14 @@ function Instructores() {
   const texto = busqueda.toLowerCase().trim();
   const instructoresFiltrados = instructores.filter((inst) => {
     if (!texto) return true;
+    const nombresCompetencias = (inst.competencias || [])
+      .map((c) => c.nombre)
+      .join(" ")
+      .toLowerCase();
+
     return (
       `${inst.nombre} ${inst.apellido}`.toLowerCase().includes(texto) ||
-      (inst.competencia || "").toLowerCase().includes(texto) ||
+      nombresCompetencias.includes(texto) ||
       (inst.correo || "").toLowerCase().includes(texto)
     );
   });
@@ -129,7 +134,13 @@ function Instructores() {
                   <h4>
                     {inst.nombre} {inst.apellido}
                   </h4>
-                  <span className="badge-competencia">{inst.competencia}</span>
+                  <div className="badges-competencias">
+                    {(inst.competencias || []).map((c) => (
+                      <span className="badge-competencia" key={c.id_competencia}>
+                        {c.nombre}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
               <hr />

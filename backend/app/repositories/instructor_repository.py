@@ -14,8 +14,13 @@ class InstructorRepository:
         instructor: InstructorCreate
     ) -> Instructor:
 
+        # "competencias" no es una columna de Instructor (se maneja
+        # aparte con InstructorCompetenciaRepository), así que se excluye
+        # al construir la fila.
+        datos = instructor.model_dump(exclude={"competencias"})
+
         db_instructor = Instructor(
-            **instructor.model_dump()
+            **datos
         )
 
         session.add(db_instructor)
@@ -78,7 +83,8 @@ class InstructorRepository:
             return None
 
         update_data = instructor_update.model_dump(
-            exclude_unset=True
+            exclude_unset=True,
+            exclude={"competencias"}
         )
 
         for key, value in update_data.items():

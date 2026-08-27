@@ -4,19 +4,8 @@ import {
   obtenerInstructor,
   actualizarInstructor,
 } from "../services/instructorService";
+import { listarCompetencias } from "../services/competenciaService";
 import "../styles/Instructores.css";
-
-const COMPETENCIAS = [
-  "Python",
-  "Java",
-  "JavaScript",
-  "HTML y CSS",
-  "Base de Datos",
-  "Redes",
-  "Seguridad Informática",
-  "Desarrollo Web",
-  "Análisis de Datos",
-];
 
 function ActualizarInstructor() {
   const { id } = useParams();
@@ -27,27 +16,36 @@ function ActualizarInstructor() {
     apellido: "",
     correo: "",
     telefono: "",
-    competencia: "",
     foto: "",
   });
+
+  const [competenciasDisponibles, setCompetenciasDisponibles] = useState([]);
+  const [competenciasSeleccionadas, setCompetenciasSeleccionadas] = useState([]);
 
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    const cargarInstructor = async () => {
+    const cargarDatos = async () => {
       try {
-        const datos = await obtenerInstructor(id);
+        const [datos, competencias] = await Promise.all([
+          obtenerInstructor(id),
+          listarCompetencias(),
+        ]);
 
         setFormulario({
           nombre: datos.nombre || "",
           apellido: datos.apellido || "",
           correo: datos.correo || "",
           telefono: datos.telefono || "",
-          competencia: datos.competencia || "",
           foto: datos.foto || "",
         });
+
+        setCompetenciasDisponibles(competencias.filter((c) => c.estado));
+        setCompetenciasSeleccionadas(
+          (datos.competencias || []).map((c) => c.id_competencia)
+        );
       } catch (error) {
         console.error(error);
         setError("No se pudo cargar el instructor.");
@@ -56,7 +54,7 @@ function ActualizarInstructor() {
       }
     };
 
-    cargarInstructor();
+    cargarDatos();
   }, [id]);
 
   const handleChange = (e) => {
@@ -66,13 +64,20 @@ function ActualizarInstructor() {
     });
   };
 
+  const alternarCompetencia = (idCompetencia) => {
+    setCompetenciasSeleccionadas((prev) =>
+      prev.includes(idCompetencia)
+        ? prev.filter((cid) => cid !== idCompetencia)
+        : [...prev, idCompetencia]
+    );
+  };
+
   const validarFormulario = () => {
     if (
       !formulario.nombre.trim() ||
       !formulario.apellido.trim() ||
       !formulario.correo.trim() ||
-      !formulario.telefono.trim() ||
-      !formulario.competencia.trim()
+      !formulario.telefono.trim()
     ) {
       return "Todos los campos obligatorios deben estar completos.";
     }
@@ -81,6 +86,10 @@ function ActualizarInstructor() {
 
     if (!correoValido) {
       return "Ingrese un correo electrónico válido.";
+    }
+
+    if (competenciasSeleccionadas.length === 0) {
+      return "Selecciona al menos una competencia.";
     }
 
     return "";
@@ -103,6 +112,7 @@ function ActualizarInstructor() {
       await actualizarInstructor(id, {
         ...formulario,
         foto: formulario.foto || null,
+        competencias: competenciasSeleccionadas,
       });
 
       setMensaje("Instructor actualizado correctamente.");
@@ -216,23 +226,20 @@ function ActualizarInstructor() {
           />
 
           <label className="form-label">
-            <i className="bi bi-book"></i> Competencia *
+            <i className="bi bi-book"></i> Competencias * (selecciona una o varias)
           </label>
-          <select
-            name="competencia"
-            className="form-select-form"
-            value={formulario.competencia}
-            onChange={handleChange}
-          >
-            <option value="" disabled>
-              Selecciona una competencia
-            </option>
-            {COMPETENCIAS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+          <div className="checkbox-grupo">
+            {competenciasDisponibles.map((c) => (
+              <label key={c.id_competencia} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={competenciasSeleccionadas.includes(c.id_competencia)}
+                  onChange={() => alternarCompetencia(c.id_competencia)}
+                />
+                {c.nombre}
+              </label>
             ))}
-          </select>
+          </div>
 
           <div className="form-row" style={{ marginTop: "10px" }}>
             <div>

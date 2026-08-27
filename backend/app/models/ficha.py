@@ -36,5 +36,9 @@ class Ficha(SQLModel, table=True):
         back_populates="ficha"
     )
 
+    horarios: list["Horario"] = Relationship(
+        back_populates="ficha"
+    )
+
     def __repr__(self):
         return f"<Ficha {self.numero_ficha}>"

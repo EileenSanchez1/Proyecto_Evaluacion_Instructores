@@ -1,0 +1,117 @@
+/* Estilos para las páginas de Competencias y Horarios (Etapa 2).
+   Reutiliza convenciones ya usadas en Fichas.css / Instructores.css. */
+
+.pagina-estructura {
+  padding: 30px 40px;
+}
+
+.pagina-estructura .encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.tabla-simple {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.tabla-simple th,
+.tabla-simple td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  font-size: 0.92rem;
+}
+
+.tabla-simple th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.tabla-simple tr:last-child td {
+  border-bottom: none;
+}
+
+.form-inline-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.form-inline-card h4 {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.form-inline-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.form-inline-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-inline-row label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-inline-row input,
+.form-inline-row select {
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+}
+
+.estado-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.estado-badge.activo {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.estado-badge.inactivo {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.acciones-tabla {
+  display: flex;
+  gap: 8px;
+}
+
+.acciones-tabla button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.acciones-tabla button.editar {
+  color: #0d6efd;
+}
+
+.acciones-tabla button.eliminar {
+  color: #dc3545;
+}

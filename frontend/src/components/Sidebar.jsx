@@ -1,9 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { esAdmin } from "../utils/sesion";
+import { esAdmin, esAdminOCoordinador } from "../utils/sesion";
 import "../styles/Layout.css";
 
 function Sidebar() {
   const admin = esAdmin();
+  const adminOCoordinador = esAdminOCoordinador();
 
   return (
     <aside className="sidebar">
@@ -38,8 +39,7 @@ function Sidebar() {
           <i className="bi bi-clipboard-check"></i> Evaluaciones
         </NavLink>
 
-        {/* Igual que en el Flask original: Preguntas, Fichas y Reportes
-            son exclusivos del admin */}
+        {/* Preguntas: exclusivo de Administrador */}
         {admin && (
           <NavLink
             to="/preguntas"
@@ -49,7 +49,9 @@ function Sidebar() {
           </NavLink>
         )}
 
-        {admin && (
+        {/* Fichas, Competencias, Horarios y Reportes: Administrador o Coordinador,
+            igual que exige el backend (require_roles) */}
+        {adminOCoordinador && (
           <NavLink
             to="/fichas"
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
@@ -58,7 +60,25 @@ function Sidebar() {
           </NavLink>
         )}
 
-        {admin && (
+        {adminOCoordinador && (
+          <NavLink
+            to="/competencias"
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+          >
+            <i className="bi bi-award"></i> Competencias
+          </NavLink>
+        )}
+
+        {adminOCoordinador && (
+          <NavLink
+            to="/horarios"
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+          >
+            <i className="bi bi-calendar-week"></i> Horarios
+          </NavLink>
+        )}
+
+        {adminOCoordinador && (
           <NavLink
             to="/reportes"
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}

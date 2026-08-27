@@ -24,6 +24,10 @@ export function esAdmin() {
   return tieneRol("Administrador");
 }
 
+export function esAdminOCoordinador() {
+  return tieneRol("Administrador", "Coordinador");
+}
+
 export function cerrarSesion() {
   localStorage.removeItem("usuario");
   localStorage.removeItem("token");

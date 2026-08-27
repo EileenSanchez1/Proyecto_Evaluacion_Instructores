@@ -224,7 +224,9 @@ function Fichas() {
                     {instructoresFicha.map((inst) => (
                       <li key={inst.id_instructor}>
                         <i className="bi bi-person-fill"></i>
-                        {inst.nombre} {inst.apellido} — {inst.competencia}
+                        {inst.nombre} {inst.apellido} —{" "}
+                        {(inst.competencias || []).map((c) => c.nombre).join(", ") ||
+                          "sin competencias"}
                       </li>
                     ))}
                   </ul>
