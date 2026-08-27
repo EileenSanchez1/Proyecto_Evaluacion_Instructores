@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from app.config.database import get_session
-from app.schemas.login import LoginRequest, RecuperarPasswordRequest
+from app.schemas.login import LoginRequest, SolicitarRecuperacionRequest
 from app.schemas.aprendiz import AprendizRead
 from app.services.login_service import LoginService
 
@@ -42,7 +42,7 @@ def login(
 
 @router.post("/recuperar", response_model=dict)
 def recuperar_password(
-    datos: RecuperarPasswordRequest,
+    datos: SolicitarRecuperacionRequest,
     session: Session = Depends(get_session)
 ):
     aprendiz, mensaje = LoginService.resetear_password(
