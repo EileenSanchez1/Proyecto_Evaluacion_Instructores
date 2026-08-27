@@ -4,9 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config.database import create_db_and_tables
 
 from app.routers.aprendiz_router import router as aprendiz_router
+from app.routers.competencia_router import router as competencia_router
 from app.routers.evaluacion_router import router as evaluacion_router
 from app.routers.ficha_router import router as ficha_router
 from app.routers.ficha_instructor_router import router as ficha_instructor_router
+from app.routers.horario_router import router as horario_router
 from app.routers.instructor_router import router as instructor_router
 from app.routers.login_router import router as login_router
 from app.routers.pregunta_router import router as pregunta_router
@@ -62,11 +64,15 @@ def inicio():
 
 app.include_router(aprendiz_router)
 
+app.include_router(competencia_router)
+
 app.include_router(evaluacion_router)
 
 app.include_router(ficha_router)
 
 app.include_router(ficha_instructor_router)
+
+app.include_router(horario_router)
 
 app.include_router(instructor_router)
 

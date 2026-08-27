@@ -50,7 +50,16 @@ def migrar_aprendices(session: Session):
             print(f"Ya migrado: {aprendiz.correo}")
             continue
 
-        rol_asignado = rol_admin if aprendiz.es_admin else rol_aprendiz
+        # getattr con default False: "es_admin" se eliminó del modelo
+        # Aprendiz en la Etapa 2 (quedaba como residuo del patrón
+        # anterior a la Etapa 1). Este getattr solo evita que el script
+        # reviente si alguien lo corre contra una BD vieja que aún
+        # tenga esa columna; en una BD nueva, todo Aprendiz será
+        # rol_aprendiz salvo que ya lo hayas migrado a mano.
+        rol_asignado = (
+            rol_admin if getattr(aprendiz, "es_admin", False)
+            else rol_aprendiz
+        )
 
         usuario = Usuario(
             nombre=aprendiz.nombre,

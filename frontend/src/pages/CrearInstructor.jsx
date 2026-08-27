@@ -1,19 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { crearInstructor } from "../services/instructorService";
+import { listarCompetencias } from "../services/competenciaService";
 import "../styles/Instructores.css";
-
-const COMPETENCIAS = [
-  "Python",
-  "Java",
-  "JavaScript",
-  "HTML y CSS",
-  "Base de Datos",
-  "Redes",
-  "Seguridad Informática",
-  "Desarrollo Web",
-  "Análisis de Datos",
-];
 
 function CrearInstructor() {
   const navigate = useNavigate();
@@ -23,12 +12,20 @@ function CrearInstructor() {
     apellido: "",
     correo: "",
     telefono: "",
-    competencia: "",
     foto: "",
   });
 
+  const [competenciasDisponibles, setCompetenciasDisponibles] = useState([]);
+  const [competenciasSeleccionadas, setCompetenciasSeleccionadas] = useState([]);
+
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    listarCompetencias()
+      .then((datos) => setCompetenciasDisponibles(datos.filter((c) => c.estado)))
+      .catch((err) => console.error("No se pudieron cargar las competencias", err));
+  }, []);
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
@@ -36,6 +33,14 @@ function CrearInstructor() {
       ...formulario,
       [name]: value,
     });
+  };
+
+  const alternarCompetencia = (idCompetencia) => {
+    setCompetenciasSeleccionadas((prev) =>
+      prev.includes(idCompetencia)
+        ? prev.filter((id) => id !== idCompetencia)
+        : [...prev, idCompetencia]
+    );
   };
 
   const manejarEnvio = async (e) => {
@@ -46,24 +51,27 @@ function CrearInstructor() {
       !formulario.nombre.trim() ||
       !formulario.apellido.trim() ||
       !formulario.correo.trim() ||
-      !formulario.telefono.trim() ||
-      !formulario.competencia.trim()
+      !formulario.telefono.trim()
     ) {
       setError("Todos los campos obligatorios deben estar completos.");
+      return;
+    }
+
+    if (competenciasSeleccionadas.length === 0) {
+      setError("Selecciona al menos una competencia.");
       return;
     }
 
     try {
       setGuardando(true);
 
-      // Enviamos el teléfono como string explícito para que Python no falle
       await crearInstructor({
         nombre: formulario.nombre.trim(),
         apellido: formulario.apellido.trim(),
         correo: formulario.correo.trim(),
         telefono: String(formulario.telefono).trim(),
-        competencia: formulario.competencia.trim(),
         foto: formulario.foto.trim() || null,
+        competencias: competenciasSeleccionadas,
       });
 
       navigate("/instructores");
@@ -73,10 +81,8 @@ function CrearInstructor() {
       const respuestaError = err.response?.data?.detail;
 
       if (Array.isArray(respuestaError)) {
-        // En caso de que FastAPI retorne array de errores de Pydantic
         setError(respuestaError[0]?.msg || "Error de validación en los datos.");
       } else if (typeof respuestaError === "string") {
-        // En caso de error directo del servidor
         setError(respuestaError);
       } else {
         setError("No se pudo crear el instructor (verifica si el correo ya existe).");
@@ -178,24 +184,26 @@ function CrearInstructor() {
           />
 
           <label className="form-label">
-            <i className="bi bi-book"></i> Competencia *
+            <i className="bi bi-book"></i> Competencias * (selecciona una o varias)
           </label>
-          <select
-            name="competencia"
-            className="form-select-form"
-            value={formulario.competencia}
-            onChange={manejarCambio}
-            required
-          >
-            <option value="" disabled>
-              Selecciona una competencia
-            </option>
-            {COMPETENCIAS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+          <div className="checkbox-grupo">
+            {competenciasDisponibles.length === 0 && (
+              <p className="text-muted">
+                No hay competencias registradas todavía. Créalas primero en
+                la sección de Competencias.
+              </p>
+            )}
+            {competenciasDisponibles.map((c) => (
+              <label key={c.id_competencia} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={competenciasSeleccionadas.includes(c.id_competencia)}
+                  onChange={() => alternarCompetencia(c.id_competencia)}
+                />
+                {c.nombre}
+              </label>
             ))}
-          </select>
+          </div>
 
           <div className="form-row" style={{ marginTop: "10px" }}>
             <div>

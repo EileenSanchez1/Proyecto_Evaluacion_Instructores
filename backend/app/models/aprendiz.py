@@ -38,10 +38,9 @@ class Aprendiz(SQLModel, table=True):
         nullable=False
     )
 
-    es_admin: bool = Field(
-        default=False,
-        nullable=False
-    )
+    # NOTA (Etapa 2): se elimina "es_admin" — era un residuo del patrón
+    # anterior a la Etapa 1. El rol real ahora vive en Usuario.id_rol
+    # y se valida en el backend con require_roles(...).
 
     id_usuario: Optional[int] = Field(
         default=None,

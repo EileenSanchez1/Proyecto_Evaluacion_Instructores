@@ -17,13 +17,13 @@ class AprendizCreate(SQLModel):
     contrasena: str
     id_ficha: int
 
+
 class AprendizRead(SQLModel):
     id_aprendiz: int
     nombre: str
     apellido: str
     correo: str
     id_ficha: int
-    es_admin: bool = False
 
 
 class AprendizUpdate(SQLModel):
@@ -32,4 +32,3 @@ class AprendizUpdate(SQLModel):
     correo: Optional[str] = None
     contrasena: Optional[str] = None
     id_ficha: Optional[int] = None
-    es_admin: Optional[bool] = None

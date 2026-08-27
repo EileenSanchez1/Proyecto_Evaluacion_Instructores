@@ -16,6 +16,8 @@ import Evaluaciones from "./pages/Evaluaciones";
 import ResponderEvaluacion from "./pages/Responderevaluacion";
 import Preguntas from "./pages/Preguntas";
 import Fichas from "./pages/Fichas";
+import Competencias from "./pages/Competencias";
+import Horarios from "./pages/Horarios";
 
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -49,8 +51,11 @@ function App() {
               element={<Instructores />}
             />
 
-            {/* Solo el admin puede crear/editar/eliminar instructores */}
-            <Route element={<AdminRoute />}>
+            {/* Instructores/Fichas/Competencias/Horarios: el backend permite
+                Administrador y Coordinador (require_roles("Administrador","Coordinador")).
+                Se alinea el frontend a lo mismo para no bloquear al Coordinador
+                de algo que la API sí le permite. */}
+            <Route element={<AdminRoute roles={["Administrador", "Coordinador"]} />}>
               <Route
                 path="/instructores/crear"
                 element={<CrearInstructor />}
@@ -78,19 +83,34 @@ function App() {
               element={<ResponderEvaluacion />}
             />
 
-            {/* En el Flask original, /evaluaciones/editar (editar preguntas),
-                /fichas y /reportes eran exclusivos del admin. Se replica igual aquí. */}
+            {/* Preguntas sigue exclusivo de Administrador (edición de
+                banco de preguntas de evaluación). Fichas/Competencias/
+                Horarios se abren también a Coordinador, igual que el backend. */}
             <Route element={<AdminRoute />}>
               {/* PREGUNTAS */}
               <Route
                 path="/preguntas"
                 element={<Preguntas />}
               />
+            </Route>
 
+            <Route element={<AdminRoute roles={["Administrador", "Coordinador"]} />}>
               {/* FICHAS */}
               <Route
                 path="/fichas"
                 element={<Fichas />}
+              />
+
+              {/* COMPETENCIAS (Etapa 2 / HU-007) */}
+              <Route
+                path="/competencias"
+                element={<Competencias />}
+              />
+
+              {/* HORARIOS (Etapa 2 / HU-010) */}
+              <Route
+                path="/horarios"
+                element={<Horarios />}
               />
 
               {/* REPORTES */}

@@ -33,10 +33,11 @@ class Instructor(SQLModel, table=True):
         nullable=False
     )
 
-    competencia: str = Field(
-        max_length=120,
-        nullable=False
-    )
+    # NOTA (Etapa 2 / HU-007): el campo "competencia: str" que existía
+    # aquí se reemplazó por la relación m2m con la tabla Competencia
+    # (a través de InstructorCompetencia), porque un instructor puede
+    # tener varias competencias. Ver migración en db/migracion_etapa2.sql
+    # para eliminar la columna vieja de la base de datos existente.
 
     foto: Optional[str] = Field(
         default=None,
@@ -56,6 +57,14 @@ class Instructor(SQLModel, table=True):
     )
 
     respuestas: list["Respuesta"] = Relationship(
+        back_populates="instructor"
+    )
+
+    instructor_competencias: list["InstructorCompetencia"] = Relationship(
+        back_populates="instructor"
+    )
+
+    horarios: list["Horario"] = Relationship(
         back_populates="instructor"
     )
 

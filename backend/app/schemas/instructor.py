@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import List, Optional
 
 from sqlmodel import SQLModel
+
+from app.schemas.competencia import CompetenciaRead
 
 
 class InstructorBase(SQLModel):
@@ -8,16 +10,17 @@ class InstructorBase(SQLModel):
     apellido: str
     correo: str
     telefono: str
-    competencia: str
     foto: Optional[str] = None
 
 
 class InstructorCreate(InstructorBase):
-    pass
+    # Lista de id_competencia a asignar al crear el instructor.
+    competencias: List[int] = []
 
 
 class InstructorRead(InstructorBase):
     id_instructor: int
+    competencias: List[CompetenciaRead] = []
 
 
 class InstructorUpdate(SQLModel):
@@ -25,5 +28,7 @@ class InstructorUpdate(SQLModel):
     apellido: Optional[str] = None
     correo: Optional[str] = None
     telefono: Optional[str] = None
-    competencia: Optional[str] = None
     foto: Optional[str] = None
+    # Si se envía, REEMPLAZA por completo el conjunto de competencias
+    # del instructor. Si se omite (None), las competencias no se tocan.
+    competencias: Optional[List[int]] = None
