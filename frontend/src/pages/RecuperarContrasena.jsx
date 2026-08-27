@@ -1,56 +1,40 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { recuperarContrasena } from "../services/authService";
+import { Link } from "react-router-dom";
+import { solicitarRecuperacion } from "../services/authService";
 import "../styles/Login.css";
 
+// Paso 1 del flujo real (HU-004): el usuario solo pide el enlace.
+// El backend nunca confirma si el correo existe o no (evita
+// que alguien use este formulario para adivinar cuentas).
 function RecuperarContrasena() {
-  const navigate = useNavigate();
-
   const [correo, setCorreo] = useState("");
-  const [nuevaContrasena, setNuevaContrasena] = useState("");
-  const [confirmar, setConfirmar] = useState("");
-
   const [mensaje, setMensaje] = useState("");
   const [esError, setEsError] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMensaje("");
     setEsError(false);
 
-    if (!correo.trim() || !nuevaContrasena) {
+    if (!correo.trim()) {
       setEsError(true);
-      setMensaje("Ingresa tu correo y la nueva contraseña.");
-      return;
-    }
-
-    if (nuevaContrasena.length < 6) {
-      setEsError(true);
-      setMensaje("La contraseña debe tener al menos 6 caracteres.");
-      return;
-    }
-
-    if (nuevaContrasena !== confirmar) {
-      setEsError(true);
-      setMensaje("Las contraseñas no coinciden.");
+      setMensaje("Ingresa tu correo.");
       return;
     }
 
     try {
       setCargando(true);
-      const respuesta = await recuperarContrasena(correo.trim(), nuevaContrasena);
-
-      setEsError(false);
-      setMensaje(respuesta.mensaje || "Contraseña actualizada correctamente.");
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 1200);
+      const respuesta = await solicitarRecuperacion(correo.trim());
+      setEnviado(true);
+      setMensaje(
+        respuesta.mensaje ||
+          "Si el correo está registrado, recibirás un enlace de recuperación."
+      );
     } catch (error) {
-      console.error("Error al recuperar contraseña:", error);
+      console.error("Error al solicitar recuperación:", error);
       setEsError(true);
-
       const detalle = error.response?.data?.detail;
       setMensaje(
         typeof detalle === "string"
@@ -68,13 +52,14 @@ function RecuperarContrasena() {
         <div className="lado-imagen">
           <img src="/imgs/logo-sena.png" alt="Logo SENA" className="logo-sena" />
           <h2>¿Olvidaste tu contraseña?</h2>
-          <p>Tranquilo, en unos pasos la recuperas</p>
+          <p>Te enviamos un enlace para recuperarla</p>
         </div>
 
         <div className="lado-formulario">
           <h1>Recuperar contraseña</h1>
           <p className="subtitulo">
-            Ingresa el correo de tu cuenta y define una nueva contraseña
+            Ingresa el correo de tu cuenta y te enviaremos un enlace
+            para definir una nueva contraseña.
           </p>
 
           {mensaje && (
@@ -83,44 +68,24 @@ function RecuperarContrasena() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div>
-              <label>Correo</label>
-              <input
-                type="email"
-                placeholder="Ingresa tu correo registrado"
-                value={correo}
-                onChange={(e) => setCorreo(e.target.value)}
-                required
-              />
-            </div>
+          {!enviado && (
+            <form onSubmit={handleSubmit}>
+              <div>
+                <label>Correo</label>
+                <input
+                  type="email"
+                  placeholder="Ingresa tu correo registrado"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div>
-              <label>Nueva contraseña</label>
-              <input
-                type="password"
-                placeholder="Mínimo 6 caracteres"
-                value={nuevaContrasena}
-                onChange={(e) => setNuevaContrasena(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label>Confirmar nueva contraseña</label>
-              <input
-                type="password"
-                placeholder="Repite la nueva contraseña"
-                value={confirmar}
-                onChange={(e) => setConfirmar(e.target.value)}
-                required
-              />
-            </div>
-
-            <button type="submit" disabled={cargando}>
-              {cargando ? "Actualizando..." : "Actualizar contraseña"}
-            </button>
-          </form>
+              <button type="submit" disabled={cargando}>
+                {cargando ? "Enviando..." : "Enviar enlace"}
+              </button>
+            </form>
+          )}
 
           <div className="registro-link">
             <p>

@@ -3,6 +3,7 @@ from sqlmodel import Session
 from typing import List
 
 from app.config.database import get_session
+from app.config.auth_dependencies import require_roles
 from app.schemas.instructor import (
     InstructorCreate,
     InstructorRead,
@@ -17,7 +18,12 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=InstructorRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=InstructorRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))]
+)
 def crear_instructor(
     instructor: InstructorCreate,
     session: Session = Depends(get_session)
@@ -77,7 +83,11 @@ def buscar_instructor(
     return instructor
 
 
-@router.put("/{instructor_id}", response_model=InstructorRead)
+@router.put(
+    "/{instructor_id}",
+    response_model=InstructorRead,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))]
+)
 def actualizar_instructor(
     instructor_id: int,
     instructor_update: InstructorUpdate,
@@ -104,7 +114,10 @@ def actualizar_instructor(
         )
 
 
-@router.delete("/{instructor_id}")
+@router.delete(
+    "/{instructor_id}",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))]
+)
 def eliminar_instructor(
     instructor_id: int,
     session: Session = Depends(get_session)
