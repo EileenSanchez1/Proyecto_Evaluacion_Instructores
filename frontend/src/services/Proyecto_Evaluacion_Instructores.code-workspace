@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"name": "Proyecto_Evaluacion_Instructores",
+			"path": "../../.."
+		}
+	],
+	"settings": {
+		"python-envs.defaultEnvManager": "ms-python.python:system"
+	}
+}

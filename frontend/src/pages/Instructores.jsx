@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarInstructores, eliminarInstructor, obtenerInstructor } from "../services/instructorService";
-import { listarInstructoresPorFicha } from "../services/Fichainstructorservice";
+import { listarInstructoresPorFichaYPeriodo } from "../services/Fichainstructorservice";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
 
@@ -20,25 +20,23 @@ function Instructores() {
       setError("");
 
       if (esAdmin) {
-        // El admin ve todos los instructores registrados
         const datos = await listarInstructores();
         setInstructores(datos);
       } else {
-        // El aprendiz solo ve los instructores asignados a su ficha
         const usuario = obtenerUsuarioSesion();
-        if (!usuario || !usuario.id_ficha) {
-          setError("No se encontró información de la ficha del aprendiz.");
+        if (!usuario || !usuario.id_ficha || !usuario.id_periodo) {
+          setError("No se encontró información completa de la ficha o periodo del aprendiz.");
           setCargando(false);
           return;
         }
-        const asignaciones = await listarInstructoresPorFicha(usuario.id_ficha);
-
-        const detalles = await Promise.all(
-          asignaciones.map((asignacion) =>
-            obtenerInstructor(asignacion.id_instructor).catch(() => null)
-          )
+        const asignaciones = await listarInstructoresPorFichaYPeriodo(
+          usuario.id_ficha,
+          usuario.id_periodo
         );
 
+        const detalles = await Promise.all(
+          asignaciones.map((a) => obtenerInstructor(a.id_instructor).catch(() => null))
+        );
         setInstructores(detalles.filter(Boolean));
       }
     } catch (err) {
@@ -60,7 +58,6 @@ function Instructores() {
         await eliminarInstructor(id);
         setInstructores(instructores.filter((inst) => inst.id_instructor !== id));
       } catch (err) {
-        console.error(err);
         alert(err.response?.data?.detail || "Error al intentar eliminar el instructor.");
       }
     }
@@ -73,7 +70,6 @@ function Instructores() {
       .map((c) => c.nombre)
       .join(" ")
       .toLowerCase();
-
     return (
       `${inst.nombre} ${inst.apellido}`.toLowerCase().includes(texto) ||
       nombresCompetencias.includes(texto) ||
@@ -90,20 +86,16 @@ function Instructores() {
             Administra, consulta y actualiza los instructores registrados
           </p>
         </div>
-
         {esAdmin && (
           <button className="btn-nuevo" onClick={() => navigate("/instructores/crear")}>
-            <i className="bi bi-plus-circle"></i>
-            Nuevo Instructor
+            <i className="bi bi-plus-circle"></i> Nuevo Instructor
           </button>
         )}
       </div>
 
       <div className="barra-superior">
         <div className="buscador">
-          <span className="buscador-icono">
-            <i className="bi bi-search"></i>
-          </span>
+          <span className="buscador-icono"><i className="bi bi-search"></i></span>
           <input
             type="text"
             placeholder="Buscar instructor..."
@@ -134,48 +126,32 @@ function Instructores() {
                     className="foto"
                     src={`http://localhost:8000${inst.foto}`}
                     alt={inst.nombre}
-                    onError={(e) => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<div class="foto-placeholder"><i class="bi bi-person-fill"></i></div>'; }}
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.parentElement.innerHTML = '<div class="foto-placeholder"><i class="bi bi-person-fill"></i></div>';
+                    }}
                   />
                 ) : (
-                  <div className="foto-placeholder">
-                    <i className="bi bi-person-fill"></i>
-                  </div>
+                  <div className="foto-placeholder"><i className="bi bi-person-fill"></i></div>
                 )}
                 <div>
-                  <h4>
-                    {inst.nombre} {inst.apellido}
-                  </h4>
+                  <h4>{inst.nombre} {inst.apellido}</h4>
                   <div className="badges-competencias">
                     {(inst.competencias || []).map((c) => (
-                      <span className="badge-competencia" key={c.id_competencia}>
-                        {c.nombre}
-                      </span>
+                      <span className="badge-competencia" key={c.id_competencia}>{c.nombre}</span>
                     ))}
                   </div>
                 </div>
               </div>
               <hr />
-              <p>
-                <i className="bi bi-envelope"></i> {inst.correo}
-              </p>
-              <p>
-                <i className="bi bi-telephone"></i> {inst.telefono}
-              </p>
-
+              <p><i className="bi bi-envelope"></i> {inst.correo}</p>
+              <p><i className="bi bi-telephone"></i> {inst.telefono}</p>
               {esAdmin && (
                 <div className="acciones">
-                  <button
-                    className="btn-editar"
-                    title="Editar"
-                    onClick={() => navigate(`/instructores/editar/${inst.id_instructor}`)}
-                  >
+                  <button className="btn-editar" title="Editar" onClick={() => navigate(`/instructores/editar/${inst.id_instructor}`)}>
                     <i className="bi bi-pencil"></i>
                   </button>
-                  <button
-                    className="btn-eliminar-icon"
-                    title="Eliminar"
-                    onClick={() => manejarEliminar(inst.id_instructor)}
-                  >
+                  <button className="btn-eliminar-icon" title="Eliminar" onClick={() => manejarEliminar(inst.id_instructor)}>
                     <i className="bi bi-trash"></i>
                   </button>
                 </div>
