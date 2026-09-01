@@ -1,10 +1,28 @@
-import axios from "axios";
+import api from "../api/axiosConfig";
 
-// Poner sin la barra al final
-const API_URL = "http://localhost:8000/ficha-instructores";
+const API_URL = "/ficha-instructores";
 
-// Instructores asignados a la ficha del aprendiz que está evaluando
+export const listarFichaInstructores = async () => {
+  const response = await api.get(`${API_URL}/`);
+  return response.data;
+};
+
 export const listarInstructoresPorFicha = async (idFicha) => {
-  const response = await axios.get(`${API_URL}/ficha/${idFicha}`);
+  const response = await api.get(`${API_URL}/ficha/${idFicha}`);
+  return response.data;
+};
+
+export const listarInstructoresPorFichaYPeriodo = async (idFicha, idPeriodo) => {
+  const response = await api.get(`${API_URL}/ficha/${idFicha}/periodo/${idPeriodo}`);
+  return response.data;
+};
+
+export const crearFichaInstructor = async (datos) => {
+  const response = await api.post(`${API_URL}/`, datos);
+  return response.data;
+};
+
+export const eliminarFichaInstructor = async (idRelacion) => {
+  const response = await api.delete(`${API_URL}/${idRelacion}`);
   return response.data;
 };
