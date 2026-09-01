@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.config.database import get_session
 from app.config.security import (
@@ -14,6 +14,7 @@ from app.schemas.login import (
     RestablecerPasswordRequest
 )
 from app.services.login_service import LoginService
+from app.models.aprendiz import Aprendiz
 
 
 router = APIRouter(
@@ -45,17 +46,29 @@ def login(
         rol=usuario.rol.nombre
     )
 
+    # Construir datos base del usuario
+    usuario_data = {
+        "id_usuario": usuario.id_usuario,
+        "nombre": usuario.nombre,
+        "apellido": usuario.apellido,
+        "correo": usuario.correo,
+        "rol": usuario.rol.nombre,
+        "foto": usuario.foto
+    }
+
+    # Si es Aprendiz, buscar su ficha para poder filtrar instructores
+    if usuario.rol.nombre == "Aprendiz":
+        aprendiz = session.exec(
+            select(Aprendiz).where(Aprendiz.id_usuario == usuario.id_usuario)
+        ).first()
+        if aprendiz:
+            usuario_data["id_aprendiz"] = aprendiz.id_aprendiz
+            usuario_data["id_ficha"] = aprendiz.id_ficha
+
     return LoginResponse(
         access_token=token,
         token_type="bearer",
-        usuario={
-            "id_usuario": usuario.id_usuario,
-            "nombre": usuario.nombre,
-            "apellido": usuario.apellido,
-            "correo": usuario.correo,
-            "rol": usuario.rol.nombre,
-            "foto": usuario.foto
-        }
+        usuario=usuario_data
     )
 
 

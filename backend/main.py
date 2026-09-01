@@ -83,7 +83,7 @@ app.include_router(notificacion_router)
 # =========================
 # ARCHIVOS ESTATICOS (fotos)
 # =========================
-
-UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+# CORREGIDO: misma carpeta que usa instructor_router.py
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "app", "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
