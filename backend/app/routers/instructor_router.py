@@ -15,6 +15,8 @@ router = APIRouter(
     tags=["Instructores"]
 )
 
+# CORREGIDO: misma carpeta que main.py sirve como /uploads
+# (sube 2 niveles desde routers/ -> app/, luego entra a uploads/)
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
@@ -26,6 +28,12 @@ def _guardar_foto(foto: UploadFile, instructor_id: int) -> str:
     ext = os.path.splitext(foto.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
         raise ValueError("Formato de imagen no válido. Use JPG, PNG, GIF o WEBP.")
+
+    # Eliminar fotos anteriores del mismo instructor (cualquier extensión)
+    for old_ext in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+        old_ruta = os.path.join(UPLOADS_DIR, f"instructor_{instructor_id}{old_ext}")
+        if os.path.exists(old_ruta):
+            os.remove(old_ruta)
 
     nombre_archivo = f"instructor_{instructor_id}{ext}"
     ruta_archivo = os.path.join(UPLOADS_DIR, nombre_archivo)
@@ -167,6 +175,7 @@ def eliminar_instructor(
     instructor_id: int,
     session: Session = Depends(get_session)
 ):
+    # Eliminar archivo de foto si existe
     for ext in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
         ruta = os.path.join(UPLOADS_DIR, f"instructor_{instructor_id}{ext}")
         if os.path.exists(ruta):

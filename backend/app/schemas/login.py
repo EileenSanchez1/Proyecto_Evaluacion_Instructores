@@ -1,21 +1,22 @@
-from pydantic import BaseModel, EmailStr
+from typing import Optional, Any
+from sqlmodel import SQLModel
 
 
-class LoginRequest(BaseModel):
-    correo: EmailStr
+class LoginRequest(SQLModel):
+    correo: str
     contrasena: str
 
 
-class LoginResponse(BaseModel):
+class LoginResponse(SQLModel):
     access_token: str
     token_type: str
-    usuario: dict
+    usuario: dict[str, Any]
 
 
-class SolicitarRecuperacionRequest(BaseModel):
-    correo: EmailStr
+class SolicitarRecuperacionRequest(SQLModel):
+    correo: str
 
 
-class RestablecerPasswordRequest(BaseModel):
+class RestablecerPasswordRequest(SQLModel):
     token: str
     nueva_contrasena: str

@@ -51,6 +51,12 @@ function EliminarInstructor() {
     }
   };
 
+  const getFotoUrl = (ruta) => {
+    if (!ruta) return null;
+    if (ruta.startsWith("http")) return ruta;
+    return `http://localhost:8000${ruta}`;
+  };
+
   if (cargando) {
     return (
       <div className="pagina-formulario">
@@ -95,7 +101,7 @@ function EliminarInstructor() {
 
         <div className="perfil">
           {instructor.foto ? (
-            <img src={instructor.foto} alt={instructor.nombre} className="foto" />
+            <img src={getFotoUrl(instructor.foto)} alt={instructor.nombre} className="foto" />
           ) : (
             <div className="foto-placeholder">
               <i className="bi bi-person-fill"></i>
@@ -105,7 +111,13 @@ function EliminarInstructor() {
             <h4>
               {instructor.nombre} {instructor.apellido}
             </h4>
-            <span className="badge-competencia">{instructor.competencia}</span>
+            <div className="badges-competencias">
+              {(instructor.competencias || []).map((c) => (
+                <span className="badge-competencia" key={c.id_competencia}>
+                  {c.nombre}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 

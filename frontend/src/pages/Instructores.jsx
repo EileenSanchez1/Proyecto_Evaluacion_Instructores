@@ -61,7 +61,7 @@ function Instructores() {
         setInstructores(instructores.filter((inst) => inst.id_instructor !== id));
       } catch (err) {
         console.error(err);
-        alert("Error al intentar eliminar el instructor.");
+        alert(err.response?.data?.detail || "Error al intentar eliminar el instructor.");
       }
     }
   };
@@ -130,10 +130,11 @@ function Instructores() {
             <div className="instructor-card" key={inst.id_instructor}>
               <div className="perfil">
                 {inst.foto ? (
-                  <img 
-                    src={`http://localhost:8000${inst.foto}`} 
+                  <img
+                    className="foto"
+                    src={`http://localhost:8000${inst.foto}`}
                     alt={inst.nombre}
-                    onError={(e) => { e.target.src = "/imgs/default-avatar.png"; }}
+                    onError={(e) => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<div class="foto-placeholder"><i class="bi bi-person-fill"></i></div>'; }}
                   />
                 ) : (
                   <div className="foto-placeholder">
