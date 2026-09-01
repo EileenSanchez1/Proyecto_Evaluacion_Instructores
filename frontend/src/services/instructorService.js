@@ -1,30 +1,55 @@
-import axios from "axios";
+import api from "../api/axiosConfig";
 
-// Poner sin la barra al final
-const API_URL = "http://localhost:8000/instructores"; 
+// Se añade '/' al final para evitar la redirección 307 de FastAPI
+const API_URL = "/instructores/";
+
+/**
+ * Convierte un objeto plano de JavaScript a FormData
+ * cuando se requiere enviar archivos o formularios 'multipart/form-data'.
+ */
+const prepararFormData = (datos) => {
+  if (datos instanceof FormData) return datos;
+
+  const formData = new FormData();
+  Object.keys(datos).forEach((key) => {
+    if (datos[key] !== null && datos[key] !== undefined) {
+      formData.append(key, datos[key]);
+    }
+  });
+  return formData;
+};
 
 export const listarInstructores = async () => {
-  // Petición directa a /instructores sin '/' al final
-  const response = await axios.get(API_URL); 
+  const response = await api.get(API_URL);
   return response.data;
 };
 
 export const obtenerInstructor = async (id) => {
-  const response = await axios.get(`${API_URL}/${id}`);
+  const response = await api.get(`${API_URL}${id}`);
   return response.data;
 };
 
 export const crearInstructor = async (datos) => {
-  const response = await axios.post(`${API_URL}/`, datos);
+  const body = prepararFormData(datos);
+  const response = await api.post(API_URL, body, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 };
 
 export const actualizarInstructor = async (id, datos) => {
-  const response = await axios.put(`${API_URL}/${id}`, datos);
+  const body = prepararFormData(datos);
+  const response = await api.put(`${API_URL}${id}`, body, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 };
 
 export const eliminarInstructor = async (id) => {
-  const response = await axios.delete(`${API_URL}/${id}`);
+  const response = await api.delete(`${API_URL}${id}`);
   return response.data;
 };

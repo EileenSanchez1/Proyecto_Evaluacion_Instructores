@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarInstructores, eliminarInstructor, obtenerInstructor } from "../services/instructorService";
 import { listarInstructoresPorFicha } from "../services/Fichainstructorservice";
-import { esAdmin as esAdminSesion } from "../utils/sesion";
+import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
 
 function Instructores() {
@@ -25,7 +25,13 @@ function Instructores() {
         setInstructores(datos);
       } else {
         // El aprendiz solo ve los instructores asignados a su ficha
-        const asignaciones = await listarInstructoresPorFicha(aprendiz.id_ficha);
+        const usuario = obtenerUsuarioSesion();
+        if (!usuario || !usuario.id_ficha) {
+          setError("No se encontró información de la ficha del aprendiz.");
+          setCargando(false);
+          return;
+        }
+        const asignaciones = await listarInstructoresPorFicha(usuario.id_ficha);
 
         const detalles = await Promise.all(
           asignaciones.map((asignacion) =>
@@ -124,7 +130,11 @@ function Instructores() {
             <div className="instructor-card" key={inst.id_instructor}>
               <div className="perfil">
                 {inst.foto ? (
-                  <img src={inst.foto} alt={inst.nombre} className="foto" />
+                  <img 
+                    src={`http://localhost:8000${inst.foto}`} 
+                    alt={inst.nombre}
+                    onError={(e) => { e.target.src = "/imgs/default-avatar.png"; }}
+                  />
                 ) : (
                   <div className="foto-placeholder">
                     <i className="bi bi-person-fill"></i>

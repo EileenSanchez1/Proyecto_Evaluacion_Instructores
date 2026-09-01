@@ -28,7 +28,16 @@ class Evaluacion(SQLModel, table=True):
         nullable=False
     )
 
+    id_periodo: int = Field(
+        foreign_key="periodos.id_periodo",
+        nullable=False
+    )
+
     aprendiz: "Aprendiz" = Relationship(
+        back_populates="evaluaciones"
+    )
+
+    periodo: "Periodo" = Relationship(
         back_populates="evaluaciones"
     )
 

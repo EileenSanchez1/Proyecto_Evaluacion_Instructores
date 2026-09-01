@@ -16,6 +16,10 @@ from app.repositories.aprendiz_repository import (
     AprendizRepository
 )
 
+from app.repositories.periodo_repository import (
+    PeriodoRepository
+)
+
 
 class EvaluacionService:
 
@@ -33,6 +37,27 @@ class EvaluacionService:
         if not aprendiz:
             raise ValueError(
                 "El aprendiz no existe."
+            )
+
+        periodo = PeriodoRepository.buscar(
+            session,
+            evaluacion.id_periodo
+        )
+
+        if not periodo:
+            raise ValueError(
+                "El periodo no existe."
+            )
+
+        existente = EvaluacionRepository.buscar_por_aprendiz_y_periodo(
+            session,
+            evaluacion.id_aprendiz,
+            evaluacion.id_periodo
+        )
+
+        if existente:
+            raise ValueError(
+                "Este aprendiz ya tiene una evaluación registrada para este periodo."
             )
 
         return EvaluacionRepository.crear(

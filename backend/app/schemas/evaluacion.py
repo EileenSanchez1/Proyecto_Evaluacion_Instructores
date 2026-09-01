@@ -10,12 +10,14 @@ class EvaluacionBase(SQLModel):
 
 class EvaluacionCreate(SQLModel):
     id_aprendiz: int
+    id_periodo: int
 
 
 class EvaluacionRead(EvaluacionBase):
     id_evaluacion: int
     fecha: datetime
     id_aprendiz: int
+    id_periodo: int
 
 
 class EvaluacionUpdate(SQLModel):
