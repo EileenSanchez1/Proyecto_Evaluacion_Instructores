@@ -12,8 +12,10 @@ function CrearInstructor() {
     apellido: "",
     correo: "",
     telefono: "",
-    foto: "",
   });
+
+  const [fotoArchivo, setFotoArchivo] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
 
   const [competenciasDisponibles, setCompetenciasDisponibles] = useState([]);
   const [competenciasSeleccionadas, setCompetenciasSeleccionadas] = useState([]);
@@ -29,10 +31,25 @@ function CrearInstructor() {
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
-    setFormulario({
-      ...formulario,
-      [name]: value,
-    });
+    setFormulario({ ...formulario, [name]: value });
+  };
+
+  const manejarFoto = (e) => {
+    const archivo = e.target.files[0];
+    if (archivo) {
+      const tiposValidos = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      if (!tiposValidos.includes(archivo.type)) {
+        setError("Formato no valido. Use JPG, PNG, GIF o WEBP.");
+        return;
+      }
+      if (archivo.size > 5 * 1024 * 1024) {
+        setError("La imagen no debe superar los 5MB.");
+        return;
+      }
+      setFotoArchivo(archivo);
+      setFotoPreview(URL.createObjectURL(archivo));
+      setError("");
+    }
   };
 
   const alternarCompetencia = (idCompetencia) => {
@@ -65,23 +82,25 @@ function CrearInstructor() {
     try {
       setGuardando(true);
 
-      await crearInstructor({
-        nombre: formulario.nombre.trim(),
-        apellido: formulario.apellido.trim(),
-        correo: formulario.correo.trim(),
-        telefono: String(formulario.telefono).trim(),
-        foto: formulario.foto.trim() || null,
-        competencias: competenciasSeleccionadas,
-      });
+      const formData = new FormData();
+      formData.append("nombre", formulario.nombre.trim());
+      formData.append("apellido", formulario.apellido.trim());
+      formData.append("correo", formulario.correo.trim());
+      formData.append("telefono", String(formulario.telefono).trim());
+      formData.append("competencias", JSON.stringify(competenciasSeleccionadas));
+
+      if (fotoArchivo) {
+        formData.append("foto", fotoArchivo);
+      }
+
+      await crearInstructor(formData);
 
       navigate("/instructores");
     } catch (err) {
       console.error("Error al crear instructor:", err);
-
       const respuestaError = err.response?.data?.detail;
-
       if (Array.isArray(respuestaError)) {
-        setError(respuestaError[0]?.msg || "Error de validación en los datos.");
+        setError(respuestaError[0]?.msg || "Error de validacion en los datos.");
       } else if (typeof respuestaError === "string") {
         setError(respuestaError);
       } else {
@@ -105,8 +124,8 @@ function CrearInstructor() {
 
         <form onSubmit={manejarEnvio}>
           <div className="preview-container">
-            {formulario.foto ? (
-              <img src={formulario.foto} alt="Vista previa" />
+            {fotoPreview ? (
+              <img src={fotoPreview} alt="Vista previa" />
             ) : (
               <span className="placeholder">
                 <i className="bi bi-camera"></i>
@@ -115,16 +134,16 @@ function CrearInstructor() {
           </div>
 
           <label className="form-label">
-            <i className="bi bi-image"></i> URL de la foto (opcional)
+            <i className="bi bi-image"></i> Foto del instructor (opcional)
           </label>
           <input
-            type="text"
+            type="file"
             name="foto"
             className="form-control-form"
-            placeholder="https://..."
-            value={formulario.foto}
-            onChange={manejarCambio}
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={manejarFoto}
           />
+          <small className="text-muted">JPG, PNG, GIF o WEBP. Max 5MB.</small>
 
           <div className="form-row">
             <div>
@@ -149,7 +168,7 @@ function CrearInstructor() {
                 type="text"
                 name="apellido"
                 className="form-control-form"
-                placeholder="Ej: Pérez"
+                placeholder="Ej: Perez"
                 value={formulario.apellido}
                 onChange={manejarCambio}
                 required
@@ -171,7 +190,7 @@ function CrearInstructor() {
           />
 
           <label className="form-label">
-            <i className="bi bi-telephone"></i> Teléfono *
+            <i className="bi bi-telephone"></i> Telefono *
           </label>
           <input
             type="text"
@@ -189,8 +208,8 @@ function CrearInstructor() {
           <div className="checkbox-grupo">
             {competenciasDisponibles.length === 0 && (
               <p className="text-muted">
-                No hay competencias registradas todavía. Créalas primero en
-                la sección de Competencias.
+                No hay competencias registradas todavia. Crealas primero en
+                la seccion de Competencias.
               </p>
             )}
             {competenciasDisponibles.map((c) => (

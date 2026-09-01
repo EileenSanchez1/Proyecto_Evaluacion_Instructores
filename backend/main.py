@@ -14,6 +14,10 @@ from app.routers.login_router import router as login_router
 from app.routers.pregunta_router import router as pregunta_router
 from app.routers.reporte_router import router as reporte_router
 from app.routers.respuesta_router import router as respuesta_router
+from app.routers.periodo_router import router as periodo_router
+from app.routers.notificacion_router import router as notificacion_router
+from fastapi.staticfiles import StaticFiles
+import os
 
 
 app = FastAPI(
@@ -63,23 +67,23 @@ def inicio():
 # =========================
 
 app.include_router(aprendiz_router)
-
 app.include_router(competencia_router)
-
 app.include_router(evaluacion_router)
-
 app.include_router(ficha_router)
-
 app.include_router(ficha_instructor_router)
-
 app.include_router(horario_router)
-
 app.include_router(instructor_router)
-
 app.include_router(login_router)
-
 app.include_router(pregunta_router)
-
 app.include_router(reporte_router)
-
 app.include_router(respuesta_router)
+app.include_router(periodo_router)
+app.include_router(notificacion_router)
+
+# =========================
+# ARCHIVOS ESTATICOS (fotos)
+# =========================
+
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")

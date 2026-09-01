@@ -17,6 +17,7 @@ from pwdlib import PasswordHash
 from app.config.database import engine
 from app.models.rol import Rol
 from app.models.usuario import Usuario
+from app.models.horario import Horario  
 
 
 password_hash = PasswordHash.recommended()

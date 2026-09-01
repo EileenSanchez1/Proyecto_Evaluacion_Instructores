@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { listarFichas } from "../services/FichaServices";
+import {
+  listarFichas,
+  crearFicha,
+  actualizarFicha,
+  eliminarFicha,
+} from "../services/FichaServices";
 import { listarAprendices } from "../services/Aprendizservice";
 import { listarInstructoresPorFicha } from "../services/Fichainstructorservice";
 import { obtenerInstructor } from "../services/instructorService";
@@ -12,7 +17,15 @@ function Fichas() {
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
-  // Detalle (modal)
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [editando, setEditando] = useState(null);
+  const [formulario, setFormulario] = useState({
+    numero_ficha: "",
+    programa: "",
+    descripcion: "",
+  });
+  const [guardando, setGuardando] = useState(false);
+
   const [fichaSeleccionada, setFichaSeleccionada] = useState(null);
   const [instructoresFicha, setInstructoresFicha] = useState([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
@@ -53,6 +66,79 @@ function Fichas() {
     );
   });
 
+  const abrirCrear = () => {
+    setEditando(null);
+    setFormulario({ numero_ficha: "", programa: "", descripcion: "" });
+    setError("");
+    setMostrarModal(true);
+  };
+
+  const abrirEditar = (ficha) => {
+    setEditando(ficha);
+    setFormulario({
+      numero_ficha: ficha.numero_ficha,
+      programa: ficha.programa,
+      descripcion: ficha.descripcion || "",
+    });
+    setError("");
+    setMostrarModal(true);
+  };
+
+  const cerrarModal = () => {
+    setMostrarModal(false);
+    setEditando(null);
+    setFormulario({ numero_ficha: "", programa: "", descripcion: "" });
+    setError("");
+  };
+
+  const manejarCambio = (e) => {
+    const { name, value } = e.target;
+    setFormulario((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const manejarGuardar = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!formulario.numero_ficha.trim() || !formulario.programa.trim()) {
+      setError("Numero de ficha y programa son obligatorios.");
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      if (editando) {
+        await actualizarFicha(editando.id_ficha, formulario);
+      } else {
+        await crearFicha(formulario);
+      }
+      cerrarModal();
+      await cargarDatos();
+    } catch (err) {
+      const detalle = err.response?.data?.detail;
+      setError(
+        typeof detalle === "string"
+          ? detalle
+          : "Error al guardar la ficha."
+      );
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const manejarEliminar = async (id) => {
+    if (!window.confirm("Eliminar esta ficha? Se perderan las asignaciones de instructores y aprendices.")) {
+      return;
+    }
+    try {
+      await eliminarFicha(id);
+      await cargarDatos();
+    } catch (err) {
+      const detalle = err.response?.data?.detail;
+      alert(typeof detalle === "string" ? detalle : "Error al eliminar la ficha.");
+    }
+  };
+
   const abrirDetalle = async (ficha) => {
     setFichaSeleccionada(ficha);
     setInstructoresFicha([]);
@@ -80,11 +166,14 @@ function Fichas() {
     <div className="pagina-fichas">
       <div className="encabezado">
         <div>
-          <h1 className="titulo">Gestión de Fichas</h1>
+          <h1 className="titulo">Gestion de Fichas</h1>
           <p className="subtitulo">
-            Consulta las fichas de formación registradas en el sistema
+            Consulta y administra las fichas de formacion registradas en el sistema
           </p>
         </div>
+        <button className="btn btn-success" onClick={abrirCrear}>
+          <i className="bi bi-plus-circle"></i> Nueva Ficha
+        </button>
       </div>
 
       <div className="barra-superior">
@@ -94,7 +183,7 @@ function Fichas() {
           </span>
           <input
             type="text"
-            placeholder="Buscar por número de ficha o programa..."
+            placeholder="Buscar por numero de ficha o programa..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -109,7 +198,7 @@ function Fichas() {
       )}
 
       {cargando && <p className="text-muted">Cargando fichas...</p>}
-      {error && <p className="text-danger">{error}</p>}
+      {error && !mostrarModal && <p className="text-danger">{error}</p>}
 
       {!cargando && !error && fichasFiltradas.length === 0 && (
         <div className="estado-vacio">
@@ -117,8 +206,8 @@ function Fichas() {
           <h4>No se encontraron fichas</h4>
           <p>
             {fichas.length === 0
-              ? "Aún no hay fichas registradas."
-              : "Intenta con otro término de búsqueda"}
+              ? "Aun no hay fichas registradas. Crea una nueva ficha para comenzar."
+              : "Intenta con otro termino de busqueda"}
           </p>
         </div>
       )}
@@ -142,7 +231,7 @@ function Fichas() {
 
               <p>
                 <i className="bi bi-card-text"></i>
-                {ficha.descripcion || "Sin descripción registrada."}
+                {ficha.descripcion || "Sin descripcion registrada."}
               </p>
               <p>
                 <i className="bi bi-people"></i>
@@ -153,9 +242,99 @@ function Fichas() {
                 <button onClick={() => abrirDetalle(ficha)}>
                   <i className="bi bi-eye"></i> Ver detalle
                 </button>
+                <button
+                  className="btn-outline-primary"
+                  onClick={() => abrirEditar(ficha)}
+                >
+                  <i className="bi bi-pencil"></i> Editar
+                </button>
+                <button
+                  className="btn-outline-danger"
+                  onClick={() => manejarEliminar(ficha.id_ficha)}
+                >
+                  <i className="bi bi-trash"></i> Eliminar
+                </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {mostrarModal && (
+        <div className="modal-overlay" onClick={cerrarModal}>
+          <div className="modal-caja" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h5>
+                <i className={`bi ${editando ? "bi-pencil-square" : "bi-plus-circle"} me-2`}></i>
+                {editando ? "Editar Ficha" : "Nueva Ficha"}
+              </h5>
+              <button onClick={cerrarModal} aria-label="Cerrar">
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {error && <div className="alert alert-danger">{error}</div>}
+
+              <form onSubmit={manejarGuardar}>
+                <div className="mb-3">
+                  <label className="form-label">Numero de Ficha *</label>
+                  <input
+                    type="text"
+                    name="numero_ficha"
+                    className="form-control"
+                    placeholder="Ej: 2876543"
+                    value={formulario.numero_ficha}
+                    onChange={manejarCambio}
+                    required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Programa *</label>
+                  <input
+                    type="text"
+                    name="programa"
+                    className="form-control"
+                    placeholder="Ej: Analisis y Desarrollo de Software"
+                    value={formulario.programa}
+                    onChange={manejarCambio}
+                    required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Descripcion</label>
+                  <textarea
+                    name="descripcion"
+                    className="form-control"
+                    rows={3}
+                    placeholder="Descripcion opcional de la ficha..."
+                    value={formulario.descripcion}
+                    onChange={manejarCambio}
+                  />
+                </div>
+
+                <div className="d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={cerrarModal}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-success"
+                    disabled={guardando}
+                  >
+                    <i className="bi bi-check-circle"></i>{" "}
+                    {guardando ? "Guardando..." : editando ? "Actualizar" : "Crear"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 
@@ -187,8 +366,8 @@ function Fichas() {
               <p>
                 <i className="bi bi-card-text"></i>
                 <span>
-                  <strong>Descripción:</strong>{" "}
-                  {fichaSeleccionada.descripcion || "Sin descripción registrada."}
+                  <strong>Descripcion:</strong>{" "}
+                  {fichaSeleccionada.descripcion || "Sin descripcion registrada."}
                 </span>
               </p>
               <p>

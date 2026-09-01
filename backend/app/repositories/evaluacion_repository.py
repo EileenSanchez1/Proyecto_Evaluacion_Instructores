@@ -77,6 +77,20 @@ class EvaluacionRepository:
         return session.exec(statement).all()
 
     @staticmethod
+    def buscar_por_aprendiz_y_periodo(
+        session: Session,
+        id_aprendiz: int,
+        id_periodo: int
+    ) -> Optional[Evaluacion]:
+
+        statement = select(Evaluacion).where(
+            (Evaluacion.id_aprendiz == id_aprendiz) &
+            (Evaluacion.id_periodo == id_periodo)
+        )
+
+        return session.exec(statement).first()
+
+    @staticmethod
     def actualizar(
         session: Session,
         evaluacion_id: int,

@@ -1,10 +1,12 @@
-from .rol import Rol
-from .usuario import Usuario
+import os
+import importlib
 
-from .ficha import Ficha
-from .aprendiz import Aprendiz
-from .instructor import Instructor
-from .pregunta import Pregunta
-from .evaluacion import Evaluacion
-from .ficha_instructor import FichaInstructor
-from .respuesta import Respuesta
+# Obtener la ruta de la carpeta actual (models)
+models_dir = os.path.dirname(__file__)
+
+# Recorrer todos los archivos de la carpeta
+for filename in os.listdir(models_dir):
+    if filename.endswith(".py") and filename != "__init__.py":
+        module_name = filename[:-3]
+        # Importar dinámicamente cada módulo de la carpeta models
+        importlib.import_module(f".{module_name}", package=__name__)

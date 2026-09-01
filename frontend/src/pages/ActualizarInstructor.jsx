@@ -16,147 +16,155 @@ function ActualizarInstructor() {
     apellido: "",
     correo: "",
     telefono: "",
-    foto: "",
   });
+
+  const [fotoArchivo, setFotoArchivo] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const [fotoActual, setFotoActual] = useState(null);
 
   const [competenciasDisponibles, setCompetenciasDisponibles] = useState([]);
   const [competenciasSeleccionadas, setCompetenciasSeleccionadas] = useState([]);
 
   const [error, setError] = useState("");
-  const [mensaje, setMensaje] = useState("");
-  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [datos, competencias] = await Promise.all([
-          obtenerInstructor(id),
-          listarCompetencias(),
-        ]);
-
+        const instructor = await obtenerInstructor(id);
         setFormulario({
-          nombre: datos.nombre || "",
-          apellido: datos.apellido || "",
-          correo: datos.correo || "",
-          telefono: datos.telefono || "",
-          foto: datos.foto || "",
+          nombre: instructor.nombre || "",
+          apellido: instructor.apellido || "",
+          correo: instructor.correo || "",
+          telefono: instructor.telefono || "",
         });
-
-        setCompetenciasDisponibles(competencias.filter((c) => c.estado));
-        setCompetenciasSeleccionadas(
-          (datos.competencias || []).map((c) => c.id_competencia)
-        );
-      } catch (error) {
-        console.error(error);
-        setError("No se pudo cargar el instructor.");
-      } finally {
-        setCargando(false);
+        if (instructor.foto) {
+          setFotoActual(instructor.foto);
+        }
+        if (instructor.competencias) {
+          setCompetenciasSeleccionadas(
+            instructor.competencias.map((c) => c.id_competencia)
+          );
+        }
+      } catch (err) {
+        console.error("Error al cargar instructor:", err);
+        setError("No se pudo cargar la informacion del instructor.");
       }
     };
 
     cargarDatos();
+
+    listarCompetencias()
+      .then((datos) => setCompetenciasDisponibles(datos.filter((c) => c.estado)))
+      .catch((err) => console.error("No se pudieron cargar las competencias", err));
   }, [id]);
 
-  const handleChange = (e) => {
-    setFormulario({
-      ...formulario,
-      [e.target.name]: e.target.value,
-    });
+  const manejarCambio = (e) => {
+    const { name, value } = e.target;
+    setFormulario({ ...formulario, [name]: value });
+  };
+
+  const manejarFoto = (e) => {
+    const archivo = e.target.files[0];
+    if (archivo) {
+      const tiposValidos = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      if (!tiposValidos.includes(archivo.type)) {
+        setError("Formato no valido. Use JPG, PNG, GIF o WEBP.");
+        return;
+      }
+      if (archivo.size > 5 * 1024 * 1024) {
+        setError("La imagen no debe superar los 5MB.");
+        return;
+      }
+      setFotoArchivo(archivo);
+      setFotoPreview(URL.createObjectURL(archivo));
+      setFotoActual(null);
+      setError("");
+    }
   };
 
   const alternarCompetencia = (idCompetencia) => {
     setCompetenciasSeleccionadas((prev) =>
       prev.includes(idCompetencia)
-        ? prev.filter((cid) => cid !== idCompetencia)
+        ? prev.filter((id) => id !== idCompetencia)
         : [...prev, idCompetencia]
     );
   };
 
-  const validarFormulario = () => {
+  const manejarEnvio = async (e) => {
+    e.preventDefault();
+    setError("");
+
     if (
       !formulario.nombre.trim() ||
       !formulario.apellido.trim() ||
       !formulario.correo.trim() ||
       !formulario.telefono.trim()
     ) {
-      return "Todos los campos obligatorios deben estar completos.";
-    }
-
-    const correoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formulario.correo);
-
-    if (!correoValido) {
-      return "Ingrese un correo electrónico válido.";
+      setError("Todos los campos obligatorios deben estar completos.");
+      return;
     }
 
     if (competenciasSeleccionadas.length === 0) {
-      return "Selecciona al menos una competencia.";
-    }
-
-    return "";
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    setError("");
-    setMensaje("");
-
-    const errorValidacion = validarFormulario();
-
-    if (errorValidacion) {
-      setError(errorValidacion);
+      setError("Selecciona al menos una competencia.");
       return;
     }
 
     try {
-      await actualizarInstructor(id, {
-        ...formulario,
-        foto: formulario.foto || null,
-        competencias: competenciasSeleccionadas,
-      });
+      setGuardando(true);
 
-      setMensaje("Instructor actualizado correctamente.");
+      const formData = new FormData();
+      formData.append("nombre", formulario.nombre.trim());
+      formData.append("apellido", formulario.apellido.trim());
+      formData.append("correo", formulario.correo.trim());
+      formData.append("telefono", String(formulario.telefono).trim());
+      formData.append("competencias", JSON.stringify(competenciasSeleccionadas));
 
-      setTimeout(() => {
-        navigate("/instructores");
-      }, 1000);
-    } catch (error) {
-      console.error(error);
+      if (fotoArchivo) {
+        formData.append("foto", fotoArchivo);
+      }
 
-      if (error.response?.data?.detail) {
-        setError(error.response.data.detail);
+      await actualizarInstructor(id, formData);
+
+      navigate("/instructores");
+    } catch (err) {
+      console.error("Error al actualizar instructor:", err);
+      const respuestaError = err.response?.data?.detail;
+      if (Array.isArray(respuestaError)) {
+        setError(respuestaError[0]?.msg || "Error de validacion en los datos.");
+      } else if (typeof respuestaError === "string") {
+        setError(respuestaError);
       } else {
         setError("No se pudo actualizar el instructor.");
       }
+    } finally {
+      setGuardando(false);
     }
   };
 
-  if (cargando) {
-    return (
-      <div className="pagina-formulario">
-        <p className="text-muted">Cargando instructor...</p>
-      </div>
-    );
-  }
+  const getFotoUrl = (ruta) => {
+    if (!ruta) return null;
+    if (ruta.startsWith("http")) return ruta;
+    return `http://localhost:8000${ruta}`;
+  };
 
   return (
     <div className="pagina-formulario">
       <div className="form-container">
         <div className="form-header">
-          <i className="bi bi-pencil-square" style={{ color: "#198754" }}></i>
+          <i className="bi bi-pencil-square"></i>
           <h2>Actualizar Instructor</h2>
-          <p>
-            Editando a <strong>{formulario.nombre} {formulario.apellido}</strong>
-          </p>
+          <p>Modifica los campos que deseas actualizar</p>
         </div>
 
-        {mensaje && <div className="form-mensaje-exito">{mensaje}</div>}
         {error && <div className="form-mensaje-error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={manejarEnvio}>
           <div className="preview-container">
-            {formulario.foto ? (
-              <img src={formulario.foto} alt="Foto del instructor" />
+            {fotoPreview ? (
+              <img src={fotoPreview} alt="Vista previa" />
+            ) : fotoActual ? (
+              <img src={getFotoUrl(fotoActual)} alt="Foto actual" />
             ) : (
               <span className="placeholder">
                 <i className="bi bi-camera"></i>
@@ -165,16 +173,16 @@ function ActualizarInstructor() {
           </div>
 
           <label className="form-label">
-            <i className="bi bi-image"></i> URL de la foto (opcional)
+            <i className="bi bi-image"></i> Cambiar foto (opcional)
           </label>
           <input
-            type="text"
+            type="file"
             name="foto"
             className="form-control-form"
-            placeholder="https://..."
-            value={formulario.foto}
-            onChange={handleChange}
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={manejarFoto}
           />
+          <small className="text-muted">JPG, PNG, GIF o WEBP. Max 5MB.</small>
 
           <div className="form-row">
             <div>
@@ -185,8 +193,10 @@ function ActualizarInstructor() {
                 type="text"
                 name="nombre"
                 className="form-control-form"
+                placeholder="Ej: Juan"
                 value={formulario.nombre}
-                onChange={handleChange}
+                onChange={manejarCambio}
+                required
               />
             </div>
             <div>
@@ -197,8 +207,10 @@ function ActualizarInstructor() {
                 type="text"
                 name="apellido"
                 className="form-control-form"
+                placeholder="Ej: Perez"
                 value={formulario.apellido}
-                onChange={handleChange}
+                onChange={manejarCambio}
+                required
               />
             </div>
           </div>
@@ -210,25 +222,34 @@ function ActualizarInstructor() {
             type="email"
             name="correo"
             className="form-control-form"
+            placeholder="correo@ejemplo.com"
             value={formulario.correo}
-            onChange={handleChange}
+            onChange={manejarCambio}
+            required
           />
 
           <label className="form-label">
-            <i className="bi bi-telephone"></i> Teléfono *
+            <i className="bi bi-telephone"></i> Telefono *
           </label>
           <input
             type="text"
             name="telefono"
             className="form-control-form"
+            placeholder="Ej: 3001234567"
             value={formulario.telefono}
-            onChange={handleChange}
+            onChange={manejarCambio}
+            required
           />
 
           <label className="form-label">
             <i className="bi bi-book"></i> Competencias * (selecciona una o varias)
           </label>
           <div className="checkbox-grupo">
+            {competenciasDisponibles.length === 0 && (
+              <p className="text-muted">
+                No hay competencias registradas todavia.
+              </p>
+            )}
             {competenciasDisponibles.map((c) => (
               <label key={c.id_competencia} className="checkbox-item">
                 <input
@@ -252,8 +273,9 @@ function ActualizarInstructor() {
               </button>
             </div>
             <div>
-              <button type="submit" className="btn-submit-form">
-                <i className="bi bi-check-circle"></i> Guardar Cambios
+              <button type="submit" className="btn-submit-form" disabled={guardando}>
+                <i className="bi bi-check-circle"></i>{" "}
+                {guardando ? "Guardando..." : "Actualizar Instructor"}
               </button>
             </div>
           </div>
