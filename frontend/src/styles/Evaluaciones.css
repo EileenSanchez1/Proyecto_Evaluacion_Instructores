@@ -1,100 +1,253 @@
-.instructor-info-card {
+.pagina-evaluaciones {
+  padding: 24px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── CARGANDO ── */
+.cargando-centrado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #39a900;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── ENCABEZADO ── */
+.encabezado-evaluacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.titulo-principal {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1a3c28;
+  margin: 0 0 6px 0;
+}
+
+.subtitulo-principal {
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.btn-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-volver:hover {
+  background: #e5e7eb;
+}
+
+/* ── ALERTAS ── */
+.alerta {
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alerta-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.alerta-warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* ── INSTRUCTOR DESTACADO ── */
+.instructor-card-destacado {
+  background: linear-gradient(135deg, #1a4a2e 0%, #2d7a4f 100%);
+  border-radius: 16px;
+  padding: 24px 28px;
+  margin-bottom: 28px;
+  color: white;
+  box-shadow: 0 4px 20px rgba(26, 74, 46, 0.2);
+}
+
+.instructor-perfil {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.instructor-foto-lg {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.3);
+}
+
+.instructor-foto-placeholder-lg {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+}
+
+.instructor-datos h3 {
+  font-size: 1.3rem;
+  margin: 0 0 6px 0;
+}
+
+.instructor-datos p {
+  margin: 0;
+  opacity: 0.85;
+  font-size: 0.9rem;
+}
+
+/* ── PROGRESO ── */
+.progreso-evaluacion {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px 20px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.estado-evaluacion {
-  margin: 12px 0;
-}
-
-.badge-estado {
-  padding: 6px 14px;
-  border-radius: 20px;
+.progreso-evaluacion span {
   font-size: 0.85rem;
-  font-weight: 600;
+  color: #6b7280;
+  font-weight: 500;
 }
 
-.badge-estado.pendiente {
-  background: #fff3cd;
-  color: #856404;
+.barra-progreso {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.badge-estado.evaluado {
-  background: #d4edda;
-  color: #155724;
+.barra-progreso-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #39a900, #2d7a4f);
+  border-radius: 4px;
+  transition: width 0.4s ease;
 }
 
-.btn-evaluar {
-  background: #39a900;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 10px;
-}
-
-.btn-ver {
-  background: #e9ecef;
-  color: #333;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 10px;
-}
-
+/* ── FORMULARIO EVALUACIÓN ── */
 .formulario-evaluacion {
-  max-width: 800px;
+  max-width: 900px;
 }
 
 .pregunta-card {
   background: white;
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: 16px;
+  padding: 28px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid #f3f4f6;
+  transition: box-shadow 0.2s;
 }
 
-.pregunta-numero {
-  color: #39a900;
+.pregunta-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.pregunta-header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.pregunta-badge {
+  background: #ecfdf5;
+  color: #065f46;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
   font-weight: 700;
-  font-size: 0.85rem;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+
+.pregunta-categoria-badge {
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .pregunta-texto {
   font-size: 1.15rem;
-  margin-bottom: 8px;
-  color: #1a3c28;
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  line-height: 1.5;
+  font-weight: 600;
 }
 
-.pregunta-categoria {
-  color: #6c757d;
-  font-size: 0.9rem;
+/* ── CALIFICACIÓN ── */
+.calificacion-grupo {
   margin-bottom: 20px;
 }
 
-.calificacion-grupo label {
+.calificacion-label {
   display: block;
   font-weight: 600;
-  margin-bottom: 12px;
-  color: #333;
+  margin-bottom: 14px;
+  color: #374151;
+  font-size: 0.9rem;
 }
 
 .escala-calificacion {
   display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .opcion-calificacion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
 }
 
@@ -102,30 +255,52 @@
   display: none;
 }
 
-.circulo {
+.circulo-calif {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  border: 2px solid #dcdcdc;
+  border: 2px solid #e5e7eb;
   font-weight: 700;
   font-size: 1.1rem;
-  color: #666;
-  transition: all 0.2s;
+  color: #6b7280;
+  background: white;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.circulo.seleccionado {
-  background: #39a900;
+.circulo-calif:hover:not(.deshabilitado) {
+  border-color: #39a900;
+  color: #39a900;
+  transform: scale(1.08);
+}
+
+.circulo-calif.seleccionado {
+  background: linear-gradient(135deg, #39a900, #2d7a4f);
   color: white;
   border-color: #39a900;
-  transform: scale(1.1);
+  transform: scale(1.12);
+  box-shadow: 0 4px 12px rgba(57, 169, 0, 0.3);
 }
 
+.circulo-calif.deshabilitado {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calif-texto {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  font-weight: 500;
+  text-align: center;
+  max-width: 60px;
+}
+
+/* ── OBSERVACIONES ── */
 .campo-observacion,
 .campo-observacion-general {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .campo-observacion label,
@@ -133,51 +308,280 @@
   display: block;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #555;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.opcional {
+  font-weight: 400;
+  color: #9ca3af;
 }
 
 .campo-observacion textarea,
 .campo-observacion-general textarea {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #dcdcdc;
-  border-radius: 8px;
+  padding: 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
   font-family: inherit;
+  font-size: 0.9rem;
   resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fafafa;
 }
 
+.campo-observacion textarea:focus,
+.campo-observacion-general textarea:focus {
+  outline: none;
+  border-color: #39a900;
+  box-shadow: 0 0 0 3px rgba(57, 169, 0, 0.1);
+  background: white;
+}
+
+/* ── ACCIONES ── */
 .acciones-formulario {
   display: flex;
-  gap: 12px;
-  margin-top: 32px;
+  gap: 14px;
+  margin-top: 36px;
   padding-bottom: 40px;
 }
 
 .btn-cancelar {
   flex: 1;
-  padding: 14px;
-  background: #e9ecef;
-  border: none;
-  border-radius: 8px;
+  padding: 14px 24px;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
+  color: #4b5563;
+  transition: all 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: #e5e7eb;
 }
 
 .btn-enviar {
   flex: 2;
-  padding: 14px;
-  background: #39a900;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #39a900, #2d7a4f);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(57, 169, 0, 0.25);
+}
+
+.btn-enviar:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(57, 169, 0, 0.35);
+}
+
+.btn-enviar:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── GRID EVALUACIONES (Cards de instructores) ── */
+.grid-evaluaciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.evaluacion-card {
+  background: white;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.evaluacion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+.card-header {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.card-foto-wrap {
+  flex-shrink: 0;
+}
+
+.card-foto {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.card-foto-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #6b7280;
+}
+
+.card-info h4 {
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  color: #1f2937;
+}
+
+.card-email,
+.card-tel {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-competencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+  min-height: 28px;
+}
+
+.badge-competencia {
+  background: #ecfdf5;
+  color: #065f46;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
+.badge-competencia.mas {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* ── BADGES ESTADO ── */
+.badge-estado {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-estado.pendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-estado.evaluado {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* ── BOTONES CARD ── */
+.btn-evaluar {
+  background: linear-gradient(135deg, #39a900, #2d7a4f);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(57, 169, 0, 0.2);
+}
+
+.btn-evaluar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(57, 169, 0, 0.3);
+}
+
+.btn-ver {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1.5px solid #e5e7eb;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-ver:hover {
+  background: #e5e7eb;
+}
+
+/* ── ESTADO VACÍO ── */
+.estado-vacio {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.estado-vacio i {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.estado-vacio h4 {
+  color: #6b7280;
+  margin: 0 0 8px 0;
+}
+
+.estado-vacio p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ── TABLA HISTORIAL ── */
 .tabla-historial {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   overflow-x: auto;
 }
 
@@ -188,20 +592,119 @@
 
 .tabla th,
 .tabla td {
-  padding: 12px;
+  padding: 14px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .tabla th {
   font-weight: 700;
   color: #1a3c28;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.alerta-warning {
-  background: #fff3cd;
-  color: #856404;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+.tabla td {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.tabla tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pagina-evaluaciones {
+    padding: 16px;
+  }
+
+  .grid-evaluaciones {
+    grid-template-columns: 1fr;
+  }
+
+  .escala-calificacion {
+    gap: 10px;
+  }
+
+  .circulo-calif {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+  }
+
+  .acciones-formulario {
+    flex-direction: column;
+  }
+
+  .instructor-perfil {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+
+/* =========================================================
+   RESUMEN DE RESULTADOS (evaluación ya realizada)
+   ========================================================= */
+
+.resultado-resumen {
+  background: white;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid #f3f4f6;
+}
+
+.resultado-promedio {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.resultado-circulo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #39a900, #2d7a4f);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 15px rgba(57, 169, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.resultado-numero {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.resultado-de {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.resultado-texto h4 {
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+.resultado-texto p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .resultado-promedio {
+    flex-direction: column;
+    text-align: center;
+  }
 }

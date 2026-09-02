@@ -22,13 +22,13 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <button className="navbar-hamburger" onClick={abrirMenu} aria-label="Abrir menú">
           <i className="bi bi-list"></i>
         </button>
         <div className="navbar-logo">
           <i className="bi bi-mortarboard-fill"></i>
-          Sistema de Evaluación de Instructores
+          <span>SENA Evaluación</span>
         </div>
       </div>
 
@@ -39,7 +39,7 @@ function Navbar() {
           <span className="user-role">{usuario?.rol || "Aprendiz"}</span>
         </div>
         <button className="btn-logout" onClick={manejarLogout}>
-          Cerrar sesión
+          <i className="bi bi-box-arrow-right"></i> Cerrar sesión
         </button>
       </div>
     </nav>

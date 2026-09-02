@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarInstructoresPorFichaYPeriodo } from "../services/Fichainstructorservice";
 import { obtenerInstructor } from "../services/instructorService";
@@ -10,8 +10,10 @@ import "../styles/Evaluaciones.css";
 
 function Evaluaciones() {
   const navigate = useNavigate();
-  const usuario = obtenerUsuarioSesion();
-  const esAdminUser = esAdmin();
+
+  // Leer usuario UNA SOLA VEZ al montar el componente
+  const [usuario] = useState(() => obtenerUsuarioSesion());
+  const esAdminUser = useMemo(() => esAdmin(), []);
 
   const [instructores, setInstructores] = useState([]);
   const [evaluaciones, setEvaluaciones] = useState([]);
@@ -21,63 +23,76 @@ function Evaluaciones() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelado = false;
+
     const cargarDatos = async () => {
       try {
+        if (cancelado) return;
         setCargando(true);
         setError("");
 
         if (esAdminUser) {
-          // Admin ve historial de evaluaciones
           const hist = await historialEvaluaciones();
-          setHistorial(hist);
+          if (!cancelado) setHistorial(hist);
         } else {
-          // Aprendiz ve instructores de su ficha/periodo
-          if (!usuario?.id_ficha || !usuario?.id_periodo || !usuario?.id_aprendiz) {
-            setError("No se encontró información completa del aprendiz.");
+          const idFicha = usuario?.id_ficha;
+          const idPeriodo = usuario?.id_periodo;
+
+          if (!idFicha) {
+            setError("No tienes una ficha de formación asignada. Contacta al coordinador.");
             setCargando(false);
             return;
           }
 
-          const [asignaciones, evals, p] = await Promise.all([
-            listarInstructoresPorFichaYPeriodo(usuario.id_ficha, usuario.id_periodo),
+          const [fichaInstructores, evals, p] = await Promise.all([
+            listarInstructoresPorFichaYPeriodo(idFicha, idPeriodo || 1),
             listarEvaluaciones(),
             listarPreguntasActivas()
           ]);
 
-          const detalles = await Promise.all(
-            asignaciones.map((a) => obtenerInstructor(a.id_instructor).catch(() => null))
+          // Obtener datos completos de cada instructor
+          const instructoresCompletos = await Promise.all(
+            fichaInstructores.map(async (fi) => {
+              try {
+                const inst = await obtenerInstructor(fi.id_instructor);
+                return { ...inst, id_ficha_instructor: fi.id_ficha_instructor };
+              } catch {
+                return null;
+              }
+            })
           );
 
-          // Filtrar evaluaciones del aprendiz actual
-          const misEvals = evals.filter((e) => e.id_aprendiz === usuario.id_aprendiz);
-
-          setInstructores(detalles.filter(Boolean));
-          setEvaluaciones(misEvals);
-          setPreguntas(p);
+          if (!cancelado) {
+            setInstructores(instructoresCompletos.filter(Boolean));
+            setEvaluaciones(evals);
+            setPreguntas(p);
+          }
         }
       } catch (err) {
         console.error(err);
-        setError("No se pudieron cargar los datos.");
+        if (!cancelado) setError("Error al cargar los datos.");
       } finally {
-        setCargando(false);
+        if (!cancelado) setCargando(false);
       }
     };
 
     cargarDatos();
-  }, []);
+
+    return () => { cancelado = true; };
+  }, [esAdminUser]); // <- SOLO depende de esAdminUser, NO de usuario
 
   const obtenerEstadoInstructor = (idInstructor) => {
     const ev = evaluaciones.find(
-      (e) => e.id_instructor === idInstructor && e.id_periodo === usuario.id_periodo
+      (e) => e.id_instructor === idInstructor && e.id_aprendiz === usuario?.id_aprendiz
     );
-    if (!ev) return { estado: "Pendiente", id_evaluacion: null };
-    return { estado: ev.estado, id_evaluacion: ev.id_evaluacion };
+    return ev ? { estado: ev.estado, id_evaluacion: ev.id_evaluacion } : { estado: "Pendiente", id_evaluacion: null };
   };
 
   const manejarEvaluar = async (idInstructor) => {
     try {
-      const ev = await iniciarEvaluacion(usuario.id_aprendiz, idInstructor, usuario.id_periodo);
-      navigate(`/evaluaciones/${ev.id_evaluacion}`);
+      const idPeriodo = usuario?.id_periodo || 1;
+      const ev = await iniciarEvaluacion(usuario.id_aprendiz, idInstructor, idPeriodo);
+      navigate(`/evaluaciones/responder/${ev.id_evaluacion}`);
     } catch (err) {
       const detalle = err.response?.data?.detail;
       setError(typeof detalle === "string" ? detalle : "Error al iniciar la evaluación.");
@@ -91,19 +106,22 @@ function Evaluaciones() {
   if (cargando) {
     return (
       <div className="pagina-evaluaciones">
-        <p className="text-muted">Cargando...</p>
+        <div className="cargando-centrado">
+          <div className="spinner"></div>
+          <p>Cargando...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="pagina-evaluaciones">
-      <div className="encabezado">
+      <div className="encabezado-evaluacion">
         <div>
-          <h1 className="titulo">
+          <h1 className="titulo-principal">
             {esAdminUser ? "Historial de Evaluaciones" : "Evaluación de Instructores"}
           </h1>
-          <p className="subtitulo">
+          <p className="subtitulo-principal">
             {esAdminUser
               ? "Consulta el historial completo de evaluaciones realizadas"
               : "Evalúa a los instructores asignados a tu ficha de formación"}
@@ -114,7 +132,6 @@ function Evaluaciones() {
       {error && <div className="alerta alerta-error">{error}</div>}
 
       {esAdminUser ? (
-        // Vista Admin
         <div className="tabla-historial">
           {historial.length === 0 ? (
             <div className="estado-vacio">
@@ -153,7 +170,6 @@ function Evaluaciones() {
           )}
         </div>
       ) : (
-        // Vista Aprendiz
         <>
           {preguntas.length === 0 && (
             <div className="alerta alerta-warning">
@@ -176,40 +192,44 @@ function Evaluaciones() {
 
                 return (
                   <div className="evaluacion-card" key={inst.id_instructor}>
-                    <div className="perfil">
-                      {inst.foto ? (
-                        <img className="foto" src={`http://localhost:8000${inst.foto}`} alt={inst.nombre} />
-                      ) : (
-                        <div className="foto-placeholder">
-                          <i className="bi bi-person-fill"></i>
-                        </div>
-                      )}
-                      <div>
+                    <div className="card-header">
+                      <div className="card-foto-wrap">
+                        {inst.foto ? (
+                          <img className="card-foto" src={`http://localhost:8000${inst.foto}`} alt={inst.nombre} />
+                        ) : (
+                          <div className="card-foto-placeholder">
+                            <i className="bi bi-person-fill"></i>
+                          </div>
+                        )}
+                      </div>
+                      <div className="card-info">
                         <h4>{inst.nombre} {inst.apellido}</h4>
-                        <div className="badges-competencias">
-                          {(inst.competencias || []).map((c) => (
-                            <span className="badge-competencia" key={c.id_competencia}>{c.nombre}</span>
-                          ))}
-                        </div>
+                        <p className="card-email"><i className="bi bi-envelope"></i> {inst.correo}</p>
+                        {inst.telefono && <p className="card-tel"><i className="bi bi-telephone"></i> {inst.telefono}</p>}
                       </div>
                     </div>
-                    <hr />
-                    <p><i className="bi bi-envelope"></i> {inst.correo}</p>
-                    <p><i className="bi bi-telephone"></i> {inst.telefono}</p>
 
-                    <div className="estado-evaluacion">
+                    <div className="card-competencias">
+                      {(inst.competencias || []).slice(0, 3).map((c) => (
+                        <span className="badge-competencia" key={c.id_competencia}>{c.nombre}</span>
+                      ))}
+                      {(inst.competencias || []).length > 3 && (
+                        <span className="badge-competencia mas">+{(inst.competencias || []).length - 3}</span>
+                      )}
+                    </div>
+
+                    <div className="card-footer">
                       <span className={`badge-estado ${yaEvaluado ? "evaluado" : "pendiente"}`}>
                         {yaEvaluado ? "Evaluado" : "Pendiente"}
                       </span>
+                      <button
+                        className={yaEvaluado ? "btn-ver" : "btn-evaluar"}
+                        onClick={() => yaEvaluado ? manejarVerResultado(id_evaluacion) : manejarEvaluar(inst.id_instructor)}
+                      >
+                        <i className={`bi ${yaEvaluado ? "bi-eye" : "bi-pencil-square"}`}></i>
+                        {yaEvaluado ? "Ver resultado" : "Evaluar"}
+                      </button>
                     </div>
-
-                    <button
-                      className={yaEvaluado ? "btn-ver" : "btn-evaluar"}
-                      onClick={() => yaEvaluado ? manejarVerResultado(id_evaluacion) : manejarEvaluar(inst.id_instructor)}
-                    >
-                      <i className={`bi ${yaEvaluado ? "bi-eye" : "bi-pencil-square"}`}></i>
-                      {yaEvaluado ? "Ver resultado" : "Evaluar"}
-                    </button>
                   </div>
                 );
               })}

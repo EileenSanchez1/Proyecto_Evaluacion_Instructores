@@ -12,12 +12,17 @@ export const obtenerRespuesta = async (id) => {
   return response.data;
 };
 
+// NUEVO: obtener respuestas de una evaluación específica
+export const listarRespuestasPorEvaluacion = async (idEvaluacion) => {
+  const response = await api.get(`${API_URL}/evaluacion/${idEvaluacion}`);
+  return response.data;
+};
+
 export const crearRespuesta = async (datos) => {
   const response = await api.post(`${API_URL}/`, datos);
   return response.data;
 };
 
-// Enviar múltiples respuestas de una sola vez
 export const crearRespuestasBulk = async (respuestas) => {
   const response = await api.post(`${API_URL}/bulk`, respuestas);
   return response.data;
