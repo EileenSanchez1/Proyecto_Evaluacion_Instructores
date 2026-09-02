@@ -1,39 +1,43 @@
-import axios from "axios";
+import api from "../api/axiosConfig";
 
-// Poner sin la barra al final
-const API_URL = "http://localhost:8000/evaluaciones";
+const API_URL = "/evaluaciones";
 
 export const listarEvaluaciones = async () => {
-  const response = await axios.get(API_URL);
+  const response = await api.get(`${API_URL}/`);
   return response.data;
 };
 
 export const obtenerEvaluacion = async (id) => {
-  const response = await axios.get(`${API_URL}/${id}`);
+  const response = await api.get(`${API_URL}/${id}`);
   return response.data;
 };
 
 export const crearEvaluacion = async (datos) => {
-  const response = await axios.post(`${API_URL}/`, datos);
+  const response = await api.post(`${API_URL}/`, datos);
+  return response.data;
+};
+
+// Iniciar evaluación de un aprendiz a un instructor en un periodo
+export const iniciarEvaluacion = async (idAprendiz, idInstructor, idPeriodo) => {
+  const response = await api.post(`${API_URL}/iniciar`, null, {
+    params: { id_aprendiz: idAprendiz, id_instructor: idInstructor, id_periodo: idPeriodo }
+  });
   return response.data;
 };
 
 export const actualizarEvaluacion = async (id, datos) => {
-  const response = await axios.put(`${API_URL}/${id}`, datos);
+  const response = await api.put(`${API_URL}/${id}`, datos);
   return response.data;
 };
 
-// El backend recibe el estado como query param (?estado=...)
-export const cambiarEstadoEvaluacion = async (id, estado) => {
-  const response = await axios.patch(
-    `${API_URL}/${id}/estado`,
-    null,
-    { params: { estado } }
-  );
+export const actualizarEstadoEvaluacion = async (id, estado) => {
+  const response = await api.put(`${API_URL}/${id}/estado`, null, {
+    params: { estado }
+  });
   return response.data;
 };
 
 export const eliminarEvaluacion = async (id) => {
-  const response = await axios.delete(`${API_URL}/${id}`);
+  const response = await api.delete(`${API_URL}/${id}`);
   return response.data;
 };
