@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { crearAprendiz } from "../services/Aprendizservice";
-import { listarFichas } from "../services/FichaServices";
+import { listarFichasPublico } from "../services/fichaPublicService";
 import "../styles/Login.css";
 
 function Registro() {
@@ -9,6 +9,7 @@ function Registro() {
 
   const [fichas, setFichas] = useState([]);
   const [cargandoFichas, setCargandoFichas] = useState(true);
+  const [errorFichas, setErrorFichas] = useState("");
 
   const [formulario, setFormulario] = useState({
     nombre: "",
@@ -26,10 +27,16 @@ function Registro() {
   useEffect(() => {
     const cargarFichas = async () => {
       try {
-        const datos = await listarFichas();
+        setCargandoFichas(true);
+        setErrorFichas("");
+        const datos = await listarFichasPublico();
         setFichas(datos);
+        if (datos.length === 0) {
+          setErrorFichas("No hay fichas disponibles. Contacta al administrador.");
+        }
       } catch (error) {
         console.error("Error al cargar fichas:", error);
+        setErrorFichas("No se pudieron cargar las fichas. Verifica que el servidor esté activo.");
       } finally {
         setCargandoFichas(false);
       }
@@ -163,31 +170,38 @@ function Registro() {
             />
 
             <label>Ficha</label>
-            <select
-              name="id_ficha"
-              value={formulario.id_ficha}
-              onChange={manejarCambio}
-              required
-              style={{
-                width: "100%",
-                padding: "14px",
-                border: "1px solid #dcdcdc",
-                borderRadius: "10px",
-                marginBottom: "10px",
-                fontFamily: "inherit",
-                fontSize: "0.95rem",
-                background: "white",
-              }}
-            >
-              <option value="" disabled>
-                {cargandoFichas ? "Cargando fichas..." : "Selecciona tu ficha"}
-              </option>
-              {fichas.map((f) => (
-                <option key={f.id_ficha} value={f.id_ficha}>
-                  {f.numero_ficha} - {f.programa}
+            {errorFichas ? (
+              <p style={{ color: "#dc3545", fontSize: "0.9rem", marginBottom: 10 }}>
+                {errorFichas}
+              </p>
+            ) : (
+              <select
+                name="id_ficha"
+                value={formulario.id_ficha}
+                onChange={manejarCambio}
+                required
+                disabled={cargandoFichas || fichas.length === 0}
+                style={{
+                  width: "100%",
+                  padding: "14px",
+                  border: "1px solid #dcdcdc",
+                  borderRadius: "10px",
+                  marginBottom: "10px",
+                  fontFamily: "inherit",
+                  fontSize: "0.95rem",
+                  background: "white",
+                }}
+              >
+                <option value="" disabled>
+                  {cargandoFichas ? "Cargando fichas..." : "Selecciona tu ficha"}
                 </option>
-              ))}
-            </select>
+                {fichas.map((f) => (
+                  <option key={f.id_ficha} value={f.id_ficha}>
+                    {f.numero_ficha} - {f.programa}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <div style={{ display: "flex", gap: "10px" }}>
               <div style={{ flex: 1 }}>
@@ -214,7 +228,7 @@ function Registro() {
               </div>
             </div>
 
-            <button type="submit" disabled={cargando}>
+            <button type="submit" disabled={cargando || cargandoFichas || fichas.length === 0}>
               {cargando ? "Creando cuenta..." : "Registrarme"}
             </button>
           </form>
