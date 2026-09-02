@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
-from app.config.database import create_db_and_tables
+from app.config.database import create_db_and_tables, engine
 
 from app.routers.aprendiz_router import router as aprendiz_router
 from app.routers.competencia_router import router as competencia_router
@@ -16,8 +18,6 @@ from app.routers.reporte_router import router as reporte_router
 from app.routers.respuesta_router import router as respuesta_router
 from app.routers.periodo_router import router as periodo_router
 from app.routers.notificacion_router import router as notificacion_router
-from fastapi.staticfiles import StaticFiles
-import os
 
 
 app = FastAPI(
@@ -43,12 +43,68 @@ app.add_middleware(
 
 
 # =========================
-# STARTUP
+# STARTUP - Auto seed roles + admin
 # =========================
 
 @app.on_event("startup")
 def startup():
     create_db_and_tables()
+    _seed_roles_y_admin()
+
+
+def _seed_roles_y_admin():
+    """Crea roles y usuario admin automáticamente si no existen.
+    Ya NO necesitas ejecutar seed_roles.py ni seed_admin.py manualmente."""
+    from sqlmodel import Session, select
+    from pwdlib import PasswordHash
+    from app.models.rol import Rol
+    from app.models.usuario import Usuario
+
+    password_hash = PasswordHash.recommended()
+
+    with Session(engine) as session:
+        # 1) Crear roles si no existen
+        roles_data = [
+            {"nombre": "Administrador", "descripcion": "Administra completamente el sistema."},
+            {"nombre": "Coordinador", "descripcion": "Gestiona fichas, instructores, evaluaciones y reportes."},
+            {"nombre": "Instructor", "descripcion": "Consulta la información y resultados correspondientes."},
+            {"nombre": "Aprendiz", "descripcion": "Realiza evaluaciones de sus instructores."},
+        ]
+
+        for datos in roles_data:
+            existente = session.exec(
+                select(Rol).where(Rol.nombre == datos["nombre"])
+            ).first()
+            if not existente:
+                session.add(Rol(**datos))
+                print(f"✅ Rol creado: {datos['nombre']}")
+
+        session.commit()
+
+        # 2) Crear admin si no existe
+        CORREO_ADMIN = "admin@evaluacion.com"
+        CONTRASENA_ADMIN = "Admin12345"
+
+        admin_existente = session.exec(
+            select(Usuario).where(Usuario.correo == CORREO_ADMIN)
+        ).first()
+
+        if not admin_existente:
+            rol_admin = session.exec(
+                select(Rol).where(Rol.nombre == "Administrador")
+            ).first()
+
+            if rol_admin:
+                admin = Usuario(
+                    nombre="Administrador",
+                    apellido="Sistema",
+                    correo=CORREO_ADMIN,
+                    contrasena=password_hash.hash(CONTRASENA_ADMIN),
+                    id_rol=rol_admin.id_rol
+                )
+                session.add(admin)
+                session.commit()
+                print(f"✅ Admin creado: {CORREO_ADMIN} / {CONTRASENA_ADMIN}")
 
 
 # =========================
@@ -83,7 +139,6 @@ app.include_router(notificacion_router)
 # =========================
 # ARCHIVOS ESTATICOS (fotos)
 # =========================
-# CORREGIDO: misma carpeta que usa instructor_router.py
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "app", "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
