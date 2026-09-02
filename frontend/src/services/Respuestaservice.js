@@ -1,28 +1,34 @@
-import axios from "axios";
+import api from "../api/axiosConfig";
 
-// Poner sin la barra al final
-const API_URL = "http://localhost:8000/respuestas";
+const API_URL = "/respuestas";
 
-// El backend no expone un filtro por evaluación, así que se trae
-// el listado completo (con un límite alto) y se filtra en el frontend.
 export const listarRespuestas = async () => {
-  const response = await axios.get(API_URL, {
-    params: { limit: 1000 },
-  });
+  const response = await api.get(`${API_URL}/`);
+  return response.data;
+};
+
+export const obtenerRespuesta = async (id) => {
+  const response = await api.get(`${API_URL}/${id}`);
   return response.data;
 };
 
 export const crearRespuesta = async (datos) => {
-  const response = await axios.post(`${API_URL}/`, datos);
+  const response = await api.post(`${API_URL}/`, datos);
+  return response.data;
+};
+
+// Enviar múltiples respuestas de una sola vez
+export const crearRespuestasBulk = async (respuestas) => {
+  const response = await api.post(`${API_URL}/bulk`, respuestas);
   return response.data;
 };
 
 export const actualizarRespuesta = async (id, datos) => {
-  const response = await axios.put(`${API_URL}/${id}`, datos);
+  const response = await api.put(`${API_URL}/${id}`, datos);
   return response.data;
 };
 
 export const eliminarRespuesta = async (id) => {
-  const response = await axios.delete(`${API_URL}/${id}`);
+  const response = await api.delete(`${API_URL}/${id}`);
   return response.data;
 };
