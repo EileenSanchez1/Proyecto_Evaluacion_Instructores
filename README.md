@@ -1,7 +1,6 @@
-[README.md](https://github.com/user-attachments/files/31720214/README.md)
 # Sistema de Evaluación de Instructores
 
-Sistema web para la evaluación de instructores del SENA, desarrollado con **FastAPI** y **PostgreSQL**.
+Sistema web para la evaluación de instructores del SENA, desarrollado con **FastAPI** (Backend), **React + Vite** (Frontend) y **PostgreSQL** (Base de Datos).
 
 Permite a los aprendices evaluar a sus instructores mediante encuestas estructuradas, gestionar fichas de formación, instructores, competencias y generar reportes de evaluación.
 
@@ -12,431 +11,254 @@ Permite a los aprendices evaluar a sus instructores mediante encuestas estructur
 Antes de comenzar, asegúrate de tener instalado en tu equipo:
 
 | Software | Versión recomendada | Descarga |
-|----------|---------------------|----------|
-| Python | 3.10 o superior | [python.org](https://www.python.org/downloads/) |
-| PostgreSQL | 15 o superior | [postgresql.org](https://www.postgresql.org/download/) |
-| Git | Última versión | [git-scm.com](https://git-scm.com/downloads) |
-| Visual Studio Code (opcional) | Última versión | [code.visualstudio.com](https://code.visualstudio.com/) |
-
-> **Nota:** Este proyecto está configurado para ejecutarse en **Windows** con Git Bash o CMD.
+| --- | --- | --- |
+| **Python** | 3.10 o superior | [python.org](https://www.python.org/downloads/) |
+| **Node.js** | 18.0 o superior | [nodejs.org](https://nodejs.org/) |
+| **PostgreSQL** | 15 o superior | [postgresql.org](https://www.postgresql.org/download/) |
+| **Git** | Última versión | [git-scm.com](https://git-scm.com/downloads) |
 
 ---
 
 ## 📁 Estructura del Proyecto
 
-```
+```text
 Proyecto_Evaluacion_Instructores/
-├── backend/
-│   ├── main.py              ← Punto de entrada de la aplicación
-│   ├── database.py          ← Configuración de la base de datos
-│   ├── requirements.txt     ← Dependencias de Python
-│   ├── .env                 ← Variables de entorno (crear manualmente)
-│   ├── models/              ← Modelos SQLModel
-│   ├── routers/             ← Endpoints de la API
-│   ├── schemas/             ← Esquemas Pydantic
-│   └── services/            ← Lógica de negocio
-├── documentacion/           ← Diagramas y documentación técnica
-├── README.md                ← Este archivo
-└── .gitignore
+├── backend/                  ← Servidor FastAPI
+│   ├── main.py               ← Punto de entrada de la aplicación
+│   ├── database.py           ← Configuración de la base de datos
+│   ├── requirements.txt      ← Dependencias de Python
+│   ├── .env                  ← Variables de entorno (crear manualmente)
+│   ├── app/                  ← Estructura del backend (routers, models, schemas)
+│   └── venv/                 ← Entorno virtual
+├── frontend/                 ← Interfaz de usuario en React (Vite)
+│   ├── src/                  ← Componentes y vistas
+│   ├── package.json          ← Dependencias de Node.js / React
+│   └── node_modules/         
+├── documentacion/            ← Diagramas y documentación técnica
+└── README.md                 ← Este archivo
+
 ```
 
 ---
 
-## 🚀 Instalación y Configuración
-
-Sigue estos pasos en **orden** para ejecutar el proyecto correctamente.
-
----
+## 🚀 Instalación y Configuración Inicial
 
 ### 1. Clonar el repositorio
 
-Desde una consola (Git Bash o CMD):
-
 ```bash
 git clone https://github.com/EileenSanchez1/Proyecto_Evaluacion_Instructores.git
-cd Proyecto_Evaluacion_Instructores/backend
-```
+cd Proyecto_Evaluacion_Instructores
 
-Si el repositorio ya está clonado, entra directamente a la carpeta `backend`.
+```
 
 ---
 
-### 2. Crear y activar el entorno virtual
+### 2. Configurar el Backend (Python / FastAPI)
 
-#### Windows
-
-Crear el entorno virtual:
-
+1. **Entra a la carpeta backend:**
 ```bash
-python -m venv venv
+cd backend
+
 ```
 
-**Git Bash:**
 
+2. **Crear y activar el entorno virtual:**
+* **Windows (PowerShell):**
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate
+
+```
+
+
+* **Windows (Git Bash):**
 ```bash
 source venv/Scripts/activate
+
 ```
 
-**CMD:**
 
-```cmd
-venv\Scripts\activate
-```
 
-Cuando el entorno esté activado debe aparecer:
 
-```text
-(venv)
-```
-
-al inicio de la consola.
-
----
-
-### 3. Instalar las dependencias
-
-Con el entorno virtual activado:
-
+3. **Instalar dependencias:**
 ```bash
 pip install -r requirements.txt
+pip install python-multipart python-dotenv
+
 ```
 
-Si las dependencias ya están instaladas, **no es necesario volver a instalarlas**.
 
-Para comprobar las dependencias instaladas:
-
-```bash
-pip list
-```
-
-Si falta alguna dependencia:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-### 4. Configurar el archivo `.env`
-
-> **⚠️ IMPORTANTE: NO OLVIDAR EL ARCHIVO `.env`.**
-
-El archivo `.env` debe estar dentro de la carpeta `backend`, al mismo nivel que `main.py`.
-
-Ejemplo:
-
+4. **Crear el archivo `.env`:**
+Crea un archivo llamado `.env` dentro de la carpeta `backend` (al mismo nivel que `main.py`) con el siguiente contenido:
 ```env
 DATABASE_URL=postgresql+psycopg2://postgres:CONTRASEÑA@localhost:5432/evaluacion_instructores
+
 ```
 
-Se debe reemplazar `CONTRASEÑA` por la contraseña configurada para el usuario de PostgreSQL en tu equipo.
 
-El archivo `.env` es necesario para que la aplicación pueda conectarse correctamente a la base de datos.
+> ⚠️ **Reemplaza `CONTRASEÑA**` por la clave real de tu usuario `postgres` en PostgreSQL.
+
+
 
 ---
 
-## 🖥️ Ejecución del Proyecto
+### 3. Configurar el Frontend (React + Vite)
 
-Se recomienda utilizar **3 consolas** para ejecutar y verificar el proyecto.
+Abre la carpeta `frontend` e instala los paquetes necesarios:
+
+```bash
+cd ../frontend
+npm install
+
+```
 
 ---
 
-## 🖥️ CONSOLA 1 — PostgreSQL
+## 🖥️ Ejecución del Proyecto (3 Terminales)
 
-Primero se debe verificar que PostgreSQL esté funcionando.
+Para ejecutar el sistema completo se requieren **3 terminales o consolas independientes**:
 
-Desde CMD:
+---
 
-```cmd
-sc query postgresql-x64-17
-```
+### 🖥️ CONSOLA 1 — Base de Datos (PostgreSQL)
 
-Debe aparecer un estado similar a:
+Verifica que el servicio de PostgreSQL esté iniciado:
 
-```text
-ESTADO : 4  RUNNING
-```
-
-Si el servicio está detenido:
-
-```cmd
+```powershell
+# En PowerShell
 net start postgresql-x64-17
+
 ```
 
-### Entrar a PostgreSQL
+*(Opcional)* Puedes conectarte para crear o verificar la base de datos `evaluacion_instructores`:
 
-```cmd
-"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres
+```powershell
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres
+
 ```
-
-Ingresar la contraseña de PostgreSQL configurada en el equipo.
-
-### Entrar a la base de datos
 
 ```sql
+CREATE DATABASE evaluacion_instructores;
 \c evaluacion_instructores
-```
-
-Comprobar la base de datos actual:
-
-```sql
-SELECT current_database();
-```
-
-Para ver las tablas:
-
-```sql
 \dt
-```
-
-Para salir de PostgreSQL:
-
-```sql
 \q
+
 ```
 
 ---
 
-## 🖥️ CONSOLA 2 — Backend / FastAPI
+### 🖥️ CONSOLA 2 — Backend (FastAPI)
 
-Abrir una segunda consola.
+1. Ve a la carpeta backend y activa el entorno virtual:
+```powershell
+cd C:\Proyecto_Evaluacion_Instructores\backend
+.\venv\Scripts\Activate
 
-Entrar a la carpeta del backend:
-
-```bash
-cd Proyecto_Evaluacion_Instructores/backend
 ```
 
-Activar el entorno virtual:
 
-```bash
-source venv/Scripts/activate
-```
-
-Ejecutar FastAPI:
-
-```bash
+2. Inicia el servidor del backend:
+```powershell
 uvicorn main:app --reload
+
 ```
 
-Si todo funciona correctamente aparecerá algo similar a:
 
-```text
-Uvicorn running on http://127.0.0.1:8000
-```
-
-### Documentación de la API
-
-La documentación de Swagger estará disponible en:
-
-```text
-http://127.0.0.1:8000/docs
-```
+3. El servidor iniciará en: `[http://127.0.0.1:8000](http://127.0.0.1:8000)`
+4. La documentación de la API estará disponible en: `[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)`
 
 ---
 
-## 🖥️ CONSOLA 3 — Verificar la base de datos
+### 🖥️ CONSOLA 3 — Frontend (React)
 
-Abrir una tercera consola.
+1. Ve a la carpeta frontend:
+```powershell
+cd C:\Proyecto_Evaluacion_Instructores\frontend
 
-Entrar a PostgreSQL:
-
-```cmd
-"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres
-```
-
-Entrar a la base de datos:
-
-```sql
-\c evaluacion_instructores
-```
-
-Ver las tablas:
-
-```sql
-\dt
-```
-
-Las tablas se crean automáticamente al iniciar la API mediante:
-
-```python
-create_db_and_tables()
 ```
 
 
+2. Inicia el servidor de desarrollo de React:
+```powershell
+npm run dev
 
-## Iniciar sesión
-
-Cuando ya existan:
-
-* La base de datos.
-* El registro activo
-* Orden seguido de ejecucion ya dicho previamente
-* El correo y contraseña del Aprendiz.
-
-Se puede realizar el inicio de sesión desde:
+```
 
 
+3. La interfaz web abrirá normalmente en: `http://localhost:5173` (o el puerto indicado por Vite).
 
-Si los datos son correctos, se devolverá el mensaje de inicio de sesión y la información correspondiente del aprendiz.
+---
+
+## 🔑 Paso Obligatorio Inicial: Crear la primera Ficha
+
+> ⚠️ **IMPORTANTE:** Para que un **Aprendiz** pueda registrarse desde la interfaz de React, **debe existir al menos una Ficha registrada previamente en el sistema**.
+
+Para crear la primera Ficha, realiza los siguientes pasos desde la API en Swagger (`[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)`):
+
+1. **Obtener Token de Administrador:**
+* Abre el endpoint `POST /login/`.
+* Ingresa las credenciales por defecto del sistema:
+* **Correo:** `admin@evaluacion.com`
+* **Contraseña:** `Admin12345`
+
+
+* Haz clic en **Execute** y copia el texto del `access_token` generado en la respuesta.
+
+
+2. **Autorizar el Token en Swagger:**
+* Ve a la parte superior derecha de la página `/docs` y haz clic en el botón verde **Authorize**.
+* Pega el `access_token` en el campo **Value:** (sin la palabra `Bearer`).
+* Haz clic en **Authorize** y luego en **Close**.
+
+
+3. **Crear la Ficha:**
+* Despliega el endpoint **`POST /fichas/`**.
+* Haz clic en **Try it out** y envía los datos de la nueva ficha (ej. número de ficha y programa de formación).
+* Haz clic en **Execute**.
+
+
+
+¡Listo! Una vez creada la ficha desde la API, ya puedes ir a la **interfaz web de React**, registrar un nuevo Aprendiz seleccionando dicha ficha e iniciar sesión normalmente.
 
 ---
 
 ## 📊 Orden recomendado de ejecución
 
 ```text
-1. Iniciar PostgreSQL
+1. Iniciar servicio de PostgreSQL
         ↓
-2. Verificar la base de datos evaluacion_instructores
+2. Ejecutar FastAPI en la Consola Backend (uvicorn main:app --reload)
         ↓
-3. Verificar el archivo .env
+3. Ejecutar React en la Consola Frontend (npm run dev)
         ↓
-4. Activar el entorno virtual
+4. Abrir Swagger (http://127.0.0.1:8000/docs)
         ↓
-5. Instalar requirements.txt si hace falta
+5. Hacer login como admin@evaluacion.com y autorizar el Token en Swagger
         ↓
-6. Ejecutar FastAPI
+6. Crear una Ficha mediante el endpoint POST /fichas/
         ↓
-7. Abrir Swagger /docs
+7. Ir a la interfaz web de React y Registrar un Aprendiz asociado a la Ficha creada
         ↓
-8. Abrir el localhost de react
-        ↓
-9. Registrarse como aprendiz
-        ↓
-10. Iniciar sesión
+8. Iniciar sesión en la interfaz web con la cuenta del Aprendiz
+
 ```
-
----
-
-## 📋 Comandos principales
-
-### Crear entorno virtual
-
-```bash
-python -m venv venv
-```
-
-### Activar entorno virtual — Git Bash
-
-```bash
-source venv/Scripts/activate
-```
-
-### Activar entorno virtual — CMD
-
-```cmd
-venv\Scripts\activate
-```
-
-### Instalar dependencias
-
-```bash
-pip install -r requirements.txt
-```
-
-### Ejecutar FastAPI
-
-```bash
-uvicorn main:app --reload
-```
-
-### Iniciar PostgreSQL
-
-```cmd
-net start postgresql-x64-17
-```
-
-### Entrar a PostgreSQL
-
-```cmd
-"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres
-```
-
-### Entrar a la base de datos
-
-```sql
-\c evaluacion_instructores
-```
-
-### Ver tablas
-
-```sql
-\dt
-```
-
----
-
-## 🔍 Documentación de la API (Swagger)
-
-Con FastAPI ejecutándose, acceder a:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Desde Swagger se pueden consultar y probar los diferentes endpoints de la API de forma interactiva.
-
-También está disponible la documentación alternativa en:
-
-```text
-http://127.0.0.1:8000/redoc
-```
-
----
-
-## ⚠️ Importante
-
-Antes de ejecutar el proyecto, verificar lo siguiente:
-
-* PostgreSQL debe estar iniciado.
-* Debe existir la base de datos `evaluacion_instructores`.
-* Debe existir el archivo `.env`.
-* El archivo `.env` debe estar dentro de `backend`.
-* La contraseña de PostgreSQL del `.env` debe ser correcta.
-* El entorno virtual debe estar activado en backend antes de ejecutar FastAPI.
-* Si las dependencias ya están instaladas, no es necesario instalarlas nuevamente.
-* Primero se debe crear la **Ficha**.
-* Después se debe crear el **Aprendiz asociado a esa Ficha**.
-* Para iniciar sesión se utiliza el correo y contraseña del Aprendiz creado.
 
 ---
 
 ## 🛠️ Solución de Problemas (Troubleshooting)
 
 | Problema | Causa probable | Solución |
-|----------|---------------|----------|
-| `ModuleNotFoundError` | Dependencias no instaladas | Ejecutar `pip install -r requirements.txt` con el entorno virtual activado |
-| `Connection refused` | PostgreSQL no está corriendo | Verificar con `sc query postgresql-x64-17` e iniciar con `net start postgresql-x64-17` |
-| Error de autenticación en login | Datos incorrectos o Aprendiz no creado | Verificar que el Aprendiz exista en la base de datos y que el correo y contraseña sean correctos |
-| No se crean las tablas | Error en la conexión a la base de datos | Revisar que el archivo `.env` tenga la URL correcta y que PostgreSQL esté activo |
-| Puerto 8000 en uso | Otra aplicación está usando el puerto | Cambiar el puerto con `uvicorn main:app --reload --port 8001` |
-
----
-
-## 📚 Endpoints principales
-
-| Módulo | Descripción |
-|--------|-------------|
-| **Fichas** | Gestión de fichas de formación |
-| **Aprendices** | Registro y gestión de aprendices |
-| **Instructores** | Gestión de instructores |
-| **Competencias** | Administración de competencias |
-| **Encuestas** | Creación y gestión de encuestas de evaluación |
-| **Login** | Autenticación de usuarios |
+| --- | --- | --- |
+| `RuntimeError: Form data requires python-multipart` | Falta la librería para procesar formularios | Ejecutar `pip install python-multipart` |
+| `Token '-U' inesperado` | Error de sintaxis en PowerShell al llamar `psql` | Usar el operador `&`: `& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres` |
+| `401 Unauthorized` al crear Fichas | No se ha enviado o autorizado el token de acceso | Iniciar sesión en `POST /login/`, copiar el token y pegarlo en el botón **Authorize** de Swagger |
+| Error al registrar Aprendiz en la Web | No existe ninguna ficha creada en la base de datos | Crear primero una Ficha desde Swagger (`POST /fichas/`) |
+| `Connection refused` | El servicio de PostgreSQL está detenido | Iniciar con `net start postgresql-x64-17` |
 
 ---
 
 ## 🛠️ Tecnologías utilizadas
 
-* **Python** — Lenguaje de programación
-* **FastAPI** — Framework web de alto rendimiento
-* **SQLModel** — ORM para modelos SQL
-* **PostgreSQL** — Sistema de gestión de bases de datos relacional
-* **Pydantic** — Validación de datos y serialización
-* **Uvicorn** — Servidor ASGI para ejecutar la aplicación
-* **psycopg2** — Driver de PostgreSQL para Python
-* **python-dotenv** — Gestión de variables de entorno
-
----
-
-> 📌 **Estado del proyecto:** Finalizado parcial — Listo para pruebas.
+* **Backend:** Python, FastAPI, SQLModel, SQLAlchemy, Uvicorn, Python-dotenv, Python-multipart.
+* **Frontend:** React, Vite, Node.js.
+* **Base de Datos:** PostgreSQL (o SQLite para pruebas persitentes).
