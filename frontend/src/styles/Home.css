@@ -648,3 +648,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── COLORES ADICIONALES PARA REPORTES ── */
+.home-stat-amarillo {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.home-stat-rojo {
+  background: #fef2f2;
+  color: #991b1b;
+}
