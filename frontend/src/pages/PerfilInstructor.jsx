@@ -18,7 +18,7 @@ function PerfilInstructor() {
   // Cargar datos del instructor
   useEffect(() => {
     const cargarDatos = async () => {
-      const idInstructor = usuario?.id_instructor || usuario?.id;
+      const idInstructor = usuario?.id_instructor;
       if (idInstructor) {
         try {
           const data = await obtenerInstructor(idInstructor);
@@ -39,7 +39,7 @@ function PerfilInstructor() {
 
   // Cargar reporte de desempeño por preguntas
   const cargarPromedioPreguntas = async () => {
-    const idInstructor = usuario?.id_instructor || usuario?.id;
+    const idInstructor = usuario?.id_instructor;
     if (!idInstructor) return;
 
     try {
@@ -57,16 +57,36 @@ function PerfilInstructor() {
   };
 
   // Subir / Cambiar Foto de Perfil
+  const urlFoto = (ruta) => {
+    if (!ruta) return null;
+    if (ruta.startsWith("http")) return ruta;
+    const base = "http://127.0.0.1:8000";
+    return `${base}${ruta}${ruta.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  };
+
   const handleFotoChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const idInstructor = usuario?.id_instructor || usuario?.id;
+    if (!file.type.startsWith("image/")) {
+      setEsError(true);
+      setMensaje("Selecciona un archivo de imagen (JPG, PNG o WEBP).");
+      return;
+    }
+
+    const idInstructor = usuario?.id_instructor;
+    if (!idInstructor) {
+      setEsError(true);
+      setMensaje("Sesión de instructor no válida.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("foto", file);
 
     try {
       setCargando(true);
+      setMensaje("");
       const response = await api.post(
         `/instructores/${idInstructor}/foto`,
         formData,
@@ -74,20 +94,29 @@ function PerfilInstructor() {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
-      setInstructor(response.data);
+      const actualizado = response.data;
+      setInstructor(actualizado);
 
-      // Actualizar usuario en localStorage
-      const updatedUser = { ...usuario, foto: response.data.foto };
-      localStorage.setItem("usuario", JSON.stringify(updatedUser));
+      // Actualizar sesión local para que navbar y demás vean la nueva foto
+      try {
+        const raw = localStorage.getItem("usuario");
+        const u = raw ? JSON.parse(raw) : {};
+        u.foto = actualizado.foto;
+        localStorage.setItem("usuario", JSON.stringify(u));
+      } catch {
+        /* ignore */
+      }
 
       setEsError(false);
-      setMensaje("Foto de perfil actualizada correctamente.");
+      setMensaje("Foto de perfil actualizada. Admin y aprendices verán el cambio al recargar la lista de instructores.");
     } catch (err) {
       console.error(err);
       setEsError(true);
-      setMensaje("No se pudo actualizar la foto de perfil.");
+      setMensaje(err.response?.data?.detail || "No se pudo actualizar la foto de perfil.");
     } finally {
       setCargando(false);
+      // limpiar input para permitir volver a elegir el mismo archivo
+      e.target.value = "";
     }
   };
 
@@ -175,8 +204,8 @@ function PerfilInstructor() {
               >
                 {instructor?.foto ? (
                   <img
-                    src={instructor.foto}
-                    alt="Foto del Instructor"
+                    src={urlFoto(instructor.foto)}
+                    alt="Foto actual del instructor"
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />
                 ) : (

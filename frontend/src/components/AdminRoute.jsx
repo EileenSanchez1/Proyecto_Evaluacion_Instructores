@@ -1,13 +1,14 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { tieneRol } from "../utils/sesion";
+import { tieneRol, esInstructor } from "../utils/sesion";
 
-// Ojo: esto es solo conveniencia de UI (ocultar/redirigir en React).
-// La protección real vive en el backend con require_roles(...),
-// así que aunque alguien manipule el localStorage no puede hacer
-// nada porque FastAPI vuelve a validar el rol con cada request.
+// Protección de UI. La seguridad real está en el backend (require_roles).
 function AdminRoute({ roles = ["Administrador"] }) {
   if (!tieneRol(...roles)) {
-    return <Navigate to="/instructores" replace />;
+    // Instructores van a su home; otros roles a una ruta segura
+    if (esInstructor()) {
+      return <Navigate to="/" replace />;
+    }
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

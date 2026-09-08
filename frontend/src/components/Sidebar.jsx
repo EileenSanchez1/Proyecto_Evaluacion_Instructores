@@ -3,7 +3,6 @@ import {
   esAdmin,
   esAdminOCoordinador,
   esInstructor,
-  obtenerUsuarioSesion,
   obtenerRol,
 } from "../utils/sesion";
 import "../styles/Layout.css";
@@ -34,7 +33,6 @@ function Sidebar() {
           <i className="bi bi-house"></i> Inicio
         </NavLink>
 
-        {/* Enlaces exclusivos para Instructor */}
         {instructor && (
           <>
             <NavLink
@@ -53,10 +51,17 @@ function Sidebar() {
             >
               <i className="bi bi-graph-up-arrow"></i> Mi Promedio
             </NavLink>
+            <NavLink
+              to="/evaluaciones"
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
+            >
+              <i className="bi bi-clipboard-check"></i> Evaluaciones
+            </NavLink>
           </>
         )}
 
-        {/* Instructores visibles para todos los logueados excepto quizás solo admin, pero se deja */}
         {!instructor && (
           <NavLink
             to="/instructores"
@@ -66,12 +71,15 @@ function Sidebar() {
           </NavLink>
         )}
 
-        <NavLink
-          to="/evaluaciones"
-          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-        >
-          <i className="bi bi-clipboard-check"></i> Evaluaciones
-        </NavLink>
+        {/* Aprendiz: Evaluaciones para calificar */}
+        {esAprendiz && (
+          <NavLink
+            to="/evaluaciones"
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+          >
+            <i className="bi bi-clipboard-check"></i> Evaluaciones
+          </NavLink>
+        )}
 
         {admin && (
           <NavLink
@@ -82,18 +90,17 @@ function Sidebar() {
           </NavLink>
         )}
 
-        {/* Novedades solo Admin / Coordinador */}
-        {adminOCoordinador && (
-          <NavLink
-            to="/novedades"
-            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-          >
-            <i className="bi bi-bell"></i> Novedades
-          </NavLink>
-        )}
-
         {adminOCoordinador && (
           <>
+            <NavLink
+              to="/novedades"
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
+            >
+              <i className="bi bi-bell"></i> Novedades
+            </NavLink>
+
             <NavLink
               to="/fichas"
               className={({ isActive }) =>
@@ -112,8 +119,6 @@ function Sidebar() {
               <i className="bi bi-award"></i> Competencias
             </NavLink>
 
-            {/* HORARIOS ELIMINADO - no es necesario */}
-
             <NavLink
               to="/periodos"
               className={({ isActive }) =>
@@ -123,13 +128,14 @@ function Sidebar() {
               <i className="bi bi-calendar-range"></i> Periodos
             </NavLink>
 
+            {/* Antes: Historial. Ahora se muestra como Evaluaciones (misma lógica /historial) */}
             <NavLink
               to="/historial"
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
             >
-              <i className="bi bi-clock-history"></i> Historial
+              <i className="bi bi-clipboard-check"></i> Evaluaciones
             </NavLink>
 
             <NavLink
@@ -143,14 +149,13 @@ function Sidebar() {
           </>
         )}
 
-        {/* Contacto principalmente para Aprendiz */}
-        {(esAprendiz || adminOCoordinador) && (
+        {/* Contacto solo Aprendiz */}
+        {esAprendiz && (
           <NavLink
             to="/contacto"
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
-            <i className="bi bi-envelope"></i>{" "}
-            {esAprendiz ? "Contacto / Novedad" : "Contacto"}
+            <i className="bi bi-envelope"></i> Contacto / Novedad
           </NavLink>
         )}
       </nav>

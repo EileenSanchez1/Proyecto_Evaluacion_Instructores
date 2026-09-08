@@ -1,19 +1,31 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { listarInstructoresPorFichaYPeriodo } from "../services/Fichainstructorservice";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  listarInstructoresPorFichaYPeriodo,
+  listarFichasPorInstructor,
+} from "../services/Fichainstructorservice";
 import { obtenerInstructor } from "../services/instructorService";
 import { iniciarEvaluacion, listarEvaluaciones } from "../services/Evaluacionservice";
 import { listarPreguntasActivas } from "../services/Preguntaservice";
-import { obtenerUsuarioSesion, esAdmin } from "../utils/sesion";
-import { historialEvaluaciones } from "../services/Reporteservice";
+import { listarFichas } from "../services/FichaServices";
+import {
+  obtenerUsuarioSesion,
+  esAdmin,
+  esInstructor,
+} from "../utils/sesion";
+import {
+  historialEvaluaciones,
+  miPromedioInstructor,
+} from "../services/Reporteservice";
 import "../styles/Evaluaciones.css";
+import "../styles/Home.css";
 
 function Evaluaciones() {
   const navigate = useNavigate();
 
-  // Leer usuario UNA SOLA VEZ al montar el componente
   const [usuario] = useState(() => obtenerUsuarioSesion());
   const esAdminUser = useMemo(() => esAdmin(), []);
+  const esInstructorUser = useMemo(() => esInstructor(), []);
 
   const [instructores, setInstructores] = useState([]);
   const [evaluaciones, setEvaluaciones] = useState([]);
@@ -21,6 +33,10 @@ function Evaluaciones() {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+
+  // Instructor view
+  const [fichasInstructor, setFichasInstructor] = useState([]);
+  const [reporteInst, setReporteInst] = useState(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -33,13 +49,52 @@ function Evaluaciones() {
 
         if (esAdminUser) {
           const hist = await historialEvaluaciones();
-          if (!cancelado) setHistorial(hist);
+          if (!cancelado) setHistorial(hist || []);
+        } else if (esInstructorUser) {
+          const idInstructor = usuario?.id_instructor;
+          if (!idInstructor) {
+            setError(
+              "No se encontró el identificador de instructor. Vuelve a iniciar sesión como instructor."
+            );
+            setCargando(false);
+            return;
+          }
+
+          const [asignaciones, reporte, todasFichas] = await Promise.all([
+            listarFichasPorInstructor(idInstructor).catch(() => []),
+            miPromedioInstructor(idInstructor).catch(() => null),
+            listarFichas().catch(() => []),
+          ]);
+
+          const mapa = Object.fromEntries(
+            (todasFichas || []).map((f) => [f.id_ficha, f])
+          );
+
+          let fichas =
+            reporte?.fichas_asignadas?.length > 0
+              ? reporte.fichas_asignadas
+              : (asignaciones || []).map((a) => {
+                  const f = mapa[a.id_ficha];
+                  return {
+                    ...a,
+                    numero_ficha: f?.numero_ficha,
+                    programa: f?.programa,
+                  };
+                });
+
+          if (!cancelado) {
+            setFichasInstructor(fichas);
+            setReporteInst(reporte);
+          }
         } else {
+          // Aprendiz
           const idFicha = usuario?.id_ficha;
           const idPeriodo = usuario?.id_periodo;
 
           if (!idFicha) {
-            setError("No tienes una ficha de formación asignada. Contacta al coordinador.");
+            setError(
+              "No tienes una ficha de formación asignada. Contacta al coordinador."
+            );
             setCargando(false);
             return;
           }
@@ -47,15 +102,17 @@ function Evaluaciones() {
           const [fichaInstructores, evals, p] = await Promise.all([
             listarInstructoresPorFichaYPeriodo(idFicha, idPeriodo || 1),
             listarEvaluaciones(),
-            listarPreguntasActivas()
+            listarPreguntasActivas(),
           ]);
 
-          // Obtener datos completos de cada instructor
           const instructoresCompletos = await Promise.all(
-            fichaInstructores.map(async (fi) => {
+            (fichaInstructores || []).map(async (fi) => {
               try {
                 const inst = await obtenerInstructor(fi.id_instructor);
-                return { ...inst, id_ficha_instructor: fi.id_ficha_instructor };
+                return {
+                  ...inst,
+                  id_ficha_instructor: fi.id_ficha_instructor || fi.id,
+                };
               } catch {
                 return null;
               }
@@ -64,38 +121,49 @@ function Evaluaciones() {
 
           if (!cancelado) {
             setInstructores(instructoresCompletos.filter(Boolean));
-            setEvaluaciones(evals);
-            setPreguntas(p);
+            setEvaluaciones(evals || []);
+            setPreguntas(p || []);
           }
         }
       } catch (err) {
         console.error(err);
-        if (!cancelado) setError("Error al cargar los datos.");
+        if (!cancelado) setError("Error al cargar las evaluaciones.");
       } finally {
         if (!cancelado) setCargando(false);
       }
     };
 
     cargarDatos();
-
-    return () => { cancelado = true; };
-  }, [esAdminUser]); // <- SOLO depende de esAdminUser, NO de usuario
+    return () => {
+      cancelado = true;
+    };
+  }, [esAdminUser, esInstructorUser, usuario]);
 
   const obtenerEstadoInstructor = (idInstructor) => {
     const ev = evaluaciones.find(
-      (e) => e.id_instructor === idInstructor && e.id_aprendiz === usuario?.id_aprendiz
+      (e) =>
+        e.id_instructor === idInstructor &&
+        e.id_aprendiz === usuario?.id_aprendiz
     );
-    return ev ? { estado: ev.estado, id_evaluacion: ev.id_evaluacion } : { estado: "Pendiente", id_evaluacion: null };
+    return {
+      estado: ev?.estado || "Pendiente",
+      id_evaluacion: ev?.id_evaluacion,
+    };
   };
 
   const manejarEvaluar = async (idInstructor) => {
     try {
       const idPeriodo = usuario?.id_periodo || 1;
-      const ev = await iniciarEvaluacion(usuario.id_aprendiz, idInstructor, idPeriodo);
+      const ev = await iniciarEvaluacion(
+        usuario.id_aprendiz,
+        idInstructor,
+        idPeriodo
+      );
       navigate(`/evaluaciones/responder/${ev.id_evaluacion}`);
     } catch (err) {
-      const detalle = err.response?.data?.detail;
-      setError(typeof detalle === "string" ? detalle : "Error al iniciar la evaluación.");
+      setError(
+        err.response?.data?.detail || "No se pudo iniciar la evaluación."
+      );
     }
   };
 
@@ -118,76 +186,215 @@ function Evaluaciones() {
     <div className="pagina-evaluaciones">
       <div className="encabezado-evaluacion">
         <div>
-          <h1 className="titulo-principal">
-            {esAdminUser ? "Historial de Evaluaciones" : "Evaluación de Instructores"}
-          </h1>
-          <p className="subtitulo-principal">
+          <h2>
             {esAdminUser
-              ? "Consulta el historial completo de evaluaciones realizadas"
+              ? "Historial de Evaluaciones"
+              : esInstructorUser
+              ? "Mis evaluaciones recibidas"
+              : "Evaluación de Instructores"}
+          </h2>
+          <p>
+            {esAdminUser
+              ? "Consulta el historial completo de evaluaciones del sistema"
+              : esInstructorUser
+              ? "Resumen de fichas asignadas y evaluaciones que has recibido (anónimas)"
               : "Evalúa a los instructores asignados a tu ficha de formación"}
           </p>
         </div>
       </div>
 
-      {error && <div className="alerta alerta-error">{error}</div>}
+      {error && (
+        <div
+          className="alerta-error"
+          style={{
+            background: "#fee2e2",
+            color: "#991b1b",
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 16,
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-      {esAdminUser ? (
-        <div className="tabla-historial">
+      {/* ── ADMIN ── */}
+      {esAdminUser && (
+        <div className="tabla-container">
           {historial.length === 0 ? (
-            <div className="estado-vacio">
-              <i className="bi bi-clipboard-data"></i>
-              <h4>No hay evaluaciones registradas</h4>
-            </div>
+            <p style={{ color: "#6b7280" }}>No hay evaluaciones registradas.</p>
           ) : (
-            <table className="tabla">
+            <table className="tabla-evaluaciones">
               <thead>
                 <tr>
-                  <th>Fecha</th>
-                  <th>Periodo</th>
-                  <th>Aprendiz</th>
                   <th>Ficha</th>
                   <th>Instructor</th>
+                  <th>Periodo</th>
                   <th>Estado</th>
+                  <th>Fecha</th>
                 </tr>
               </thead>
               <tbody>
-                {historial.map((h) => (
-                  <tr key={h.id_evaluacion}>
-                    <td>{new Date(h.fecha).toLocaleDateString()}</td>
-                    <td>{h.periodo}</td>
-                    <td>{h.aprendiz}</td>
+                {historial.map((h, i) => (
+                  <tr key={h.id_evaluacion || i}>
                     <td>{h.ficha}</td>
                     <td>{h.instructor}</td>
+                    <td>{h.periodo}</td>
                     <td>
-                      <span className={`badge-estado ${h.estado.toLowerCase()}`}>
+                      <span
+                        className={`badge-estado ${
+                          h.estado === "Evaluado" ? "evaluado" : "pendiente"
+                        }`}
+                      >
                         {h.estado}
                       </span>
                     </td>
+                    <td>{h.fecha || "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
         </div>
-      ) : (
-        <>
-          {preguntas.length === 0 && (
-            <div className="alerta alerta-warning">
-              <i className="bi bi-exclamation-triangle"></i>
-              Aún no hay preguntas de evaluación configuradas. Contacta al administrador.
-            </div>
-          )}
+      )}
 
+      {/* ── INSTRUCTOR ── */}
+      {esInstructorUser && (
+        <>
+          <div className="home-stats" style={{ marginBottom: 24 }}>
+            <div className="home-stat-card">
+              <div className="home-stat-icon home-stat-verde">
+                <i className="bi bi-card-list"></i>
+              </div>
+              <div className="home-stat-info">
+                <span className="home-stat-num">{fichasInstructor.length}</span>
+                <span className="home-stat-label">Fichas asignadas</span>
+              </div>
+            </div>
+            <div className="home-stat-card">
+              <div className="home-stat-icon home-stat-naranja">
+                <i className="bi bi-star-fill"></i>
+              </div>
+              <div className="home-stat-info">
+                <span className="home-stat-num">
+                  {reporteInst?.promedio_general != null && Number(reporteInst.total_respuestas || 0) > 0
+                    ? Number(reporteInst.promedio_general).toFixed(2)
+                    : "0.00"}
+                </span>
+                <span className="home-stat-label">Promedio general (1–5)</span>
+              </div>
+            </div>
+            <div className="home-stat-card">
+              <div className="home-stat-icon home-stat-azul">
+                <i className="bi bi-graph-up"></i>
+              </div>
+              <div className="home-stat-info">
+                <span className="home-stat-num">
+                  {reporteInst?.porcentaje_general != null && Number(reporteInst.total_respuestas || 0) > 0
+                    ? `${Number(reporteInst.porcentaje_general).toFixed(1)}%`
+                    : "0%"}
+                </span>
+                <span className="home-stat-label">Desempeño global</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 20,
+              boxShadow: "0 1px 3px rgba(0,0,0,.08)",
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              <i className="bi bi-card-list"></i> Fichas donde estás asignado
+            </h3>
+            {fichasInstructor.length === 0 ? (
+              <p style={{ color: "#6b7280" }}>
+                No tienes fichas asignadas todavía. Cuando el administrador te
+                asigne a una ficha y periodo, aparecerán aquí.
+              </p>
+            ) : (
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {fichasInstructor.map((f, idx) => (
+                  <li
+                    key={f.id_ficha_instructor || f.id || idx}
+                    style={{
+                      padding: "12px 0",
+                      borderBottom: "1px solid #f3f4f6",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 8,
+                    }}
+                  >
+                    <span>
+                      <strong>Ficha {f.numero_ficha || f.id_ficha}</strong>
+                      {f.programa ? ` — ${f.programa}` : ""}
+                    </span>
+                    {f.periodo && (
+                      <span style={{ color: "#065f46", fontWeight: 600 }}>
+                        {f.periodo}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 20,
+              boxShadow: "0 1px 3px rgba(0,0,0,.08)",
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              <i className="bi bi-graph-up"></i> Detalle de desempeño
+            </h3>
+            <p style={{ color: "#6b7280", fontSize: "0.95rem" }}>
+              Las evaluaciones son anónimas. Puedes ver el porcentaje por
+              pregunta y las fichas que participaron, sin identificar aprendices.
+            </p>
+            <Link
+              to="/mi-promedio"
+              className="btn-evaluar"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                textDecoration: "none",
+                marginTop: 8,
+              }}
+            >
+              <i className="bi bi-graph-up-arrow"></i> Ir a Mi promedio
+            </Link>
+          </div>
+        </>
+      )}
+
+      {/* ── APRENDIZ ── */}
+      {!esAdminUser && !esInstructorUser && (
+        <>
           {instructores.length === 0 ? (
-            <div className="estado-vacio">
-              <i className="bi bi-search"></i>
+            <div className="sin-datos">
+              <i className="bi bi-inbox"></i>
               <h4>No tienes instructores asignados</h4>
-              <p>Contacta al coordinador para que te asigne instructores a tu ficha.</p>
+              <p>
+                Contacta al coordinador para que te asigne instructores a tu
+                ficha.
+              </p>
             </div>
           ) : (
             <div className="grid-evaluaciones">
               {instructores.map((inst) => {
-                const { estado, id_evaluacion } = obtenerEstadoInstructor(inst.id_instructor);
+                const { estado, id_evaluacion } = obtenerEstadoInstructor(
+                  inst.id_instructor
+                );
                 const yaEvaluado = estado === "Evaluado";
 
                 return (
@@ -195,7 +402,11 @@ function Evaluaciones() {
                     <div className="card-header">
                       <div className="card-foto-wrap">
                         {inst.foto ? (
-                          <img className="card-foto" src={`http://localhost:8000${inst.foto}`} alt={inst.nombre} />
+                          <img
+                            className="card-foto"
+                            src={`http://localhost:8000${inst.foto}`}
+                            alt={inst.nombre}
+                          />
                         ) : (
                           <div className="card-foto-placeholder">
                             <i className="bi bi-person-fill"></i>
@@ -203,30 +414,57 @@ function Evaluaciones() {
                         )}
                       </div>
                       <div className="card-info">
-                        <h4>{inst.nombre} {inst.apellido}</h4>
-                        <p className="card-email"><i className="bi bi-envelope"></i> {inst.correo}</p>
-                        {inst.telefono && <p className="card-tel"><i className="bi bi-telephone"></i> {inst.telefono}</p>}
+                        <h4>
+                          {inst.nombre} {inst.apellido}
+                        </h4>
+                        <p className="card-email">
+                          <i className="bi bi-envelope"></i> {inst.correo}
+                        </p>
+                        {inst.telefono && (
+                          <p className="card-tel">
+                            <i className="bi bi-telephone"></i> {inst.telefono}
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     <div className="card-competencias">
                       {(inst.competencias || []).slice(0, 3).map((c) => (
-                        <span className="badge-competencia" key={c.id_competencia}>{c.nombre}</span>
+                        <span
+                          className="badge-competencia"
+                          key={c.id_competencia}
+                        >
+                          {c.nombre}
+                        </span>
                       ))}
                       {(inst.competencias || []).length > 3 && (
-                        <span className="badge-competencia mas">+{(inst.competencias || []).length - 3}</span>
+                        <span className="badge-competencia mas">
+                          +{(inst.competencias || []).length - 3}
+                        </span>
                       )}
                     </div>
 
                     <div className="card-footer">
-                      <span className={`badge-estado ${yaEvaluado ? "evaluado" : "pendiente"}`}>
+                      <span
+                        className={`badge-estado ${
+                          yaEvaluado ? "evaluado" : "pendiente"
+                        }`}
+                      >
                         {yaEvaluado ? "Evaluado" : "Pendiente"}
                       </span>
                       <button
                         className={yaEvaluado ? "btn-ver" : "btn-evaluar"}
-                        onClick={() => yaEvaluado ? manejarVerResultado(id_evaluacion) : manejarEvaluar(inst.id_instructor)}
+                        onClick={() =>
+                          yaEvaluado
+                            ? manejarVerResultado(id_evaluacion)
+                            : manejarEvaluar(inst.id_instructor)
+                        }
                       >
-                        <i className={`bi ${yaEvaluado ? "bi-eye" : "bi-pencil-square"}`}></i>
+                        <i
+                          className={`bi ${
+                            yaEvaluado ? "bi-eye" : "bi-pencil-square"
+                          }`}
+                        ></i>
                         {yaEvaluado ? "Ver resultado" : "Evaluar"}
                       </button>
                     </div>

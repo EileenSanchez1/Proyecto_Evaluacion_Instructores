@@ -17,6 +17,12 @@ export const listarInstructoresPorFichaYPeriodo = async (idFicha, idPeriodo) => 
   return response.data;
 };
 
+/** Fichas asignadas a un instructor */
+export const listarFichasPorInstructor = async (idInstructor) => {
+  const response = await api.get(`${API_URL}/instructor/${idInstructor}`);
+  return response.data;
+};
+
 export const crearFichaInstructor = async (datos) => {
   const response = await api.post(`${API_URL}/`, datos);
   return response.data;

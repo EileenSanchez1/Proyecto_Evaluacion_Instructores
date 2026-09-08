@@ -22,8 +22,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      let eraInstructor = false;
+      try {
+        const u = JSON.parse(localStorage.getItem('usuario') || 'null');
+        eraInstructor = u?.rol === 'Instructor';
+      } catch {
+        /* ignore */
+      }
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('usuario');
+      window.location.href = eraInstructor ? '/login-instructor' : '/login';
     }
     return Promise.reject(error);
   }

@@ -48,7 +48,9 @@ function Contacto() {
       });
 
       setEsError(false);
-      setMensaje("Mensaje enviado correctamente. El administrador lo verá en Novedades.");
+      setMensaje(
+        "Mensaje enviado correctamente. El administrador lo verá en Novedades."
+      );
       setAsunto("");
       setTextoMensaje("");
     } catch (error) {
@@ -64,133 +66,148 @@ function Contacto() {
   };
 
   return (
-    <>
-      <header className="page-header">
-        <h1>CONTACTO</h1>
+    <div className="contacto-page">
+      <header className="contacto-header">
+        <div>
+          <h1>
+            <i className="bi bi-envelope-heart"></i> Contacto
+          </h1>
+          <p>
+            Envía una novedad o mensaje al administrador. Aparecerá en la
+            sección de Novedades.
+          </p>
+        </div>
       </header>
 
-      <div className="contact-wrapper">
-        <section className="contact-form-section">
-          <div className="section-header">
-            <h2>Contáctanos / Enviar novedad</h2>
-            <p>
-              Envía un mensaje al administrador. Aparecerá en la sección de
-              Novedades.
-            </p>
+      <div className="contacto-grid">
+        <section className="contacto-card contacto-form-card">
+          <div className="contacto-card-title">
+            <h2>Enviar mensaje</h2>
+            <p>Tu nombre, correo y ficha se toman de tu sesión.</p>
           </div>
 
           {mensaje && (
             <div
-              className={`mensaje-login ${esError ? "error" : "exito"}`}
-              style={{ marginBottom: "1rem", padding: "0.75rem", borderRadius: "8px" }}
+              className={`contacto-alerta ${
+                esError ? "contacto-alerta-error" : "contacto-alerta-ok"
+              }`}
             >
-              {mensaje}
+              <i
+                className={`bi ${
+                  esError ? "bi-exclamation-circle" : "bi-check-circle"
+                }`}
+              ></i>
+              <span>{mensaje}</span>
             </div>
           )}
 
-          <form className="contact-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="nombre">Nombre completo</label>
-              <input
-                type="text"
-                id="nombre"
-                value={`${nombre} ${apellido}`.trim()}
-                disabled
-                readOnly
-              />
+          <form className="contacto-form" onSubmit={handleSubmit}>
+            <div className="contacto-row">
+              <div className="contacto-field">
+                <label>Nombre</label>
+                <input type="text" value={nombre} disabled readOnly />
+              </div>
+              <div className="contacto-field">
+                <label>Apellido</label>
+                <input type="text" value={apellido} disabled readOnly />
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="email">Correo electrónico</label>
-              <input type="email" id="email" value={correo} disabled readOnly />
+            <div className="contacto-row">
+              <div className="contacto-field">
+                <label>Correo</label>
+                <input type="email" value={correo} disabled readOnly />
+              </div>
+              <div className="contacto-field">
+                <label>Ficha</label>
+                <input type="text" value={String(ficha)} disabled readOnly />
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="ficha">Ficha</label>
-              <input type="text" id="ficha" value={String(ficha)} disabled readOnly />
-            </div>
-
-            <div className="form-group">
+            <div className="contacto-field">
               <label htmlFor="asunto">Asunto (opcional)</label>
               <input
-                type="text"
                 id="asunto"
-                placeholder="Asunto del mensaje..."
+                type="text"
+                placeholder="Ej. Solicitud, duda, novedad..."
                 value={asunto}
                 onChange={(e) => setAsunto(e.target.value)}
               />
             </div>
 
-            <div className="form-group">
+            <div className="contacto-field">
               <label htmlFor="mensaje">Mensaje</label>
               <textarea
                 id="mensaje"
-                rows="5"
+                rows="6"
                 placeholder="Escribe tu mensaje o novedad aquí..."
                 required
                 value={textoMensaje}
                 onChange={(e) => setTextoMensaje(e.target.value)}
-              ></textarea>
+              />
             </div>
 
-            <button type="submit" className="btn-enviar" disabled={enviando}>
-              {enviando ? "Enviando..." : "Enviar mensaje"}
-              <i className="fas fa-paper-plane"></i>
+            <button type="submit" className="contacto-btn" disabled={enviando}>
+              {enviando ? (
+                <>
+                  <span className="contacto-spinner"></span> Enviando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-send-fill"></i> Enviar mensaje
+                </>
+              )}
             </button>
           </form>
         </section>
 
-        <section className="contact-info-section">
-          <div className="section-header">
-            <h2>Información de contacto</h2>
+        <aside className="contacto-card contacto-info-card">
+          <div className="contacto-card-title">
+            <h2>Información</h2>
+            <p>Datos de atención institucional</p>
           </div>
 
-          <div className="info-cards">
-            <div className="info-card">
-              <div className="info-icon">
-                <i className="fas fa-location-dot"></i>
+          <ul className="contacto-info-list">
+            <li>
+              <span className="contacto-info-icon">
+                <i className="bi bi-geo-alt-fill"></i>
+              </span>
+              <div>
+                <strong>Dirección</strong>
+                <p>Cl. 52 #13-65 · Bogotá D.C., Colombia</p>
               </div>
-              <div className="info-content">
-                <h3>Dirección</h3>
-                <p>Cl. 52 #13-65</p>
-                <p>Bogotá D.C., Colombia</p>
-              </div>
-            </div>
-
-            <div className="info-card">
-              <div className="info-icon">
-                <i className="fas fa-phone"></i>
-              </div>
-              <div className="info-content">
-                <h3>Teléfono</h3>
+            </li>
+            <li>
+              <span className="contacto-info-icon">
+                <i className="bi bi-telephone-fill"></i>
+              </span>
+              <div>
+                <strong>Teléfono</strong>
                 <p>(+57) 322 659 9083</p>
               </div>
-            </div>
-
-            <div className="info-card">
-              <div className="info-icon">
-                <i className="fas fa-envelope"></i>
-              </div>
-              <div className="info-content">
-                <h3>Correo Institucional</h3>
+            </li>
+            <li>
+              <span className="contacto-info-icon">
+                <i className="bi bi-envelope-fill"></i>
+              </span>
+              <div>
+                <strong>Correo</strong>
                 <p>evaluacioninstructores@sena.edu.co</p>
               </div>
-            </div>
-
-            <div className="info-card">
-              <div className="info-icon">
-                <i className="fas fa-clock"></i>
+            </li>
+            <li>
+              <span className="contacto-info-icon">
+                <i className="bi bi-clock-fill"></i>
+              </span>
+              <div>
+                <strong>Horario</strong>
+                <p>Lunes a viernes · 7:00 a.m. – 6:00 p.m.</p>
               </div>
-              <div className="info-content">
-                <h3>Horarios de atención</h3>
-                <p>Lunes a Viernes</p>
-                <p>7:00 a.m. - 6:00 p.m.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+            </li>
+          </ul>
+        </aside>
       </div>
-    </>
+    </div>
   );
 }
 
