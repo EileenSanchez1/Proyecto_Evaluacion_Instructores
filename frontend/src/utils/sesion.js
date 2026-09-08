@@ -1,6 +1,5 @@
 // Utilidad compartida para leer los datos de la sesión guardada en el login.
-// Desde la migración a JWT + roles, la sesión ya no guarda "es_admin";
-// guarda el usuario real (con su rol) devuelto por /login/.
+// Desde la migración a JWT + roles, la sesión guarda el usuario real (con su rol) devuelto por /login/.
 
 export function obtenerUsuarioSesion() {
   try {
@@ -26,6 +25,10 @@ export function esAdmin() {
 
 export function esAdminOCoordinador() {
   return tieneRol("Administrador", "Coordinador");
+}
+
+export function esInstructor() {
+  return tieneRol("Instructor");
 }
 
 export function cerrarSesion() {
