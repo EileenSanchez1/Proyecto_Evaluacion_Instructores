@@ -63,9 +63,9 @@ function Historial() {
       <div className="evaluation-header">
         <div>
           <h2>
-            <i className="bi bi-clock-history"></i> Historial de Evaluaciones
+            <i className="bi bi-clock-history"></i> Evaluaciones
           </h2>
-          <p>Consulta el historial completo de evaluaciones del sistema.</p>
+          <p>Consulta el registro completo de evaluaciones del sistema.</p>
         </div>
       </div>
 

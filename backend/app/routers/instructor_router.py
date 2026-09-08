@@ -109,6 +109,9 @@ def subir_foto_instructor(
     foto: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
+    from app.models.usuario import Usuario
+    import time
+
     instructor = InstructorService.buscar(session, instructor_id)
     if not instructor:
         raise HTTPException(status_code=404, detail="Instructor no encontrado")
@@ -117,14 +120,24 @@ def subir_foto_instructor(
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="Solo se permiten imágenes JPG, PNG o WEBP.")
 
-    filename = f"instructor_{instructor_id}{ext}"
+    # Nombre único para evitar caché del navegador
+    filename = f"instructor_{instructor_id}_{int(time.time())}{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(foto.file, buffer)
 
-    instructor.foto = f"/uploads/{filename}"
+    foto_url = f"/uploads/{filename}"
+    instructor.foto = foto_url
     session.add(instructor)
+
+    # Sincronizar foto en el usuario vinculado (navbar / sesión)
+    if instructor.id_usuario:
+        usuario = session.get(Usuario, instructor.id_usuario)
+        if usuario:
+            usuario.foto = foto_url
+            session.add(usuario)
+
     session.commit()
     session.refresh(instructor)
     return instructor

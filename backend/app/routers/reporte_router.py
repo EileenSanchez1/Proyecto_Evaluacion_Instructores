@@ -219,5 +219,34 @@ def mi_promedio_instructor(
     instructor_id: int = Query(...),
     session: Session = Depends(get_session)
 ):
-    """Misma data que /instructor/{id}/preguntas, pensado para el rol Instructor."""
-    return reporte_por_preguntas(instructor_id=instructor_id, session=session)
+    """Desempeño del instructor logueado + fichas asignadas."""
+    data = reporte_por_preguntas(instructor_id=instructor_id, session=session)
+
+    # Fichas asignadas al instructor (con número de ficha legible)
+    from app.models.ficha_instructor import FichaInstructor
+    from app.models.periodo import Periodo as PeriodoModel
+
+    asignaciones = session.exec(
+        select(FichaInstructor).where(FichaInstructor.id_instructor == instructor_id)
+    ).all()
+
+    fichas_asignadas = []
+    for a in asignaciones:
+        ficha = session.get(Ficha, a.id_ficha)
+        periodo = session.get(PeriodoModel, a.id_periodo)
+        fichas_asignadas.append({
+            "id_ficha_instructor": a.id,
+            "id_ficha": a.id_ficha,
+            "numero_ficha": getattr(ficha, "numero_ficha", None) if ficha else None,
+            "programa": (getattr(ficha, "programa", None) if ficha else None),
+            "id_periodo": a.id_periodo,
+            "periodo": getattr(periodo, "nombre", None) if periodo else None,
+        })
+
+    instructor = session.get(Instructor, instructor_id)
+    data["fichas_asignadas"] = fichas_asignadas
+    data["total_fichas"] = len(fichas_asignadas)
+    data["nombre_instructor"] = (
+        f"{instructor.nombre} {instructor.apellido}" if instructor else None
+    )
+    return data

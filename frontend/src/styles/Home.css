@@ -659,3 +659,53 @@
   background: #fef2f2;
   color: #991b1b;
 }
+/* ── Botones del banner (instructor / general) ── */
+.home-banner-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.home-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: #fff;
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-banner-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  color: #0f172a;
+}
+
+.home-banner-btn i {
+  color: #39a900;
+  font-size: 1.05rem;
+}
+
+.home-banner-btn-secondary {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+}
+
+.home-banner-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+.home-banner-btn-secondary i {
+  color: #fff;
+}

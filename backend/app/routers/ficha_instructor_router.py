@@ -19,12 +19,7 @@ def crear(ficha_instructor: FichaInstructorCreate, session: Session = Depends(ge
 def listar(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), session: Session = Depends(get_session)):
     return FichaInstructorService.listar(session, offset, limit)
 
-@router.get("/{relacion_id}", response_model=FichaInstructorRead)
-def buscar(relacion_id: int, session: Session = Depends(get_session)):
-    r = FichaInstructorService.buscar(session, relacion_id)
-    if not r: raise HTTPException(status_code=404, detail="Asignación no encontrada")
-    return r
-
+# Rutas específicas ANTES de /{relacion_id} para evitar conflictos
 @router.get("/ficha/{id_ficha}", response_model=List[FichaInstructorRead])
 def por_ficha(id_ficha: int, session: Session = Depends(get_session)):
     return FichaInstructorService.listar_por_ficha(session, id_ficha)
@@ -37,13 +32,21 @@ def por_ficha_y_periodo(id_ficha: int, id_periodo: int, session: Session = Depen
 def por_instructor(id_instructor: int, session: Session = Depends(get_session)):
     return FichaInstructorService.listar_por_instructor(session, id_instructor)
 
+@router.get("/{relacion_id}", response_model=FichaInstructorRead)
+def buscar(relacion_id: int, session: Session = Depends(get_session)):
+    r = FichaInstructorService.buscar(session, relacion_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="Asignación no encontrada")
+    return r
+
 @router.put("/{relacion_id}", response_model=FichaInstructorRead, dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
 def actualizar(relacion_id: int, update: FichaInstructorUpdate, session: Session = Depends(get_session)):
     try:
         r = FichaInstructorService.actualizar(session, relacion_id, update)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    if not r: raise HTTPException(status_code=404, detail="Asignación no encontrada")
+    if not r:
+        raise HTTPException(status_code=404, detail="Asignación no encontrada")
     return r
 
 @router.delete("/{relacion_id}", dependencies=[Depends(require_roles("Administrador", "Coordinador"))])

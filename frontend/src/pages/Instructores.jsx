@@ -124,7 +124,7 @@ function Instructores() {
                 {inst.foto ? (
                   <img
                     className="foto"
-                    src={`http://localhost:8000${inst.foto}`}
+                    src={`http://127.0.0.1:8000${inst.foto}`}
                     alt={inst.nombre}
                     onError={(e) => {
                       e.target.style.display = "none";
