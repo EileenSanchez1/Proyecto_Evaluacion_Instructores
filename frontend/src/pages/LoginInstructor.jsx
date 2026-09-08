@@ -4,7 +4,6 @@ import {
   instructorIniciar,
   instructorCrearPassword,
   loginInstructorPaso1,
-  verificarCodigoInstructor,
 } from "../services/authService";
 import "../styles/Login.css";
 
@@ -20,8 +19,7 @@ function validarContrasenaSegura(contrasena) {
 
 function LoginInstructor() {
   const navigate = useNavigate();
-
-  // pasos: 1=correo, 2=crear pass+codigo, 3=pass normal, 4=codigo normal
+  // 1 correo | 2 primer acceso | 3 login normal
   const [paso, setPaso] = useState(1);
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -31,6 +29,11 @@ function LoginInstructor() {
   const [mensaje, setMensaje] = useState("");
   const [esError, setEsError] = useState(false);
   const [cargando, setCargando] = useState(false);
+
+  const guardarSesion = (respuesta) => {
+    localStorage.setItem("token", respuesta.access_token);
+    localStorage.setItem("usuario", JSON.stringify(respuesta.usuario));
+  };
 
   const handleCorreo = async (e) => {
     e.preventDefault();
@@ -48,10 +51,10 @@ function LoginInstructor() {
       setCorreo(c);
       if (res.requiere_crear_password) {
         setPaso(2);
-        setMensaje("Primer acceso: revisa tu correo (o la consola del backend) e ingresa el código y crea tu contraseña.");
+        setMensaje("Primer acceso: mira el código en la consola del backend y crea tu contraseña.");
       } else {
         setPaso(3);
-        setMensaje("Ingresa tu contraseña. Luego te pediremos el código enviado al correo.");
+        setMensaje("Ya iniciaste antes. Ingresa tu contraseña.");
       }
     } catch (error) {
       setEsError(true);
@@ -66,20 +69,12 @@ function LoginInstructor() {
     setMensaje("");
     setEsError(false);
     const err = validarContrasenaSegura(contrasena);
-    if (err) {
-      setEsError(true);
-      setMensaje(err);
-      return;
-    }
+    if (err) { setEsError(true); setMensaje(err); return; }
     if (contrasena !== confirmPass) {
-      setEsError(true);
-      setMensaje("Las contraseñas no coinciden.");
-      return;
+      setEsError(true); setMensaje("Las contraseñas no coinciden."); return;
     }
     if (!codigo.trim()) {
-      setEsError(true);
-      setMensaje("Ingresa el código de verificación.");
-      return;
+      setEsError(true); setMensaje("Ingresa el código de verificación."); return;
     }
     try {
       setCargando(true);
@@ -88,10 +83,9 @@ function LoginInstructor() {
         codigo: codigo.trim(),
         nueva_contrasena: contrasena,
       });
-      localStorage.setItem("token", respuesta.access_token);
-      localStorage.setItem("usuario", JSON.stringify(respuesta.usuario));
-      setMensaje("Contraseña creada. Ingreso exitoso.");
-      setTimeout(() => navigate("/"), 600);
+      guardarSesion(respuesta);
+      setMensaje("¡Listo! Contraseña creada e ingreso exitoso.");
+      setTimeout(() => navigate("/"), 500);
     } catch (error) {
       setEsError(true);
       setMensaje(error.response?.data?.detail || "No se pudo crear la contraseña.");
@@ -100,37 +94,24 @@ function LoginInstructor() {
     }
   };
 
-  const handlePassword = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setMensaje("");
     setEsError(false);
     try {
       setCargando(true);
-      await loginInstructorPaso1({ correo, contrasena });
-      setPaso(4);
-      setMensaje("Código enviado. Revisa tu correo (o la consola del backend).");
+      const respuesta = await loginInstructorPaso1({ correo, contrasena });
+      if (!respuesta.access_token) {
+        setEsError(true);
+        setMensaje("No se recibió token.");
+        return;
+      }
+      guardarSesion(respuesta);
+      setMensaje("Inicio de sesión exitoso");
+      setTimeout(() => navigate("/"), 400);
     } catch (error) {
       setEsError(true);
       setMensaje(error.response?.data?.detail || "Correo o contraseña incorrectos.");
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const handleCodigo = async (e) => {
-    e.preventDefault();
-    setMensaje("");
-    setEsError(false);
-    try {
-      setCargando(true);
-      const respuesta = await verificarCodigoInstructor({ correo, codigo: codigo.trim() });
-      localStorage.setItem("token", respuesta.access_token);
-      localStorage.setItem("usuario", JSON.stringify(respuesta.usuario));
-      setMensaje("Inicio de sesión exitoso");
-      setTimeout(() => navigate("/"), 500);
-    } catch (error) {
-      setEsError(true);
-      setMensaje(error.response?.data?.detail || "Código inválido.");
     } finally {
       setCargando(false);
     }
@@ -144,20 +125,16 @@ function LoginInstructor() {
           <h2>Acceso Instructor</h2>
           <p>Plataforma de evaluación SENA</p>
         </div>
-
         <div className="lado-formulario">
           <h1>Soy Instructor</h1>
           <p className="subtitulo">
-            {paso === 1 && "Ingresa tu correo institucional @sena.edu.co"}
-            {paso === 2 && "Crea tu contraseña (primer acceso)"}
+            {paso === 1 && "Correo institucional @sena.edu.co"}
+            {paso === 2 && "Crea tu contraseña (solo la primera vez)"}
             {paso === 3 && "Ingresa tu contraseña"}
-            {paso === 4 && "Ingresa el código de verificación"}
           </p>
 
           {mensaje && (
-            <div className={`mensaje-login ${esError ? "error" : "exito"}`}>
-              {mensaje}
-            </div>
+            <div className={`mensaje-login ${esError ? "error" : "exito"}`}>{mensaje}</div>
           )}
 
           {paso === 1 && (
@@ -196,28 +173,22 @@ function LoginInstructor() {
                 <div className="password-input-wrapper">
                   <input
                     type={mostrarPass ? "text" : "password"}
-                    placeholder="Crea una contraseña segura"
                     value={contrasena}
                     onChange={(e) => setContrasena(e.target.value)}
                     required
                   />
-                  <button
-                    type="button"
-                    className="btn-ojito"
-                    onClick={() => setMostrarPass(!mostrarPass)}
-                  >
+                  <button type="button" className="btn-ojito" onClick={() => setMostrarPass(!mostrarPass)}>
                     <i className={`bi ${mostrarPass ? "bi-eye-slash" : "bi-eye"}`}></i>
                   </button>
                 </div>
                 <small className="hint-pass">
-                  Mín. 8 caracteres · Mayúscula · Minúscula · Número · Carácter especial (!@#$%...)
+                  Mín. 8 · Mayúscula · Minúscula · Número · Especial (!@#$%)
                 </small>
               </div>
               <div>
                 <label>Confirmar contraseña</label>
                 <input
                   type="password"
-                  placeholder="Repite la contraseña"
                   value={confirmPass}
                   onChange={(e) => setConfirmPass(e.target.value)}
                   required
@@ -226,68 +197,35 @@ function LoginInstructor() {
               <button type="submit" disabled={cargando}>
                 {cargando ? "Guardando..." : "Crear contraseña e ingresar"}
               </button>
-              <button type="button" className="btn-secundario" onClick={() => setPaso(1)}>
-                Volver
-              </button>
+              <button type="button" className="btn-secundario" onClick={() => setPaso(1)}>Volver</button>
             </form>
           )}
 
           {paso === 3 && (
-            <form onSubmit={handlePassword}>
+            <form onSubmit={handleLogin}>
               <div className="password-field">
                 <label>Contraseña</label>
                 <div className="password-input-wrapper">
                   <input
                     type={mostrarPass ? "text" : "password"}
-                    placeholder="Tu contraseña"
                     value={contrasena}
                     onChange={(e) => setContrasena(e.target.value)}
                     required
                   />
-                  <button
-                    type="button"
-                    className="btn-ojito"
-                    onClick={() => setMostrarPass(!mostrarPass)}
-                  >
+                  <button type="button" className="btn-ojito" onClick={() => setMostrarPass(!mostrarPass)}>
                     <i className={`bi ${mostrarPass ? "bi-eye-slash" : "bi-eye"}`}></i>
                   </button>
                 </div>
               </div>
               <button type="submit" disabled={cargando}>
-                {cargando ? "Verificando..." : "Enviar código"}
+                {cargando ? "Ingresando..." : "Ingresar"}
               </button>
-              <button type="button" className="btn-secundario" onClick={() => setPaso(1)}>
-                Volver
-              </button>
-            </form>
-          )}
-
-          {paso === 4 && (
-            <form onSubmit={handleCodigo}>
-              <div>
-                <label>Código de verificación</label>
-                <input
-                  type="text"
-                  placeholder="123456"
-                  value={codigo}
-                  onChange={(e) => setCodigo(e.target.value)}
-                  maxLength={8}
-                  required
-                />
-              </div>
-              <button type="submit" disabled={cargando}>
-                {cargando ? "Verificando..." : "Verificar e ingresar"}
-              </button>
-              <button type="button" className="btn-secundario" onClick={() => setPaso(3)}>
-                Volver
-              </button>
+              <button type="button" className="btn-secundario" onClick={() => setPaso(1)}>Volver</button>
             </form>
           )}
 
           <div className="registro-link">
-            <p>
-              <Link to="/login">← Volver al login principal</Link>
-            </p>
+            <p><Link to="/login">← Volver al login principal</Link></p>
           </div>
         </div>
       </div>

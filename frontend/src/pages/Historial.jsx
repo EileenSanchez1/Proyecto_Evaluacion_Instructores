@@ -134,11 +134,24 @@ function Historial() {
                   <td>{h.programa}</td>
                   <td>
                     <span
-                      className={`badge ${
-                        h.estado === "Evaluado"
-                          ? "badge-evaluado"
-                          : "badge-pendiente"
-                      } px-3 py-2`}
+                      className="badge px-3 py-2"
+                      style={{
+                        backgroundColor:
+                          h.estado === "Evaluado" || h.estado === "Completada"
+                            ? "#d1fae5"
+                            : "#fef3c7",
+                        color:
+                          h.estado === "Evaluado" || h.estado === "Completada"
+                            ? "#065f46"
+                            : "#92400e",
+                        border:
+                          h.estado === "Evaluado" || h.estado === "Completada"
+                            ? "1px solid #a7f3d0"
+                            : "1px solid #fde68a",
+                        fontWeight: 700,
+                        borderRadius: "20px",
+                        display: "inline-block",
+                      }}
                     >
                       {h.estado}
                     </span>

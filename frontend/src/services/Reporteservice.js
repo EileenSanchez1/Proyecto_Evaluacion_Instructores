@@ -3,21 +3,35 @@ import api from "../api/axiosConfig";
 const API_URL = "/reportes";
 
 export const generarReporte = async (evaluacionId) => {
-  const response = await api.get(`${API_URL}/`, { params: { evaluacion_id: evaluacionId } });
+  const response = await api.get(`${API_URL}/`, {
+    params: { evaluacion_id: evaluacionId },
+  });
   return response.data;
 };
 
 export const generarReporteInstructor = async (evaluacionId, instructorId) => {
   const response = await api.get(`${API_URL}/instructor`, {
-    params: { evaluacion_id: evaluacionId, instructor_id: instructorId }
+    params: { evaluacion_id: evaluacionId, instructor_id: instructorId },
   });
   return response.data;
 };
 
-// Función consultada por PerfilInstructor.jsx y MiPromedio.jsx
+/**
+ * Desempeño por pregunta de un instructor.
+ * Usado por Admin (Reportes) e Instructor (Mi Promedio).
+ */
 export const reportePreguntasInstructor = async (instructorId, params = {}) => {
-  const response = await api.get(`${API_URL}/instructor`, {
-    params: { instructor_id: instructorId, ...params }
+  const response = await api.get(
+    `${API_URL}/instructor/${instructorId}/preguntas`,
+    { params }
+  );
+  return response.data;
+};
+
+/** Atajo para el instructor logueado */
+export const miPromedioInstructor = async (instructorId) => {
+  const response = await api.get(`${API_URL}/mi-promedio`, {
+    params: { instructor_id: instructorId },
   });
   return response.data;
 };

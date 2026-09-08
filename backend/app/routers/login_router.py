@@ -91,12 +91,13 @@ def restablecer_password(datos: RestablecerPasswordRequest, session: Session = D
     return {"mensaje": mensaje}
 
 
+
 # =========================
-# LOGIN INSTRUCTOR (2FA + primer acceso)
+# LOGIN INSTRUCTOR
 # =========================
 @router.post("/instructor/iniciar", response_model=dict)
 def instructor_iniciar(datos: InstructorCorreoRequest, session: Session = Depends(get_session)):
-    """Paso 0: solo correo. Indica si debe crear contraseña o ya puede iniciar."""
+    """Solo correo: detecta si es primer acceso o login normal."""
     correo = datos.correo.strip().lower()
     if not correo.endswith("@sena.edu.co"):
         raise HTTPException(status_code=400, detail="El correo debe ser institucional (@sena.edu.co).")
@@ -109,27 +110,22 @@ def instructor_iniciar(datos: InstructorCorreoRequest, session: Session = Depend
     if not usuario or not usuario.activo:
         raise HTTPException(status_code=401, detail="Cuenta de instructor no activa.")
 
-    necesita = LoginService.instructor_necesita_crear_password(session, correo)
-
-    # Enviar código siempre (para crear password o para login)
-    LoginService.enviar_codigo_instructor(correo)
-
-    if necesita:
+    if LoginService.instructor_necesita_crear_password(session, correo):
+        LoginService.enviar_codigo_instructor(correo)
         return {
             "mensaje": "Primer acceso: se envió un código a tu correo. Crea tu contraseña.",
             "requiere_crear_password": True,
-            "requiere_codigo": True,
         }
+
     return {
-        "mensaje": "Se envió un código a tu correo. Ingresa tu contraseña y el código.",
+        "mensaje": "Ingresa tu contraseña para continuar.",
         "requiere_crear_password": False,
-        "requiere_codigo": True,
     }
 
 
 @router.post("/instructor/crear-password", response_model=LoginResponse)
 def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Session = Depends(get_session)):
-    """Primer acceso: verifica código OTP y establece la contraseña definitiva."""
+    """Primer acceso: código + nueva contraseña → entra."""
     correo = datos.correo.strip().lower()
     if not correo.endswith("@sena.edu.co"):
         raise HTTPException(status_code=400, detail="Correo inválido.")
@@ -138,7 +134,7 @@ def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Se
         raise HTTPException(status_code=400, detail="Código inválido o expirado.")
 
     if not LoginService.instructor_necesita_crear_password(session, correo):
-        raise HTTPException(status_code=400, detail="Esta cuenta ya tiene contraseña. Usa el login normal.")
+        raise HTTPException(status_code=400, detail="Esta cuenta ya tiene contraseña.")
 
     usuario, mensaje = LoginService.establecer_password_instructor(session, correo, datos.nueva_contrasena)
     if not usuario:
@@ -146,22 +142,20 @@ def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Se
 
     limpiar_codigo(correo, tipo="instructor")
 
-    token = crear_access_token(
-        id_usuario=usuario.id_usuario,
-        correo=usuario.correo,
-        rol="Instructor",
-    )
+    token = crear_access_token(id_usuario=usuario.id_usuario, correo=usuario.correo, rol="Instructor")
     usuario_data = _usuario_a_dict(usuario)
     instructor = LoginService.buscar_instructor_por_correo(session, correo)
     if instructor:
         usuario_data["id_instructor"] = instructor.id_instructor
+        if instructor.foto:
+            usuario_data["foto"] = instructor.foto
 
     return LoginResponse(access_token=token, token_type="bearer", usuario=usuario_data)
 
 
-@router.post("/instructor", response_model=dict)
-def login_instructor_paso1(datos: LoginInstructorRequest, session: Session = Depends(get_session)):
-    """Login normal instructor: correo + contraseña → envía código OTP."""
+@router.post("/instructor", response_model=LoginResponse)
+def login_instructor_directo(datos: LoginInstructorRequest, session: Session = Depends(get_session)):
+    """Login normal: correo + contraseña → entra directo (sin código)."""
     correo = datos.correo.strip().lower()
     if not correo.endswith("@sena.edu.co"):
         raise HTTPException(status_code=400, detail="El correo debe ser institucional (@sena.edu.co).")
@@ -171,45 +165,19 @@ def login_instructor_paso1(datos: LoginInstructorRequest, session: Session = Dep
         raise HTTPException(status_code=401, detail="Instructor no encontrado.")
 
     usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
-    if not usuario:
-        raise HTTPException(status_code=401, detail="Instructor no tiene cuenta de usuario activa.")
+    if not usuario or not usuario.activo:
+        raise HTTPException(status_code=401, detail="Cuenta no activa.")
 
     if LoginService.instructor_necesita_crear_password(session, correo):
-        raise HTTPException(
-            status_code=400,
-            detail="Debes crear tu contraseña primero. Usa el flujo de primer acceso (solo correo).",
-        )
+        raise HTTPException(status_code=400, detail="Debes crear tu contraseña primero (primer acceso).")
 
     if not LoginService.verificar_password(datos.contrasena, usuario.contrasena):
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos.")
 
-    LoginService.enviar_codigo_instructor(correo)
-    return {"mensaje": "Se envió un código de verificación a tu correo institucional.", "requiere_codigo": True}
-
-
-@router.post("/instructor/verificar", response_model=LoginResponse)
-def login_instructor_paso2(datos: VerificarCodigoInstructorRequest, session: Session = Depends(get_session)):
-    if not datos.correo.endswith("@sena.edu.co"):
-        raise HTTPException(status_code=400, detail="Correo inválido.")
-
-    if not verificar_codigo(datos.correo, datos.codigo, tipo="instructor"):
-        raise HTTPException(status_code=400, detail="Código inválido o expirado.")
-
-    usuario = session.exec(select(Usuario).where(Usuario.correo == datos.correo)).first()
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-
-    limpiar_codigo(datos.correo, tipo="instructor")
-
-    token = crear_access_token(
-        id_usuario=usuario.id_usuario,
-        correo=usuario.correo,
-        rol="Instructor",
-    )
-
+    token = crear_access_token(id_usuario=usuario.id_usuario, correo=usuario.correo, rol="Instructor")
     usuario_data = _usuario_a_dict(usuario)
-    instructor = LoginService.buscar_instructor_por_correo(session, datos.correo)
-    if instructor:
-        usuario_data["id_instructor"] = instructor.id_instructor
+    usuario_data["id_instructor"] = instructor.id_instructor
+    if instructor.foto:
+        usuario_data["foto"] = instructor.foto
 
     return LoginResponse(access_token=token, token_type="bearer", usuario=usuario_data)

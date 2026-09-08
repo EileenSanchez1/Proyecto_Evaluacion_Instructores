@@ -1,20 +1,17 @@
 import api from "../api/axiosConfig";
 
-// Login general (Aprendiz / Administrador)
 export const login = async (datos) => {
   const respuesta = await api.post("/login/", datos);
   return respuesta.data;
 };
 
-// ---- Instructor ----
-
-/** Paso 0: solo correo → indica si debe crear contraseña y envía código */
+/** Paso 0 instructor: solo correo */
 export const instructorIniciar = async (correo) => {
   const respuesta = await api.post("/login/instructor/iniciar", { correo });
   return respuesta.data;
 };
 
-/** Primer acceso: código + nueva contraseña → entra al sistema */
+/** Primer acceso: código + contraseña nueva */
 export const instructorCrearPassword = async ({ correo, codigo, nueva_contrasena }) => {
   const respuesta = await api.post("/login/instructor/crear-password", {
     correo,
@@ -24,21 +21,18 @@ export const instructorCrearPassword = async ({ correo, codigo, nueva_contrasena
   return respuesta.data;
 };
 
-/** Login normal instructor: correo + contraseña → envía código */
+/** Login normal instructor: correo + contraseña → token directo */
 export const loginInstructorPaso1 = async (datos) => {
   const payload = typeof datos === "object" ? datos : { correo: arguments[0], contrasena: arguments[1] };
   const respuesta = await api.post("/login/instructor", payload);
   return respuesta.data;
 };
 
-/** Verificar OTP del instructor (login normal) */
 export const verificarCodigoInstructor = async (datos) => {
   const payload = typeof datos === "object" ? datos : { correo: arguments[0], codigo: arguments[1] };
   const respuesta = await api.post("/login/instructor/verificar", payload);
   return respuesta.data;
 };
-
-// ---- Recuperación ----
 
 export const solicitarRecuperacion = async (correo) => {
   const respuesta = await api.post("/login/recuperar", { correo });
