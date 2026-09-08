@@ -1,12 +1,16 @@
-import os
-import importlib
-
-# Obtener la ruta de la carpeta actual (models)
-models_dir = os.path.dirname(__file__)
-
-# Recorrer todos los archivos de la carpeta
-for filename in os.listdir(models_dir):
-    if filename.endswith(".py") and filename != "__init__.py":
-        module_name = filename[:-3]
-        # Importar dinámicamente cada módulo de la carpeta models
-        importlib.import_module(f".{module_name}", package=__name__)
+from app.models.usuario import Usuario
+from app.models.rol import Rol
+from app.models.aprendiz import Aprendiz
+from app.models.instructor import Instructor
+from app.models.ficha import Ficha
+from app.models.competencia import Competencia
+from app.models.periodo import Periodo
+from app.models.pregunta import Pregunta
+from app.models.evaluacion import Evaluacion
+from app.models.respuesta import Respuesta
+from app.models.ficha_instructor import FichaInstructor
+from app.models.instructor_competencia import InstructorCompetencia
+from app.models.horario import Horario
+from app.models.auditoria import Auditoria
+from app.models.notificacion import Notificacion
+from app.models.novedad import Novedad
