@@ -23,6 +23,8 @@ function Registro() {
   const [mensaje, setMensaje] = useState("");
   const [esError, setEsError] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [mostrarPass, setMostrarPass] = useState(false);
+  const [mostrarConfirm, setMostrarConfirm] = useState(false);
 
   useEffect(() => {
     const cargarFichas = async () => {
@@ -67,9 +69,31 @@ function Registro() {
       return;
     }
 
-    if (formulario.contrasena.length < 6) {
+    // Validación de contraseña segura
+    const pass = formulario.contrasena;
+    if (pass.length < 8) {
       setEsError(true);
-      setMensaje("La contraseña debe tener al menos 6 caracteres.");
+      setMensaje("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (!/[A-Z]/.test(pass)) {
+      setEsError(true);
+      setMensaje("Debe contener al menos una mayúscula.");
+      return;
+    }
+    if (!/[a-z]/.test(pass)) {
+      setEsError(true);
+      setMensaje("Debe contener al menos una minúscula.");
+      return;
+    }
+    if (!/\d/.test(pass)) {
+      setEsError(true);
+      setMensaje("Debe contener al menos un número.");
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pass)) {
+      setEsError(true);
+      setMensaje("Debe contener al menos un carácter especial (!@#$%^&* etc.).");
       return;
     }
 
@@ -206,25 +230,36 @@ function Registro() {
             <div style={{ display: "flex", gap: "10px" }}>
               <div style={{ flex: 1 }}>
                 <label>Contraseña</label>
+              <div className="password-input-wrapper">
                 <input
-                  type="password"
+                  type={mostrarPass ? "text" : "password"}
                   name="contrasena"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Contraseña segura"
                   value={formulario.contrasena}
                   onChange={manejarCambio}
                   required
                 />
+                <button type="button" className="btn-ojito" onClick={() => setMostrarPass(!mostrarPass)}>
+                  <i className={`bi ${mostrarPass ? "bi-eye-slash" : "bi-eye"}`}></i>
+                </button>
+              </div>
+              <small className="hint-pass">Mín. 8 car. · Mayúscula · Minúscula · Número · Especial (!@#$%)</small>
               </div>
               <div style={{ flex: 1 }}>
                 <label>Confirmar contraseña</label>
+              <div className="password-input-wrapper">
                 <input
-                  type="password"
+                  type={mostrarConfirm ? "text" : "password"}
                   name="confirmarContrasena"
-                  placeholder="Repite tu contraseña"
+                  placeholder="Repite la contraseña"
                   value={formulario.confirmarContrasena}
                   onChange={manejarCambio}
                   required
                 />
+                <button type="button" className="btn-ojito" onClick={() => setMostrarConfirm(!mostrarConfirm)}>
+                  <i className={`bi ${mostrarConfirm ? "bi-eye-slash" : "bi-eye"}`}></i>
+                </button>
+              </div>
               </div>
             </div>
 

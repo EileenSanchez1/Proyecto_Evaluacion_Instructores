@@ -74,6 +74,12 @@ function CrearInstructor() {
       return;
     }
 
+    const correoNorm = formulario.correo.trim().toLowerCase();
+    if (!correoNorm.endsWith("@sena.edu.co")) {
+      setError("El correo del instructor debe ser institucional (@sena.edu.co).");
+      return;
+    }
+
     if (competenciasSeleccionadas.length === 0) {
       setError("Selecciona al menos una competencia.");
       return;
@@ -85,7 +91,7 @@ function CrearInstructor() {
       const formData = new FormData();
       formData.append("nombre", formulario.nombre.trim());
       formData.append("apellido", formulario.apellido.trim());
-      formData.append("correo", formulario.correo.trim());
+      formData.append("correo", correoNorm);
       formData.append("telefono", String(formulario.telefono).trim());
       formData.append("competencias", JSON.stringify(competenciasSeleccionadas));
 
@@ -183,7 +189,7 @@ function CrearInstructor() {
             type="email"
             name="correo"
             className="form-control-form"
-            placeholder="correo@ejemplo.com"
+            placeholder="nombre.apellido@sena.edu.co"
             value={formulario.correo}
             onChange={manejarCambio}
             required

@@ -11,6 +11,9 @@ password_hash = PasswordHash.recommended()
 
 class LoginService:
 
+    # Marcador: el instructor aún no ha definido su contraseña real
+    PASSWORD_PENDIENTE_MARKER = "__PENDIENTE_CREAR_PASSWORD__"
+
     PATRON_SEGURO = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]).{8,}$')
 
     @staticmethod
@@ -76,6 +79,32 @@ class LoginService:
         print(f"[EMAIL] Código de verificación instructor para {correo}: {codigo}")
         print(f"{'='*50}\n")
         return codigo
+
+
+    @staticmethod
+    def instructor_necesita_crear_password(session: Session, correo: str) -> bool:
+        """True si el instructor existe pero aún no ha creado su contraseña."""
+        usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
+        if not usuario:
+            return False
+        # Si la contraseña actual verifica contra el marcador, aún no la creó
+        return LoginService.verificar_password(
+            LoginService.PASSWORD_PENDIENTE_MARKER, usuario.contrasena
+        )
+
+    @staticmethod
+    def establecer_password_instructor(session: Session, correo: str, nueva: str):
+        usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
+        if not usuario:
+            return None, "Usuario no encontrado"
+        es_segura, msg = LoginService.validar_contrasena_segura(nueva)
+        if not es_segura:
+            return None, msg
+        usuario.contrasena = LoginService.hash_password(nueva)
+        session.add(usuario)
+        session.commit()
+        session.refresh(usuario)
+        return usuario, "Contraseña creada correctamente."
 
     @staticmethod
     def buscar_instructor_por_correo(session: Session, correo: str):
