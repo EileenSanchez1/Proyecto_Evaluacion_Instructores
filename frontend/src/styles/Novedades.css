@@ -1,0 +1,16 @@
+.novedades-page { padding: 24px; font-family: "Segoe UI", sans-serif; }
+.page-header h1 { color: #39a900; margin-bottom: 4px; }
+.page-header p { color: #666; margin-bottom: 20px; }
+.novedades-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.novedad-card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee; }
+.novedad-card.leida { opacity: 0.6; }
+.novedad-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; position: relative; }
+.novedad-avatar { width: 44px; height: 44px; border-radius: 50%; background: #39a900; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.novedad-info h4 { margin: 0; font-size: 0.95rem; }
+.novedad-ficha { display: block; font-size: 0.78rem; color: #666; }
+.novedad-fecha { display: block; font-size: 0.72rem; color: #999; }
+.badge-nueva { position: absolute; right: 0; top: 0; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+.novedad-body p { margin: 0 0 6px; font-size: 0.9rem; color: #333; }
+.novedad-correo { color: #999; }
+.btn-marcar-leida { margin-top: 12px; background: #39a900; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+.btn-marcar-leida:hover { background: #007832; }

@@ -3,6 +3,7 @@ import api from "../api/axiosConfig";
 import { listarPeriodos } from "../services/PeriodoService";
 import { listarFichas } from "../services/FichaServices";
 import { listarInstructores } from "../services/instructorService";
+import { reportePreguntasInstructor } from "../services/Reporteservice";
 import "../styles/Home.css";
 
 function Reportes() {
@@ -19,6 +20,11 @@ function Reportes() {
   const [reporte, setReporte] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+
+  // Estados para el detalle por pregunta
+  const [instructorSeleccionado, setInstructorSeleccionado] = useState(null);
+  const [detallePreguntas, setDetallePreguntas] = useState([]);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   useEffect(() => {
     listarPeriodos().then(setPeriodos).catch(console.error);
@@ -54,9 +60,25 @@ function Reportes() {
     setFiltros((prev) => ({ ...prev, [name]: value }));
   };
 
+  const verDetalleInstructor = async (inst) => {
+    try {
+      setCargandoDetalle(true);
+      setInstructorSeleccionado(inst);
+      const params = {};
+      if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
+      if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
+      const data = await reportePreguntasInstructor(inst.id_instructor, params);
+      setDetallePreguntas(data.preguntas || []);
+    } catch (err) {
+      console.error(err);
+      setDetallePreguntas([]);
+    } finally {
+      setCargandoDetalle(false);
+    }
+  };
+
   // ── Helpers de color según promedio (escala 1–5) ──
   const getColorClass = (valor) => {
-    // Si viene como porcentaje (0–100), convertir a escala 1–5
     const escala = valor > 5 ? valor / 20 : valor;
     if (escala >= 4.0) return "verde";
     if (escala >= 3.0) return "amarillo";
@@ -278,7 +300,8 @@ function Reportes() {
                         return (
                           <tr
                             key={inst.id_instructor}
-                            style={{ borderBottom: "1px solid #f3f4f6", transition: "background 0.15s" }}
+                            onClick={() => verDetalleInstructor(inst)}
+                            style={{ borderBottom: "1px solid #f3f4f6", transition: "background 0.15s", cursor: "pointer" }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
@@ -301,7 +324,9 @@ function Reportes() {
                                 >
                                   {inst.nombre?.charAt(0)?.toUpperCase() || "I"}
                                 </div>
-                                <span style={{ fontWeight: 600, color: "#1f2937" }}>{inst.nombre}</span>
+                                <span style={{ fontWeight: 600, color: "#1f2937" }}>
+                                  {inst.nombre} <small style={{ color: "#9ca3af" }}> · ver detalle</small>
+                                </span>
                               </div>
                             </td>
                             <td style={{ padding: "14px", textAlign: "center" }}>
@@ -356,6 +381,50 @@ function Reportes() {
               )}
             </div>
           </div>
+
+          {/* ── Detalle por pregunta al oprimir un instructor ── */}
+          {instructorSeleccionado && (
+            <div className="home-card" style={{ marginTop: "24px" }}>
+              <div className="home-card-header" style={{ display: "flex", justifyContent: "space-between" }}>
+                <h3><i className="bi bi-list-check"></i> Detalle: {instructorSeleccionado.nombre}</h3>
+                <button onClick={() => setInstructorSeleccionado(null)} style={{ width: "auto", margin: 0, padding: "6px 14px" }}>Cerrar</button>
+              </div>
+              <div className="home-card-body">
+                {cargandoDetalle && <p>Cargando detalle...</p>}
+                {!cargandoDetalle && detallePreguntas.length === 0 && (
+                  <p style={{ color: "#6b7280" }}>No hay respuestas registradas para este instructor.</p>
+                )}
+                {!cargandoDetalle && detallePreguntas.map((p) => {
+                  const colores = {
+                    verde: { fondo: "#d1fae5", texto: "#065f46", borde: "#a7f3d0", barra: "linear-gradient(90deg,#39a900,#2d7a4f)" },
+                    amarillo: { fondo: "#fef3c7", texto: "#92400e", borde: "#fde68a", barra: "linear-gradient(90deg,#f59e0b,#d97706)" },
+                    rojo: { fondo: "#fee2e2", texto: "#991b1b", borde: "#fecaca", barra: "linear-gradient(90deg,#ef4444,#b91c1c)" },
+                  };
+                  const c = colores[p.color] || colores.verde;
+                  return (
+                    <div key={p.id_pregunta} style={{ padding: "14px 0", borderBottom: "1px solid #f3f4f6" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "6px" }}>
+                        <p style={{ margin: 0, fontWeight: 600 }}>{p.orden}. {p.pregunta}</p>
+                        <span style={{ padding: "4px 12px", borderRadius: "20px", fontWeight: 700, fontSize: "0.85rem", background: c.fondo, color: c.texto, border: `1px solid ${c.borde}` }}>
+                          {p.porcentaje}%
+                        </span>
+                      </div>
+                      <div style={{ height: "10px", background: "#e5e7eb", borderRadius: "5px", overflow: "hidden", marginBottom: "6px" }}>
+                        <div style={{ height: "100%", width: `${Math.min(p.porcentaje, 100)}%`, background: c.barra }} />
+                      </div>
+                      <small style={{ color: "#6b7280" }}>Fichas que evaluaron: {p.fichas.join(", ") || "—"}</small>
+                      {/* 3.0–4.0: advertencia de mejora · <3.0: alerta roja */}
+                      {p.color !== "verde" && (
+                        <p style={{ margin: "6px 0 0", fontSize: "0.82rem", fontWeight: 600, color: c.texto }}>
+                          {p.mensaje}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

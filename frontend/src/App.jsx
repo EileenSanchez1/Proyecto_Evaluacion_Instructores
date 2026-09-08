@@ -1,10 +1,14 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
+import LoginInstructor from './pages/LoginInstructor';
 import Registro from './pages/Registro';
 import RecuperarContrasena from './pages/RecuperarContrasena';
 import RestablecerContrasena from './pages/RestablecerContrasena';
 import Home from './pages/Home';
 import Contacto from './pages/Contacto';
+import Novedades from './pages/Novedades';
+import PerfilInstructor from './pages/PerfilInstructor';
+import MiPromedio from './pages/MiPromedio';
 import Instructores from './pages/Instructores';
 import CrearInstructor from './pages/CrearInstructor';
 import ActualizarInstructor from './pages/ActualizarInstructor';
@@ -14,7 +18,6 @@ import ResponderEvaluacion from './pages/Responderevaluacion';
 import Preguntas from './pages/Preguntas';
 import Fichas from './pages/Fichas';
 import Competencias from './pages/Competencias';
-import Horarios from './pages/Horarios';
 import Reportes from './pages/Reportes';
 import Historial from './pages/Historial';
 import Periodos from './pages/Periodos';
@@ -28,6 +31,7 @@ function App() {
       <Routes>
         {/* RUTAS PUBLICAS */}
         <Route path='/login' element={<Login />} />
+        <Route path='/login-instructor' element={<LoginInstructor />} />
         <Route path='/registro' element={<Registro />} />
         <Route path='/recuperar-contrasena' element={<RecuperarContrasena />} />
         <Route path='/restablecer-contrasena' element={<RestablecerContrasena />} />
@@ -37,6 +41,12 @@ function App() {
           <Route element={<Layout />}>
             {/* HOME */}
             <Route path='/' element={<Home />} />
+
+            {/* INSTRUCTOR */}
+            <Route element={<AdminRoute roles={['Instructor']} />}>
+              <Route path='/perfil-instructor' element={<PerfilInstructor />} />
+              <Route path='/mi-promedio' element={<MiPromedio />} />
+            </Route>
 
             {/* INSTRUCTORES */}
             <Route path='/instructores' element={<Instructores />} />
@@ -56,19 +66,19 @@ function App() {
             {/* PREGUNTAS - Solo Admin */}
             <Route element={<AdminRoute />}>
               <Route path='/preguntas' element={<Preguntas />} />
+              <Route path='/novedades' element={<Novedades />} />
             </Route>
 
             {/* Admin/Coordinador */}
             <Route element={<AdminRoute roles={['Administrador', 'Coordinador']} />}>
               <Route path='/fichas' element={<Fichas />} />
               <Route path='/competencias' element={<Competencias />} />
-              <Route path='/horarios' element={<Horarios />} />
               <Route path='/periodos' element={<Periodos />} />
               <Route path='/reportes' element={<Reportes />} />
               <Route path='/historial' element={<Historial />} />
             </Route>
 
-            {/* CONTACTO */}
+            {/* CONTACTO - Aprendiz */}
             <Route path='/contacto' element={<Contacto />} />
           </Route>
         </Route>

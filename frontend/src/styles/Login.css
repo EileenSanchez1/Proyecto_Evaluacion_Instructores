@@ -175,3 +175,18 @@
     padding: 40px 20px;
   }
 }
+/* Ojito de contraseña */
+.password-input-wrapper { position: relative; display: flex; align-items: center; }
+.password-input-wrapper input { width: 100%; padding-right: 44px; }
+.toggle-password { position: absolute; right: 10px; background: none !important; border: none; cursor: pointer; font-size: 1rem; padding: 0; margin: 0; width: auto; color: #666; }
+.toggle-password:hover { background: none !important; }
+.hint-password { display: block; color: #999; font-size: 0.75rem; margin: -4px 0 8px; }
+
+/* Botón secundario (Volver, etc.) */
+.btn-secundario { background: #6b7280 !important; margin-top: 10px; }
+.btn-secundario:hover { background: #4b5563 !important; }
+
+/* Caja "Soy instructor" */
+.login-instructor-box { margin-top: 24px; padding-top: 18px; border-top: 1px solid #eee; text-align: center; font-size: 0.85rem; color: #666; }
+.btn-soy-instructor { display: inline-block; margin-top: 8px; padding: 10px 22px; background: #007832; color: #fff !important; border-radius: 10px; font-weight: 600; text-decoration: none; }
+.btn-soy-instructor:hover { background: #005a24; }
