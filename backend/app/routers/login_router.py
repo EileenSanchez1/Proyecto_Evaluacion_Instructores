@@ -8,7 +8,8 @@ from app.config.security import (
 from app.schemas.login import (
     LoginRequest, LoginResponse, SolicitarRecuperacionRequest,
     VerificarCodigoRequest, RestablecerPasswordRequest,
-    LoginInstructorRequest, VerificarCodigoInstructorRequest
+    LoginInstructorRequest, VerificarCodigoInstructorRequest,
+    InstructorCorreoRequest, InstructorCrearPasswordRequest,
 )
 from app.services.login_service import LoginService
 from app.models.aprendiz import Aprendiz
@@ -89,30 +90,102 @@ def restablecer_password(datos: RestablecerPasswordRequest, session: Session = D
     limpiar_codigo(datos.correo, tipo="recuperacion")
     return {"mensaje": mensaje}
 
+
 # =========================
-# LOGIN INSTRUCTOR (2FA)
+# LOGIN INSTRUCTOR (2FA + primer acceso)
 # =========================
-@router.post("/instructor", response_model=dict)
-def login_instructor_paso1(datos: LoginInstructorRequest, session: Session = Depends(get_session)):
-    # Validar que sea correo @sena.edu.co
-    if not datos.correo.endswith("@sena.edu.co"):
+@router.post("/instructor/iniciar", response_model=dict)
+def instructor_iniciar(datos: InstructorCorreoRequest, session: Session = Depends(get_session)):
+    """Paso 0: solo correo. Indica si debe crear contraseña o ya puede iniciar."""
+    correo = datos.correo.strip().lower()
+    if not correo.endswith("@sena.edu.co"):
         raise HTTPException(status_code=400, detail="El correo debe ser institucional (@sena.edu.co).")
 
-    instructor = LoginService.buscar_instructor_por_correo(session, datos.correo)
+    instructor = LoginService.buscar_instructor_por_correo(session, correo)
+    if not instructor:
+        raise HTTPException(status_code=404, detail="No hay un instructor registrado con ese correo.")
+
+    usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
+    if not usuario or not usuario.activo:
+        raise HTTPException(status_code=401, detail="Cuenta de instructor no activa.")
+
+    necesita = LoginService.instructor_necesita_crear_password(session, correo)
+
+    # Enviar código siempre (para crear password o para login)
+    LoginService.enviar_codigo_instructor(correo)
+
+    if necesita:
+        return {
+            "mensaje": "Primer acceso: se envió un código a tu correo. Crea tu contraseña.",
+            "requiere_crear_password": True,
+            "requiere_codigo": True,
+        }
+    return {
+        "mensaje": "Se envió un código a tu correo. Ingresa tu contraseña y el código.",
+        "requiere_crear_password": False,
+        "requiere_codigo": True,
+    }
+
+
+@router.post("/instructor/crear-password", response_model=LoginResponse)
+def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Session = Depends(get_session)):
+    """Primer acceso: verifica código OTP y establece la contraseña definitiva."""
+    correo = datos.correo.strip().lower()
+    if not correo.endswith("@sena.edu.co"):
+        raise HTTPException(status_code=400, detail="Correo inválido.")
+
+    if not verificar_codigo(correo, datos.codigo, tipo="instructor"):
+        raise HTTPException(status_code=400, detail="Código inválido o expirado.")
+
+    if not LoginService.instructor_necesita_crear_password(session, correo):
+        raise HTTPException(status_code=400, detail="Esta cuenta ya tiene contraseña. Usa el login normal.")
+
+    usuario, mensaje = LoginService.establecer_password_instructor(session, correo, datos.nueva_contrasena)
+    if not usuario:
+        raise HTTPException(status_code=400, detail=mensaje)
+
+    limpiar_codigo(correo, tipo="instructor")
+
+    token = crear_access_token(
+        id_usuario=usuario.id_usuario,
+        correo=usuario.correo,
+        rol="Instructor",
+    )
+    usuario_data = _usuario_a_dict(usuario)
+    instructor = LoginService.buscar_instructor_por_correo(session, correo)
+    if instructor:
+        usuario_data["id_instructor"] = instructor.id_instructor
+
+    return LoginResponse(access_token=token, token_type="bearer", usuario=usuario_data)
+
+
+@router.post("/instructor", response_model=dict)
+def login_instructor_paso1(datos: LoginInstructorRequest, session: Session = Depends(get_session)):
+    """Login normal instructor: correo + contraseña → envía código OTP."""
+    correo = datos.correo.strip().lower()
+    if not correo.endswith("@sena.edu.co"):
+        raise HTTPException(status_code=400, detail="El correo debe ser institucional (@sena.edu.co).")
+
+    instructor = LoginService.buscar_instructor_por_correo(session, correo)
     if not instructor:
         raise HTTPException(status_code=401, detail="Instructor no encontrado.")
 
-    # Verificar que tenga usuario asociado
-    usuario = session.exec(select(Usuario).where(Usuario.correo == datos.correo)).first()
+    usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
     if not usuario:
         raise HTTPException(status_code=401, detail="Instructor no tiene cuenta de usuario activa.")
+
+    if LoginService.instructor_necesita_crear_password(session, correo):
+        raise HTTPException(
+            status_code=400,
+            detail="Debes crear tu contraseña primero. Usa el flujo de primer acceso (solo correo).",
+        )
 
     if not LoginService.verificar_password(datos.contrasena, usuario.contrasena):
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos.")
 
-    # Enviar código de verificación
-    LoginService.enviar_codigo_instructor(datos.correo)
+    LoginService.enviar_codigo_instructor(correo)
     return {"mensaje": "Se envió un código de verificación a tu correo institucional.", "requiere_codigo": True}
+
 
 @router.post("/instructor/verificar", response_model=LoginResponse)
 def login_instructor_paso2(datos: VerificarCodigoInstructorRequest, session: Session = Depends(get_session)):
@@ -126,14 +199,15 @@ def login_instructor_paso2(datos: VerificarCodigoInstructorRequest, session: Ses
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
+    limpiar_codigo(datos.correo, tipo="instructor")
+
     token = crear_access_token(
         id_usuario=usuario.id_usuario,
         correo=usuario.correo,
-        rol="Instructor"
+        rol="Instructor",
     )
 
     usuario_data = _usuario_a_dict(usuario)
-    # Agregar id_instructor
     instructor = LoginService.buscar_instructor_por_correo(session, datos.correo)
     if instructor:
         usuario_data["id_instructor"] = instructor.id_instructor

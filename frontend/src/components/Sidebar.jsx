@@ -1,11 +1,19 @@
 import { NavLink } from "react-router-dom";
-import { esAdmin, esAdminOCoordinador, esInstructor, obtenerUsuarioSesion } from "../utils/sesion";
+import {
+  esAdmin,
+  esAdminOCoordinador,
+  esInstructor,
+  obtenerUsuarioSesion,
+  obtenerRol,
+} from "../utils/sesion";
 import "../styles/Layout.css";
 
 function Sidebar() {
   const admin = esAdmin();
   const adminOCoordinador = esAdminOCoordinador();
-  const instructor = esInstructor ? esInstructor() : obtenerUsuarioSesion()?.rol === "INSTRUCTOR";
+  const instructor = esInstructor();
+  const rol = obtenerRol();
+  const esAprendiz = rol === "Aprendiz";
 
   return (
     <aside className="sidebar">
@@ -26,30 +34,37 @@ function Sidebar() {
           <i className="bi bi-house"></i> Inicio
         </NavLink>
 
-        {/* Enlaces exclusivos o de interés para Instructor */}
+        {/* Enlaces exclusivos para Instructor */}
         {instructor && (
           <>
             <NavLink
               to="/perfil-instructor"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
               <i className="bi bi-person-badge"></i> Mi Perfil
             </NavLink>
             <NavLink
               to="/mi-promedio"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
               <i className="bi bi-graph-up-arrow"></i> Mi Promedio
             </NavLink>
           </>
         )}
 
-        <NavLink
-          to="/instructores"
-          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-        >
-          <i className="bi bi-people"></i> Instructores
-        </NavLink>
+        {/* Instructores visibles para todos los logueados excepto quizás solo admin, pero se deja */}
+        {!instructor && (
+          <NavLink
+            to="/instructores"
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+          >
+            <i className="bi bi-people"></i> Instructores
+          </NavLink>
+        )}
 
         <NavLink
           to="/evaluaciones"
@@ -67,58 +82,77 @@ function Sidebar() {
           </NavLink>
         )}
 
+        {/* Novedades solo Admin / Coordinador */}
+        {adminOCoordinador && (
+          <NavLink
+            to="/novedades"
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+          >
+            <i className="bi bi-bell"></i> Novedades
+          </NavLink>
+        )}
+
         {adminOCoordinador && (
           <>
             <NavLink
               to="/fichas"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
               <i className="bi bi-card-text"></i> Fichas
             </NavLink>
 
             <NavLink
               to="/competencias"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
               <i className="bi bi-award"></i> Competencias
             </NavLink>
 
-            <NavLink
-              to="/horarios"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-            >
-              <i className="bi bi-calendar-week"></i> Horarios
-            </NavLink>
+            {/* HORARIOS ELIMINADO - no es necesario */}
 
             <NavLink
               to="/periodos"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
               <i className="bi bi-calendar-range"></i> Periodos
             </NavLink>
 
             <NavLink
               to="/historial"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
               <i className="bi bi-clock-history"></i> Historial
             </NavLink>
 
             <NavLink
               to="/reportes"
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
             >
               <i className="bi bi-bar-chart"></i> Reportes
             </NavLink>
           </>
         )}
 
-        <NavLink
-          to="/contacto"
-          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-        >
-          <i className="bi bi-envelope"></i> Contacto
-        </NavLink>
+        {/* Contacto principalmente para Aprendiz */}
+        {(esAprendiz || adminOCoordinador) && (
+          <NavLink
+            to="/contacto"
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+          >
+            <i className="bi bi-envelope"></i>{" "}
+            {esAprendiz ? "Contacto / Novedad" : "Contacto"}
+          </NavLink>
+        )}
       </nav>
     </aside>
   );

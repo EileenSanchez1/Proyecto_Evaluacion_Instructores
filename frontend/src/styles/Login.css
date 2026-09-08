@@ -190,3 +190,144 @@
 .login-instructor-box { margin-top: 24px; padding-top: 18px; border-top: 1px solid #eee; text-align: center; font-size: 0.85rem; color: #666; }
 .btn-soy-instructor { display: inline-block; margin-top: 8px; padding: 10px 22px; background: #007832; color: #fff !important; border-radius: 10px; font-weight: 600; text-decoration: none; }
 .btn-soy-instructor:hover { background: #005a24; }
+/* ===== Ojito de contraseña ===== */
+.password-field {
+  position: relative;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 2.8rem;
+}
+
+.btn-ojito {
+  position: absolute;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  font-size: 1.15rem;
+  padding: 0.25rem 0.4rem;
+  line-height: 1;
+}
+
+.btn-ojito:hover {
+  color: #39a900;
+}
+
+.hint-pass {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+
+
+/* ===== Ojito de contraseña (profesional, dentro del input) ===== */
+.password-field {
+  margin-bottom: 4px;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding: 14px 44px 14px 14px !important;
+  margin-bottom: 4px;
+  box-sizing: border-box;
+}
+
+/* CRÍTICO: anular el estilo general de .lado-formulario button */
+.lado-formulario .btn-ojito,
+.password-input-wrapper .btn-ojito,
+button.btn-ojito {
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: auto !important;
+  min-width: 32px !important;
+  max-width: 36px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #6b7280 !important;
+  font-size: 1.1rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+  transition: color 0.2s ease, background 0.2s ease !important;
+}
+
+.lado-formulario .btn-ojito:hover,
+.password-input-wrapper .btn-ojito:hover,
+button.btn-ojito:hover {
+  background: rgba(57, 169, 0, 0.1) !important;
+  background-color: rgba(57, 169, 0, 0.1) !important;
+  color: #39a900 !important;
+}
+
+.lado-formulario .btn-ojito:disabled,
+button.btn-ojito:disabled {
+  background: transparent !important;
+  cursor: default !important;
+}
+
+.hint-pass {
+  display: block;
+  margin-top: 2px;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  color: #9ca3af;
+  line-height: 1.3;
+}
+
+
+/* También para la clase toggle-password (LoginInstructor) */
+.lado-formulario .toggle-password,
+.password-input-wrapper .toggle-password,
+button.toggle-password {
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: auto !important;
+  min-width: 32px !important;
+  max-width: 36px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  color: #6b7280 !important;
+  font-size: 1.05rem !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+}
+.lado-formulario .toggle-password:hover,
+button.toggle-password:hover {
+  background: rgba(57, 169, 0, 0.1) !important;
+  color: #39a900 !important;
+}
