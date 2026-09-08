@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { obtenerUsuarioSesion } from "../utils/sesion";
-import { reportePreguntasInstructor } from "../services/Reporteservice";
+import { miPromedioInstructor } from "../services/Reporteservice";
 import "../styles/Home.css";
 
 function MiPromedio() {
@@ -20,7 +20,7 @@ function MiPromedio() {
 
       try {
         // Cargar reporte de evaluación por preguntas
-        const data = await reportePreguntasInstructor(idInstructor, {});
+        const data = await miPromedioInstructor(idInstructor);
         setReporte(data);
       } catch (err) {
         console.error("Error al cargar el rendimiento:", err);

@@ -120,172 +120,104 @@ def historial_evaluaciones(
         })
     return historial
 
-@router.get("/instructor/{instructor_id}/preguntas", dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
-def reporte_por_preguntas_admin(
+
+@router.get("/instructor/{instructor_id}/preguntas")
+def reporte_por_preguntas(
     instructor_id: int,
     periodo_id: Optional[int] = Query(None),
     ficha_id: Optional[int] = Query(None),
     session: Session = Depends(get_session)
 ):
     """
-    Devuelve el desempeño de un instructor agrupado por pregunta.
-    Incluye: pregunta, promedio (1-5), porcentaje, fichas que evaluaron, mensaje.
+    Desempeño del instructor por pregunta.
+    Accesible por Admin/Coordinador e Instructor (su propio id).
     """
-    statement = select(Evaluacion).where(
-        Evaluacion.estado == "Evaluado",
-        Evaluacion.id_instructor == instructor_id
+    # Respuestas del instructor (fuente de verdad)
+    stmt = (
+        select(Respuesta, Pregunta, Evaluacion)
+        .join(Pregunta, Respuesta.id_pregunta == Pregunta.id_pregunta)
+        .join(Evaluacion, Respuesta.id_evaluacion == Evaluacion.id_evaluacion)
+        .where(Respuesta.id_instructor == instructor_id)
     )
     if periodo_id:
-        statement = statement.where(Evaluacion.id_periodo == periodo_id)
-
-    evaluaciones = session.exec(statement).all()
-    if not evaluaciones:
-        return {"instructor_id": instructor_id, "preguntas": []}
-
-    ids_evals = [e.id_evaluacion for e in evaluaciones]
-
-    # Si hay filtro de ficha, filtrar evaluaciones por aprendiz
-    if ficha_id:
-        evals_filtradas = []
-        for ev in evaluaciones:
-            aprendiz = session.get(Aprendiz, ev.id_aprendiz)
-            if aprendiz and aprendiz.id_ficha == ficha_id:
-                evals_filtradas.append(ev)
-        ids_evals = [e.id_evaluacion for e in evals_filtradas]
-        if not ids_evals:
-            return {"instructor_id": instructor_id, "preguntas": []}
-
-    # Traer respuestas con preguntas
-    stmt = select(Respuesta, Pregunta).join(Pregunta, Respuesta.id_pregunta == Pregunta.id_pregunta).where(
-        Respuesta.id_evaluacion.in_(ids_evals),
-        Respuesta.id_instructor == instructor_id
-    ).order_by(Pregunta.orden)
+        stmt = stmt.where(Evaluacion.id_periodo == periodo_id)
+    stmt = stmt.order_by(Pregunta.orden)
     resultados = session.exec(stmt).all()
 
-    # Agrupar por pregunta
-    preguntas_data = defaultdict(lambda: {"suma": 0, "total": 0, "fichas": set()})
-    for respuesta, pregunta in resultados:
+    # Filtro por ficha
+    if ficha_id:
+        filtrados = []
+        for resp, preg, ev in resultados:
+            ap = session.get(Aprendiz, ev.id_aprendiz)
+            if ap and ap.id_ficha == ficha_id:
+                filtrados.append((resp, preg, ev))
+        resultados = filtrados
+
+    if not resultados:
+        return {
+            "instructor_id": instructor_id,
+            "promedio_general": 0,
+            "porcentaje_general": 0,
+            "total_respuestas": 0,
+            "preguntas": [],
+        }
+
+    preguntas_data = defaultdict(lambda: {"suma": 0, "total": 0, "fichas": set(), "descripcion": "", "orden": 0})
+    suma_g = 0
+    total_g = 0
+    for respuesta, pregunta, evaluacion in resultados:
         key = pregunta.id_pregunta
         preguntas_data[key]["suma"] += respuesta.respuesta
         preguntas_data[key]["total"] += 1
         preguntas_data[key]["descripcion"] = pregunta.descripcion
-        preguntas_data[key]["orden"] = pregunta.orden
-        # Ficha del aprendiz que respondió
-        eval_obj = session.get(Evaluacion, respuesta.id_evaluacion)
-        if eval_obj:
-            aprendiz = session.get(Aprendiz, eval_obj.id_aprendiz)
-            if aprendiz:
-                ficha = session.get(Ficha, aprendiz.id_ficha)
-                if ficha:
-                    preguntas_data[key]["fichas"].add(ficha.numero_ficha)
+        preguntas_data[key]["orden"] = getattr(pregunta, "orden", 0) or 0
+        suma_g += respuesta.respuesta
+        total_g += 1
+        ap = session.get(Aprendiz, evaluacion.id_aprendiz)
+        if ap:
+            ficha = session.get(Ficha, ap.id_ficha)
+            if ficha:
+                preguntas_data[key]["fichas"].add(str(ficha.numero_ficha))
 
     preguntas_list = []
     for pid, data in sorted(preguntas_data.items(), key=lambda x: x[1]["orden"]):
-        promedio = data["suma"] / data["total"] if data["total"] > 0 else 0
+        promedio = data["suma"] / data["total"] if data["total"] else 0
         porcentaje = (promedio / 5) * 100
-
         if promedio >= 4.0:
-            estado = "excelente"
-            mensaje = "¡Excelente desempeño! Sigue así."
-            color = "verde"
+            estado, mensaje, color = "excelente", "¡Excelente desempeño! Cumples este criterio.", "verde"
         elif promedio >= 3.0:
-            estado = "mejorar"
-            mensaje = f"Debes mejorar en: {data['descripcion']}"
-            color = "amarillo"
+            estado, mensaje, color = "mejorar", f"Debes mejorar en: {data['descripcion']}", "amarillo"
         else:
-            estado = "critico"
-            mensaje = f"Estás fallando en: {data['descripcion']}. ¡Atención urgente!"
-            color = "rojo"
-
+            estado, mensaje, color = "critico", f"Fallando en: {data['descripcion']}. Requiere atención urgente.", "rojo"
         preguntas_list.append({
             "id_pregunta": pid,
             "orden": data["orden"],
             "pregunta": data["descripcion"],
+            "texto_pregunta": data["descripcion"],
+            "nota": round(promedio, 2),
             "promedio": round(promedio, 2),
-            "porcentaje": round(porcentaje, 2),
+            "porcentaje": round(porcentaje, 1),
             "total_respuestas": data["total"],
             "fichas": sorted(list(data["fichas"])),
             "estado": estado,
             "mensaje": mensaje,
-            "color": color
+            "color": color,
         })
 
+    prom_g = (suma_g / total_g) if total_g else 0
     return {
         "instructor_id": instructor_id,
-        "preguntas": preguntas_list
+        "promedio_general": round(prom_g, 2),
+        "porcentaje_general": round((prom_g / 5) * 100, 1) if total_g else 0,
+        "total_respuestas": total_g,
+        "preguntas": preguntas_list,
     }
+
 
 @router.get("/mi-promedio")
 def mi_promedio_instructor(
     instructor_id: int = Query(...),
     session: Session = Depends(get_session)
 ):
-    """
-    Para el instructor logueado. Muestra su promedio por pregunta.
-    """
-    statement = select(Evaluacion).where(
-        Evaluacion.estado == "Evaluado",
-        Evaluacion.id_instructor == instructor_id
-    )
-    evaluaciones = session.exec(statement).all()
-    if not evaluaciones:
-        return {"instructor_id": instructor_id, "preguntas": []}
-
-    ids_evals = [e.id_evaluacion for e in evaluaciones]
-
-    stmt = select(Respuesta, Pregunta).join(Pregunta, Respuesta.id_pregunta == Pregunta.id_pregunta).where(
-        Respuesta.id_evaluacion.in_(ids_evals),
-        Respuesta.id_instructor == instructor_id
-    ).order_by(Pregunta.orden)
-    resultados = session.exec(stmt).all()
-
-    preguntas_data = defaultdict(lambda: {"suma": 0, "total": 0, "fichas": set()})
-    for respuesta, pregunta in resultados:
-        key = pregunta.id_pregunta
-        preguntas_data[key]["suma"] += respuesta.respuesta
-        preguntas_data[key]["total"] += 1
-        preguntas_data[key]["descripcion"] = pregunta.descripcion
-        preguntas_data[key]["orden"] = pregunta.orden
-        eval_obj = session.get(Evaluacion, respuesta.id_evaluacion)
-        if eval_obj:
-            aprendiz = session.get(Aprendiz, eval_obj.id_aprendiz)
-            if aprendiz:
-                ficha = session.get(Ficha, aprendiz.id_ficha)
-                if ficha:
-                    preguntas_data[key]["fichas"].add(ficha.numero_ficha)
-
-    preguntas_list = []
-    for pid, data in sorted(preguntas_data.items(), key=lambda x: x[1]["orden"]):
-        promedio = data["suma"] / data["total"] if data["total"] > 0 else 0
-        porcentaje = (promedio / 5) * 100
-
-        if promedio >= 4.0:
-            estado = "excelente"
-            mensaje = "¡Excelente desempeño! Sigue así."
-            color = "verde"
-        elif promedio >= 3.0:
-            estado = "mejorar"
-            mensaje = f"Debes mejorar en: {data['descripcion']}"
-            color = "amarillo"
-        else:
-            estado = "critico"
-            mensaje = f"Estás fallando en: {data['descripcion']}. ¡Atención urgente!"
-            color = "rojo"
-
-        preguntas_list.append({
-            "id_pregunta": pid,
-            "orden": data["orden"],
-            "pregunta": data["descripcion"],
-            "promedio": round(promedio, 2),
-            "porcentaje": round(porcentaje, 2),
-            "total_respuestas": data["total"],
-            "fichas": sorted(list(data["fichas"])),
-            "estado": estado,
-            "mensaje": mensaje,
-            "color": color
-        })
-
-    return {
-        "instructor_id": instructor_id,
-        "preguntas": preguntas_list
-    }
+    """Misma data que /instructor/{id}/preguntas, pensado para el rol Instructor."""
+    return reporte_por_preguntas(instructor_id=instructor_id, session=session)
