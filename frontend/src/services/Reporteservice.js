@@ -14,6 +14,14 @@ export const generarReporteInstructor = async (evaluacionId, instructorId) => {
   return response.data;
 };
 
+// Función consultada por PerfilInstructor.jsx y MiPromedio.jsx
+export const reportePreguntasInstructor = async (instructorId, params = {}) => {
+  const response = await api.get(`${API_URL}/instructor`, {
+    params: { instructor_id: instructorId, ...params }
+  });
+  return response.data;
+};
+
 export const reporteDashboard = async (params = {}) => {
   const response = await api.get(`${API_URL}/dashboard`, { params });
   return response.data;
