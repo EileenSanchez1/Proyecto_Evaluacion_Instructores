@@ -45,3 +45,11 @@ export const historialEvaluaciones = async (params = {}) => {
   const response = await api.get(`${API_URL}/historial`, { params });
   return response.data;
 };
+
+/** Evaluaciones recibidas por el instructor (anónimas: ficha, fecha, estado, programa) */
+export const misEvaluacionesInstructor = async (instructorId) => {
+  const response = await api.get(`${API_URL}/mis-evaluaciones`, {
+    params: { instructor_id: instructorId },
+  });
+  return response.data;
+};

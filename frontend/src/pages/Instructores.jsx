@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listarInstructores, eliminarInstructor, obtenerInstructor } from "../services/instructorService";
+import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor } from "../services/instructorService";
 import { listarInstructoresPorFichaYPeriodo } from "../services/Fichainstructorservice";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
@@ -53,13 +53,38 @@ function Instructores() {
   }, []);
 
   const manejarEliminar = async (id) => {
-    if (window.confirm("¿Está seguro de eliminar este instructor?")) {
+    if (
+      window.confirm(
+        "¿Está seguro de eliminar este instructor? Se borrarán también sus evaluaciones, respuestas y asignaciones a fichas."
+      )
+    ) {
       try {
         await eliminarInstructor(id);
         setInstructores(instructores.filter((inst) => inst.id_instructor !== id));
       } catch (err) {
-        alert(err.response?.data?.detail || "Error al intentar eliminar el instructor.");
+        const d = err.response?.data?.detail;
+        const msg = Array.isArray(d)
+          ? d[0]?.msg || JSON.stringify(d)
+          : d || "Error al intentar eliminar el instructor.";
+        alert(msg);
       }
+    }
+  };
+
+  const manejarResetPrimerAcceso = async (id, nombre) => {
+    if (
+      !window.confirm(
+        `¿Resetear primer acceso de ${nombre}?\nAl iniciar sesión pedirá código (consola del backend) y crear contraseña.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await resetPrimerAccesoInstructor(id);
+      alert(res.mensaje || "Primer acceso restablecido.");
+    } catch (err) {
+      const d = err.response?.data?.detail;
+      alert(typeof d === "string" ? d : "No se pudo resetear el primer acceso.");
     }
   };
 
@@ -150,6 +175,13 @@ function Instructores() {
                 <div className="acciones">
                   <button className="btn-editar" title="Editar" onClick={() => navigate(`/instructores/editar/${inst.id_instructor}`)}>
                     <i className="bi bi-pencil"></i>
+                  </button>
+                  <button
+                    className="btn-editar-icon"
+                    title="Resetear primer acceso"
+                    onClick={() => manejarResetPrimerAcceso(inst.id_instructor, `${inst.nombre} ${inst.apellido}`)}
+                  >
+                    <i className="bi bi-key"></i>
                   </button>
                   <button className="btn-eliminar-icon" title="Eliminar" onClick={() => manejarEliminar(inst.id_instructor)}>
                     <i className="bi bi-trash"></i>

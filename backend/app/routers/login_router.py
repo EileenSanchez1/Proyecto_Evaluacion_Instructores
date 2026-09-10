@@ -61,33 +61,43 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
 # =========================
 @router.post("/recuperar", response_model=dict)
 def solicitar_recuperacion(datos: SolicitarRecuperacionRequest, session: Session = Depends(get_session)):
-    usuario = LoginService.buscar_por_correo(session, datos.correo)
+    correo = datos.correo.strip().lower()
+    usuario = LoginService.buscar_por_correo(session, correo)
     if usuario:
-        LoginService.enviar_codigo_recuperacion(usuario.correo)
-    return {"mensaje": "Si el correo está registrado, recibirás un código de verificación en unos minutos."}
+        LoginService.enviar_codigo_recuperacion(usuario.correo.strip().lower())
+    return {
+        "mensaje": "Si el correo está registrado, recibirás un código de verificación en unos minutos. Revisa tu bandeja de entrada y spam."
+    }
 
 @router.post("/verificar-codigo", response_model=dict)
 def verificar_codigo_recuperacion(datos: VerificarCodigoRequest):
-    if not verificar_codigo(datos.correo, datos.codigo, tipo="recuperacion"):
+    # Solo valida; NO consume el código (se consume al restablecer)
+    correo = datos.correo.strip().lower()
+    if not verificar_codigo(correo, datos.codigo.strip(), tipo="recuperacion", consumir=False):
         raise HTTPException(status_code=400, detail="Código inválido o expirado.")
     return {"mensaje": "Código verificado correctamente.", "valido": True}
 
 @router.post("/restablecer", response_model=dict)
 def restablecer_password(datos: RestablecerPasswordRequest, session: Session = Depends(get_session)):
-    # Validar contraseña segura
     es_segura, msg = LoginService.validar_contrasena_segura(datos.nueva_contrasena)
     if not es_segura:
         raise HTTPException(status_code=400, detail=f"La contraseña no es segura: {msg}")
 
-    if not verificar_codigo(datos.correo, datos.codigo, tipo="recuperacion"):
-        raise HTTPException(status_code=400, detail="Código inválido o expirado.")
+    correo = datos.correo.strip().lower()
+    codigo = datos.codigo.strip()
 
-    usuario = LoginService.buscar_por_correo(session, datos.correo)
+    if not verificar_codigo(correo, codigo, tipo="recuperacion", consumir=True):
+        raise HTTPException(
+            status_code=400,
+            detail="Código inválido o expirado. Solicita uno nuevo.",
+        )
+
+    usuario = LoginService.buscar_por_correo(session, correo)
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
     _, mensaje = LoginService.restablecer_password(session, usuario, datos.nueva_contrasena)
-    limpiar_codigo(datos.correo, tipo="recuperacion")
+    limpiar_codigo(correo, tipo="recuperacion")
     return {"mensaje": mensaje}
 
 

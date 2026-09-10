@@ -1,13 +1,18 @@
 from typing import List, Optional
 from sqlmodel import Session, select
+
 from app.models.instructor import Instructor
 from app.models.usuario import Usuario
 from app.models.rol import Rol
 from app.models.instructor_competencia import InstructorCompetencia
+from app.models.ficha_instructor import FichaInstructor
+from app.models.respuesta import Respuesta
+from app.models.evaluacion import Evaluacion
+from app.models.horario import Horario
 from app.schemas.instructor import InstructorCreate, InstructorUpdate
 from app.services.login_service import LoginService
 
-# Marcador interno: el instructor aún no ha creado su contraseña
+
 class InstructorService:
     @staticmethod
     def crear(session: Session, instructor: InstructorCreate) -> Instructor:
@@ -25,7 +30,7 @@ class InstructorService:
         if not rol:
             raise ValueError("El rol 'Instructor' no existe. Ejecuta seed_roles.py primero.")
 
-        # Contraseña temporal: el instructor la creará en su primer acceso
+        # Primer acceso: el instructor creará su contraseña con código
         pwd = LoginService.hash_password(LoginService.PASSWORD_PENDIENTE_MARKER)
 
         usuario = Usuario(
@@ -50,14 +55,14 @@ class InstructorService:
         session.add(db)
         session.flush()
 
-        # Asignar competencias si vienen
         if instructor.competencias:
             for id_comp in instructor.competencias:
-                rel = InstructorCompetencia(
-                    id_instructor=db.id_instructor,
-                    id_competencia=id_comp,
+                session.add(
+                    InstructorCompetencia(
+                        id_instructor=db.id_instructor,
+                        id_competencia=id_comp,
+                    )
                 )
-                session.add(rel)
 
         session.commit()
         session.refresh(db)
@@ -72,37 +77,48 @@ class InstructorService:
         return session.exec(select(Instructor)).all()
 
     @staticmethod
-    def actualizar(session: Session, instructor_id: int, instructor_update: InstructorUpdate) -> Optional[Instructor]:
+    def actualizar(
+        session: Session, instructor_id: int, instructor_update: InstructorUpdate
+    ) -> Optional[Instructor]:
         instructor = session.get(Instructor, instructor_id)
         if not instructor:
             return None
 
-        if instructor_update.nombre:
-            instructor.nombre = instructor_update.nombre
-        if instructor_update.apellido:
-            instructor.apellido = instructor_update.apellido
-        if instructor_update.correo:
+        if instructor_update.nombre is not None:
+            instructor.nombre = instructor_update.nombre.strip()
+        if instructor_update.apellido is not None:
+            instructor.apellido = instructor_update.apellido.strip()
+        if instructor_update.correo is not None:
             correo = instructor_update.correo.strip().lower()
             if not correo.endswith("@sena.edu.co"):
-                raise ValueError("El correo del instructor debe ser institucional (@sena.edu.co).")
+                raise ValueError(
+                    "El correo del instructor debe ser institucional (@sena.edu.co)."
+                )
+            otro = session.exec(
+                select(Instructor).where(
+                    Instructor.correo == correo,
+                    Instructor.id_instructor != instructor_id,
+                )
+            ).first()
+            if otro:
+                raise ValueError("Ya existe otro instructor con ese correo.")
             instructor.correo = correo
-        if instructor_update.telefono:
-            instructor.telefono = instructor_update.telefono
+        if instructor_update.telefono is not None:
+            instructor.telefono = instructor_update.telefono.strip()
         if instructor_update.foto is not None:
             instructor.foto = instructor_update.foto
 
         if instructor.id_usuario:
             usuario = session.get(Usuario, instructor.id_usuario)
             if usuario:
-                if instructor_update.nombre:
-                    usuario.nombre = instructor_update.nombre
-                if instructor_update.apellido:
-                    usuario.apellido = instructor_update.apellido
-                if instructor_update.correo:
-                    usuario.correo = instructor_update.correo.strip().lower()
+                if instructor_update.nombre is not None:
+                    usuario.nombre = instructor.nombre
+                if instructor_update.apellido is not None:
+                    usuario.apellido = instructor.apellido
+                if instructor_update.correo is not None:
+                    usuario.correo = instructor.correo
                 session.add(usuario)
 
-        # Reemplazar competencias si se envían
         if instructor_update.competencias is not None:
             existentes = session.exec(
                 select(InstructorCompetencia).where(
@@ -126,31 +142,100 @@ class InstructorService:
 
     @staticmethod
     def eliminar(session: Session, instructor_id: int) -> bool:
+        """
+        Elimina instructor y todas sus dependencias
+        (respuestas, evaluaciones, fichas, horarios, competencias, usuario).
+        """
         instructor = session.get(Instructor, instructor_id)
         if not instructor:
             return False
-        # Borrar relaciones de competencias
-        for rel in session.exec(
-            select(InstructorCompetencia).where(
-                InstructorCompetencia.id_instructor == instructor_id
-            )
-        ).all():
-            session.delete(rel)
-        if instructor.id_usuario:
-            usuario = session.get(Usuario, instructor.id_usuario)
-            if usuario:
-                session.delete(usuario)
-        session.delete(instructor)
+
+        try:
+            # 1) Respuestas ligadas al instructor
+            for r in session.exec(
+                select(Respuesta).where(Respuesta.id_instructor == instructor_id)
+            ).all():
+                session.delete(r)
+
+            # 2) Evaluaciones (y respuestas residuales por evaluación)
+            evaluaciones = session.exec(
+                select(Evaluacion).where(Evaluacion.id_instructor == instructor_id)
+            ).all()
+            for ev in evaluaciones:
+                for r in session.exec(
+                    select(Respuesta).where(Respuesta.id_evaluacion == ev.id_evaluacion)
+                ).all():
+                    session.delete(r)
+                session.delete(ev)
+
+            # 3) Asignaciones ficha–instructor
+            for fi in session.exec(
+                select(FichaInstructor).where(
+                    FichaInstructor.id_instructor == instructor_id
+                )
+            ).all():
+                session.delete(fi)
+
+            # 4) Horarios
+            for h in session.exec(
+                select(Horario).where(Horario.id_instructor == instructor_id)
+            ).all():
+                session.delete(h)
+
+            # 5) Competencias
+            for rel in session.exec(
+                select(InstructorCompetencia).where(
+                    InstructorCompetencia.id_instructor == instructor_id
+                )
+            ).all():
+                session.delete(rel)
+
+            # 6) Usuario vinculado
+            if instructor.id_usuario:
+                usuario = session.get(Usuario, instructor.id_usuario)
+                if usuario:
+                    session.delete(usuario)
+
+            # 7) Instructor
+            session.delete(instructor)
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            raise ValueError(f"No se pudo eliminar el instructor: {e}") from e
+
+    @staticmethod
+    def resetear_primer_acceso(session: Session, instructor_id: int) -> bool:
+        """Deja al instructor en modo primer acceso (código + crear contraseña)."""
+        instructor = session.get(Instructor, instructor_id)
+        if not instructor:
+            return False
+        if not instructor.id_usuario:
+            return False
+        usuario = session.get(Usuario, instructor.id_usuario)
+        if not usuario:
+            return False
+        usuario.contrasena = LoginService.hash_password(
+            LoginService.PASSWORD_PENDIENTE_MARKER
+        )
+        session.add(usuario)
         session.commit()
         return True
 
     @staticmethod
-    def actualizar_foto(session: Session, instructor_id: int, foto_url: str) -> Optional[Instructor]:
+    def actualizar_foto(
+        session: Session, instructor_id: int, foto_url: str
+    ) -> Optional[Instructor]:
         instructor = session.get(Instructor, instructor_id)
         if not instructor:
             return None
         instructor.foto = foto_url
         session.add(instructor)
+        if instructor.id_usuario:
+            usuario = session.get(Usuario, instructor.id_usuario)
+            if usuario:
+                usuario.foto = foto_url
+                session.add(usuario)
         session.commit()
         session.refresh(instructor)
         return instructor
