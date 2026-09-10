@@ -4,7 +4,7 @@ import {
   listarInstructoresPorFichaYPeriodo,
   listarFichasPorInstructor,
 } from "../services/Fichainstructorservice";
-import { obtenerInstructor } from "../services/instructorService";
+import { listarInstructores, obtenerInstructor } from "../services/instructorService";
 import { iniciarEvaluacion, listarEvaluaciones } from "../services/Evaluacionservice";
 import { listarPreguntasActivas } from "../services/Preguntaservice";
 import { listarFichas } from "../services/FichaServices";
@@ -16,6 +16,8 @@ import {
 import {
   historialEvaluaciones,
   miPromedioInstructor,
+  reportePreguntasInstructor,
+  misEvaluacionesInstructor,
 } from "../services/Reporteservice";
 import "../styles/Evaluaciones.css";
 import "../styles/Home.css";
@@ -37,6 +39,7 @@ function Evaluaciones() {
   // Instructor view
   const [fichasInstructor, setFichasInstructor] = useState([]);
   const [reporteInst, setReporteInst] = useState(null);
+  const [historialInst, setHistorialInst] = useState([]);
 
   useEffect(() => {
     let cancelado = false;
@@ -51,7 +54,26 @@ function Evaluaciones() {
           const hist = await historialEvaluaciones();
           if (!cancelado) setHistorial(hist || []);
         } else if (esInstructorUser) {
-          const idInstructor = usuario?.id_instructor;
+          let idInstructor = usuario?.id_instructor;
+          if (!idInstructor) {
+            try {
+              const todos = await listarInstructores().catch(() => []);
+              const yo = (todos || []).find(
+                (i) =>
+                  (i.correo || "").toLowerCase() ===
+                  (usuario?.correo || "").toLowerCase()
+              );
+              if (yo?.id_instructor) {
+                idInstructor = yo.id_instructor;
+                localStorage.setItem(
+                  "usuario",
+                  JSON.stringify({ ...usuario, id_instructor: idInstructor })
+                );
+              }
+            } catch {
+              /* ignore */
+            }
+          }
           if (!idInstructor) {
             setError(
               "No se encontró el identificador de instructor. Vuelve a iniciar sesión como instructor."
@@ -60,10 +82,23 @@ function Evaluaciones() {
             return;
           }
 
-          const [asignaciones, reporte, todasFichas] = await Promise.all([
+          const cargarReporte = async () => {
+            try {
+              return await miPromedioInstructor(idInstructor);
+            } catch {
+              try {
+                return await reportePreguntasInstructor(idInstructor, {});
+              } catch {
+                return null;
+              }
+            }
+          };
+
+          const [asignaciones, reporte, todasFichas, hist] = await Promise.all([
             listarFichasPorInstructor(idInstructor).catch(() => []),
-            miPromedioInstructor(idInstructor).catch(() => null),
+            cargarReporte(),
             listarFichas().catch(() => []),
+            misEvaluacionesInstructor(idInstructor).catch(() => []),
           ]);
 
           const mapa = Object.fromEntries(
@@ -85,6 +120,7 @@ function Evaluaciones() {
           if (!cancelado) {
             setFichasInstructor(fichas);
             setReporteInst(reporte);
+            setHistorialInst(hist || []);
           }
         } else {
           // Aprendiz
@@ -277,9 +313,9 @@ function Evaluaciones() {
               </div>
               <div className="home-stat-info">
                 <span className="home-stat-num">
-                  {reporteInst?.promedio_general != null && Number(reporteInst.total_respuestas || 0) > 0
+                  {reporteInst != null && reporteInst.promedio_general != null
                     ? Number(reporteInst.promedio_general).toFixed(2)
-                    : "0.00"}
+                    : "—"}
                 </span>
                 <span className="home-stat-label">Promedio general (1–5)</span>
               </div>
@@ -290,9 +326,9 @@ function Evaluaciones() {
               </div>
               <div className="home-stat-info">
                 <span className="home-stat-num">
-                  {reporteInst?.porcentaje_general != null && Number(reporteInst.total_respuestas || 0) > 0
+                  {reporteInst != null && reporteInst.porcentaje_general != null
                     ? `${Number(reporteInst.porcentaje_general).toFixed(1)}%`
-                    : "0%"}
+                    : "—"}
                 </span>
                 <span className="home-stat-label">Desempeño global</span>
               </div>
@@ -354,12 +390,67 @@ function Evaluaciones() {
             }}
           >
             <h3 style={{ marginTop: 0 }}>
-              <i className="bi bi-graph-up"></i> Detalle de desempeño
+              <i className="bi bi-clipboard-check"></i> Evaluaciones recibidas
             </h3>
             <p style={{ color: "#6b7280", fontSize: "0.95rem" }}>
-              Las evaluaciones son anónimas. Puedes ver el porcentaje por
-              pregunta y las fichas que participaron, sin identificar aprendices.
+              Listado anónimo: ves ficha, programa, fecha y estado. No se muestra quién evaluó.
             </p>
+            {historialInst.length === 0 ? (
+              <p style={{ color: "#9ca3af", marginTop: 12 }}>
+                Aún no has recibido evaluaciones. Cuando los aprendices de tus fichas te evalúen, aparecerán aquí.
+              </p>
+            ) : (
+              <div className="table-responsive" style={{ marginTop: 12 }}>
+                <table className="table table-hover" style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", borderBottom: "2px solid #e5e7eb", color: "#6b7280", fontSize: "0.85rem" }}>
+                      <th style={{ padding: "10px 8px" }}>Fecha</th>
+                      <th style={{ padding: "10px 8px" }}>Ficha</th>
+                      <th style={{ padding: "10px 8px" }}>Programa</th>
+                      <th style={{ padding: "10px 8px" }}>Periodo</th>
+                      <th style={{ padding: "10px 8px" }}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historialInst.map((h) => (
+                      <tr key={h.id_evaluacion} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                        <td style={{ padding: "12px 8px" }}>
+                          {h.fecha
+                            ? new Date(h.fecha).toLocaleDateString("es-CO", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "—"}
+                        </td>
+                        <td style={{ padding: "12px 8px" }}>
+                          <strong>{h.ficha ?? "—"}</strong>
+                        </td>
+                        <td style={{ padding: "12px 8px" }}>{h.programa || "—"}</td>
+                        <td style={{ padding: "12px 8px" }}>{h.periodo || "—"}</td>
+                        <td style={{ padding: "12px 8px" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 10px",
+                              borderRadius: 999,
+                              fontSize: "0.8rem",
+                              fontWeight: 600,
+                              background:
+                                h.estado === "Evaluado" ? "#d1fae5" : "#fef3c7",
+                              color:
+                                h.estado === "Evaluado" ? "#065f46" : "#92400e",
+                            }}
+                          >
+                            {h.estado || "—"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <Link
               to="/mi-promedio"
               className="btn-evaluar"
@@ -368,7 +459,7 @@ function Evaluaciones() {
                 alignItems: "center",
                 gap: 8,
                 textDecoration: "none",
-                marginTop: 8,
+                marginTop: 16,
               }}
             >
               <i className="bi bi-graph-up-arrow"></i> Ir a Mi promedio

@@ -121,6 +121,39 @@ def historial_evaluaciones(
     return historial
 
 
+@router.get("/mis-evaluaciones")
+def mis_evaluaciones_instructor(
+    instructor_id: int = Query(...),
+    session: Session = Depends(get_session),
+):
+    """
+    Historial de evaluaciones RECIBIDAS por un instructor (anónimo).
+    No incluye nombre del aprendiz: solo ficha, programa, fecha, estado y periodo.
+    """
+    statement = (
+        select(Evaluacion, Aprendiz, Ficha, Periodo)
+        .join(Aprendiz, Evaluacion.id_aprendiz == Aprendiz.id_aprendiz)
+        .join(Ficha, Aprendiz.id_ficha == Ficha.id_ficha)
+        .join(Periodo, Evaluacion.id_periodo == Periodo.id_periodo)
+        .where(Evaluacion.id_instructor == instructor_id)
+        .order_by(Evaluacion.fecha.desc())
+    )
+    resultados = session.exec(statement).all()
+
+    items = []
+    for evaluacion, aprendiz, ficha, periodo in resultados:
+        items.append({
+            "id_evaluacion": evaluacion.id_evaluacion,
+            "fecha": evaluacion.fecha.isoformat() if evaluacion.fecha else None,
+            "estado": evaluacion.estado,
+            "periodo": periodo.nombre if periodo else None,
+            "ficha": ficha.numero_ficha if ficha else None,
+            "programa": ficha.programa if ficha else None,
+            # Anónimo: sin datos del aprendiz
+        })
+    return items
+
+
 @router.get("/instructor/{instructor_id}/preguntas")
 def reporte_por_preguntas(
     instructor_id: int,
@@ -132,12 +165,18 @@ def reporte_por_preguntas(
     Desempeño del instructor por pregunta.
     Accesible por Admin/Coordinador e Instructor (su propio id).
     """
-    # Respuestas del instructor (fuente de verdad)
+    # Respuestas del instructor (por id en respuesta o en la evaluación)
+    from sqlalchemy import or_
     stmt = (
         select(Respuesta, Pregunta, Evaluacion)
         .join(Pregunta, Respuesta.id_pregunta == Pregunta.id_pregunta)
         .join(Evaluacion, Respuesta.id_evaluacion == Evaluacion.id_evaluacion)
-        .where(Respuesta.id_instructor == instructor_id)
+        .where(
+            or_(
+                Respuesta.id_instructor == instructor_id,
+                Evaluacion.id_instructor == instructor_id,
+            )
+        )
     )
     if periodo_id:
         stmt = stmt.where(Evaluacion.id_periodo == periodo_id)

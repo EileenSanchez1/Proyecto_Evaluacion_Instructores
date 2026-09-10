@@ -11,7 +11,7 @@ import { listarEvaluaciones } from "../services/Evaluacionservice";
 import { listarInstructores, obtenerInstructor } from "../services/instructorService";
 import { listarAprendices } from "../services/Aprendizservice";
 import { listarFichas } from "../services/FichaServices";
-import { historialEvaluaciones, miPromedioInstructor } from "../services/Reporteservice";
+import { historialEvaluaciones, miPromedioInstructor, reportePreguntasInstructor } from "../services/Reporteservice";
 import { listarPreguntasActivas } from "../services/Preguntaservice";
 import "../styles/Home.css";
 
@@ -68,16 +68,43 @@ function Home() {
             setUltimasEvaluaciones((historial || []).slice(0, 5));
           }
         } else if (esInstructorUser) {
-          const idInstructor = usuario?.id_instructor;
+          let idInstructor = usuario?.id_instructor;
           if (!idInstructor) {
-            setError("No se encontró el identificador de instructor en la sesión. Cierra sesión e inicia de nuevo.");
+            // Intentar recuperar id_instructor por correo si la sesión es antigua
+            try {
+              const todos = await listarInstructores().catch(() => []);
+              const yo = (todos || []).find(
+                (i) => (i.correo || "").toLowerCase() === (usuario?.correo || "").toLowerCase()
+              );
+              if (yo?.id_instructor) {
+                idInstructor = yo.id_instructor;
+                const u = { ...usuario, id_instructor: idInstructor };
+                localStorage.setItem("usuario", JSON.stringify(u));
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+          if (!idInstructor) {
+            setError("No se encontró el identificador de instructor en la sesión. Cierra sesión e inicia de nuevo como instructor.");
             setCargando(false);
             return;
           }
 
           const [asignaciones, reporte] = await Promise.all([
             listarFichasPorInstructor(idInstructor).catch(() => []),
-            miPromedioInstructor(idInstructor).catch(() => null),
+            (async () => {
+              try {
+                return await miPromedioInstructor(idInstructor);
+              } catch (e1) {
+                try {
+                  return await reportePreguntasInstructor(idInstructor, {});
+                } catch (e2) {
+                  console.error("No se pudo cargar el promedio del instructor", e1, e2);
+                  return null;
+                }
+              }
+            })(),
           ]);
 
           // Enriquecer fichas si el reporte ya trae detalle
@@ -245,9 +272,9 @@ function Home() {
               </div>
               <div className="home-stat-info">
                 <span className="home-stat-num">
-                  {reporteInstructor?.promedio_general != null && Number(reporteInstructor.total_respuestas || 0) > 0
+                  {reporteInstructor != null && reporteInstructor.promedio_general != null
                     ? Number(reporteInstructor.promedio_general).toFixed(2)
-                    : "0.00"}
+                    : "—"}
                 </span>
                 <span className="home-stat-label">Promedio general (1–5)</span>
               </div>
@@ -258,9 +285,9 @@ function Home() {
               </div>
               <div className="home-stat-info">
                 <span className="home-stat-num">
-                  {reporteInstructor?.porcentaje_general != null && Number(reporteInstructor.total_respuestas || 0) > 0
+                  {reporteInstructor != null && reporteInstructor.porcentaje_general != null
                     ? `${Number(reporteInstructor.porcentaje_general).toFixed(1)}%`
-                    : "0%"}
+                    : "—"}
                 </span>
                 <span className="home-stat-label">Desempeño global</span>
               </div>

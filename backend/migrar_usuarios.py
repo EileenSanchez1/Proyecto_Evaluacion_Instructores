@@ -95,13 +95,13 @@ def migrar_instructores(session: Session):
             print(f"Ya migrado: {instructor.correo}")
             continue
 
-        clave_temporal = secrets.token_urlsafe(9)
-
+        # Primer acceso: el instructor creará su contraseña con código
+        from app.services.login_service import LoginService
         usuario = Usuario(
             nombre=instructor.nombre,
             apellido=instructor.apellido,
             correo=instructor.correo,
-            contrasena=password_hash.hash(clave_temporal),
+            contrasena=password_hash.hash(LoginService.PASSWORD_PENDIENTE_MARKER),
             id_rol=rol_instructor.id_rol
         )
 
@@ -113,7 +113,7 @@ def migrar_instructores(session: Session):
 
         print(
             f"Migrado instructor: {instructor.correo} "
-            f"-> clave temporal: {clave_temporal}"
+            f"-> pendiente de crear contraseña (primer acceso)"
         )
 
     session.commit()
