@@ -1,6 +1,6 @@
-from sqlmodel import SQLModel, Session, create_engine
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+from sqlmodel import SQLModel, Session, create_engine
 
 from app.models import *
 
@@ -11,20 +11,23 @@ DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_SSLMODE = os.getenv("DB_SSLMODE", "require")
 
 # Si todas las variables de PostgreSQL están configuradas, usar PostgreSQL
 if all([DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD]):
     DATABASE_URL = (
-        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode={DB_SSLMODE}"
     )
     engine = create_engine(
         DATABASE_URL,
         echo=True,
-        connect_args={"options": "-c lc_messages=C"}
+        connect_args={
+            "connect_timeout": 10
+        }
     )
-    print("✅ Conectado a PostgreSQL")
+    print("✅ Configuración de PostgreSQL cargada (Neon)")
 else:
-    # Fallback a SQLite persistente en archivo (los datos NO se borran al cerrar)
+    # Fallback a SQLite persistente en archivo
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     SQLITE_PATH = os.path.join(BASE_DIR, "database.sqlite")
     DATABASE_URL = f"sqlite:///{SQLITE_PATH}"
