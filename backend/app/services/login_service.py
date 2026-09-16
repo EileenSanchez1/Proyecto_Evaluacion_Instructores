@@ -88,23 +88,28 @@ class LoginService:
 
     @staticmethod
     def enviar_codigo_instructor(correo: str) -> str:
+        """Genera código, lo imprime en consola y lo envía por correo (igual que recuperación)."""
         correo = (correo or "").strip().lower()
         codigo = generar_codigo_numerico(6)
         guardar_codigo(correo, codigo, tipo="instructor", expiracion_minutos=15)
 
-        # Siempre en consola (respaldo en desarrollo)
+        # Respaldo en consola del backend
         print(f"\n{'='*50}")
         print(f"[EMAIL] Código de verificación instructor para {correo}: {codigo}")
         print(f"{'='*50}\n")
 
-        # Envío real si SMTP está configurado en .env
+        # Envío real al correo del instructor (mismo SMTP que recuperación)
         if mail_codigo_instructor:
             try:
                 ok = mail_codigo_instructor(correo, codigo)
-                if not ok:
-                    print("[EMAIL] Aviso: no se envió al correo del instructor. Usa el de la consola.")
+                if ok:
+                    print(f"[EMAIL] Código de instructor enviado a {correo}")
+                else:
+                    print("[EMAIL] No se pudo enviar al instructor. Usa el código de la consola.")
             except Exception as e:
                 print(f"[EMAIL] Error enviando a instructor: {e}")
+        else:
+            print("[EMAIL] email_service no disponible; solo código en consola.")
         return codigo
 
 

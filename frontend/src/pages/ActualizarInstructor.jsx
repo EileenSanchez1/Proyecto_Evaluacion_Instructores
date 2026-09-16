@@ -6,6 +6,7 @@ import {
 } from "../services/instructorService";
 import { listarCompetencias } from "../services/competenciaService";
 import "../styles/Instructores.css";
+import "../styles/agregar-a-Instructores.css";
 
 function ActualizarInstructor() {
   const { id } = useParams();
