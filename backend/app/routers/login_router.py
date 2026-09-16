@@ -123,8 +123,9 @@ def instructor_iniciar(datos: InstructorCorreoRequest, session: Session = Depend
     if LoginService.instructor_necesita_crear_password(session, correo):
         LoginService.enviar_codigo_instructor(correo)
         return {
-            "mensaje": "Primer acceso: se envió un código a tu correo. Crea tu contraseña.",
+            "mensaje": "Primer acceso: se envió un código a tu correo institucional. Revisa bandeja de entrada y spam. Luego crea tu contraseña.",
             "requiere_crear_password": True,
+            "email_enviado": True,
         }
 
     return {

@@ -95,60 +95,14 @@ def buscar_instructor(instructor_id: int, session: Session = Depends(get_session
     response_model=InstructorRead,
     dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
 )
-async def actualizar_instructor(
+def actualizar_instructor(
     instructor_id: int,
-    nombre: str = Form(...),
-    apellido: str = Form(...),
-    correo: str = Form(...),
-    telefono: str = Form(...),
-    competencias: str = Form("[]"),
-    foto: Optional[UploadFile] = File(None),
+    datos: InstructorUpdate,
     session: Session = Depends(get_session),
 ):
-    """Actualiza instructor con multipart/form-data (igual que crear)."""
-    correo = correo.strip().lower()
-    if not correo.endswith("@sena.edu.co"):
-        raise HTTPException(
-            status_code=400,
-            detail="El correo del instructor debe ser institucional (@sena.edu.co).",
-        )
-
+    """Actualiza datos del instructor (JSON). La foto se sube en POST /{id}/foto."""
     try:
-        lista_comp = json.loads(competencias) if competencias else []
-        if not isinstance(lista_comp, list):
-            lista_comp = []
-        lista_comp = [int(x) for x in lista_comp]
-    except (json.JSONDecodeError, TypeError, ValueError):
-        lista_comp = []
-
-    foto_url = None
-    if foto and foto.filename:
-        ext = os.path.splitext(foto.filename)[1].lower()
-        if ext not in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
-            raise HTTPException(
-                status_code=400,
-                detail="Solo se permiten imágenes JPG, PNG, GIF o WEBP.",
-            )
-        filename = f"instructor_{instructor_id}_{uuid.uuid4().hex[:8]}{ext}"
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(foto.file, buffer)
-        foto_url = f"/uploads/{filename}"
-
-    update_kwargs = {
-        "nombre": nombre.strip(),
-        "apellido": apellido.strip(),
-        "correo": correo,
-        "telefono": telefono.strip(),
-        "competencias": lista_comp,
-    }
-    if foto_url is not None:
-        update_kwargs["foto"] = foto_url
-
-    try:
-        inst = InstructorService.actualizar(
-            session, instructor_id, InstructorUpdate(**update_kwargs)
-        )
+        inst = InstructorService.actualizar(session, instructor_id, datos)
         if not inst:
             raise HTTPException(status_code=404, detail="Instructor no encontrado")
         return inst

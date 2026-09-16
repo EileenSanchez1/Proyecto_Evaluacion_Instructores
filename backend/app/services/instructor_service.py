@@ -127,7 +127,22 @@ class InstructorService:
             ).all()
             for e in existentes:
                 session.delete(e)
+            # Obligatorio: aplicar DELETE antes de INSERT (evita UniqueViolation)
+            session.flush()
+
+            # Sin duplicados por si el front manda el mismo id dos veces
+            ids_unicos = []
+            vistos = set()
             for id_comp in instructor_update.competencias:
+                try:
+                    cid = int(id_comp)
+                except (TypeError, ValueError):
+                    continue
+                if cid not in vistos:
+                    vistos.add(cid)
+                    ids_unicos.append(cid)
+
+            for id_comp in ids_unicos:
                 session.add(
                     InstructorCompetencia(
                         id_instructor=instructor_id,
@@ -136,8 +151,12 @@ class InstructorService:
                 )
 
         session.add(instructor)
-        session.commit()
-        session.refresh(instructor)
+        try:
+            session.commit()
+            session.refresh(instructor)
+        except Exception as e:
+            session.rollback()
+            raise ValueError(f"No se pudo guardar el instructor: {e}") from e
         return instructor
 
     @staticmethod
