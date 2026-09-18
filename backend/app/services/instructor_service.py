@@ -19,7 +19,9 @@ class InstructorService:
         correo = instructor.correo.strip().lower()
 
         if not correo.endswith("@sena.edu.co"):
-            raise ValueError("El correo del instructor debe ser institucional (@sena.edu.co).")
+            raise ValueError(
+                "El correo del instructor debe ser institucional (@sena.edu.co)."
+            )
 
         if session.exec(select(Instructor).where(Instructor.correo == correo)).first():
             raise ValueError("Ya existe un instructor con ese correo.")
@@ -28,9 +30,10 @@ class InstructorService:
 
         rol = session.exec(select(Rol).where(Rol.nombre == "Instructor")).first()
         if not rol:
-            raise ValueError("El rol 'Instructor' no existe. Ejecuta seed_roles.py primero.")
+            raise ValueError(
+                "El rol 'Instructor' no existe. Ejecuta seed_roles.py primero."
+            )
 
-        # Primer acceso: el instructor creará su contraseña con código
         pwd = LoginService.hash_password(LoginService.PASSWORD_PENDIENTE_MARKER)
 
         usuario = Usuario(
@@ -73,8 +76,49 @@ class InstructorService:
         return session.get(Instructor, instructor_id)
 
     @staticmethod
-    def listar(session: Session) -> List[Instructor]:
-        return session.exec(select(Instructor)).all()
+    def es_activo(session: Session, instructor: Instructor) -> bool:
+        if not instructor.id_usuario:
+            return True
+        usuario = session.get(Usuario, instructor.id_usuario)
+        return bool(usuario and usuario.activo)
+
+    @staticmethod
+    def listar(session: Session, incluir_inactivos: bool = False) -> List[Instructor]:
+        todos = session.exec(select(Instructor)).all()
+        if incluir_inactivos:
+            return list(todos)
+        return [i for i in todos if InstructorService.es_activo(session, i)]
+
+    @staticmethod
+    def to_read(session: Session, instructor: Instructor) -> dict:
+        from app.models.competencia import Competencia
+
+        comps = []
+        for rel in session.exec(
+            select(InstructorCompetencia).where(
+                InstructorCompetencia.id_instructor == instructor.id_instructor
+            )
+        ).all():
+            c = session.get(Competencia, rel.id_competencia)
+            if c:
+                comps.append(
+                    {
+                        "id_competencia": c.id_competencia,
+                        "nombre": c.nombre,
+                        "descripcion": getattr(c, "descripcion", None),
+                        "estado": getattr(c, "estado", True),
+                    }
+                )
+        return {
+            "id_instructor": instructor.id_instructor,
+            "nombre": instructor.nombre,
+            "apellido": instructor.apellido,
+            "correo": instructor.correo,
+            "telefono": instructor.telefono,
+            "foto": instructor.foto,
+            "competencias": comps,
+            "activo": InstructorService.es_activo(session, instructor),
+        }
 
     @staticmethod
     def actualizar(
@@ -127,10 +171,8 @@ class InstructorService:
             ).all()
             for e in existentes:
                 session.delete(e)
-            # Obligatorio: aplicar DELETE antes de INSERT (evita UniqueViolation)
             session.flush()
 
-            # Sin duplicados por si el front manda el mismo id dos veces
             ids_unicos = []
             vistos = set()
             for id_comp in instructor_update.competencias:
@@ -161,67 +203,37 @@ class InstructorService:
 
     @staticmethod
     def eliminar(session: Session, instructor_id: int) -> bool:
-        """
-        Elimina instructor y todas sus dependencias
-        (respuestas, evaluaciones, fichas, horarios, competencias, usuario).
-        """
+        """Desactiva el instructor (soft delete). No borra historial ni datos."""
         instructor = session.get(Instructor, instructor_id)
         if not instructor:
             return False
+        if not instructor.id_usuario:
+            raise ValueError(
+                "El instructor no tiene usuario vinculado para desactivar."
+            )
+        usuario = session.get(Usuario, instructor.id_usuario)
+        if not usuario:
+            raise ValueError("Usuario del instructor no encontrado.")
+        usuario.activo = False
+        session.add(usuario)
+        session.commit()
+        return True
 
-        try:
-            # 1) Respuestas ligadas al instructor
-            for r in session.exec(
-                select(Respuesta).where(Respuesta.id_instructor == instructor_id)
-            ).all():
-                session.delete(r)
-
-            # 2) Evaluaciones (y respuestas residuales por evaluación)
-            evaluaciones = session.exec(
-                select(Evaluacion).where(Evaluacion.id_instructor == instructor_id)
-            ).all()
-            for ev in evaluaciones:
-                for r in session.exec(
-                    select(Respuesta).where(Respuesta.id_evaluacion == ev.id_evaluacion)
-                ).all():
-                    session.delete(r)
-                session.delete(ev)
-
-            # 3) Asignaciones ficha–instructor
-            for fi in session.exec(
-                select(FichaInstructor).where(
-                    FichaInstructor.id_instructor == instructor_id
-                )
-            ).all():
-                session.delete(fi)
-
-            # 4) Horarios
-            for h in session.exec(
-                select(Horario).where(Horario.id_instructor == instructor_id)
-            ).all():
-                session.delete(h)
-
-            # 5) Competencias
-            for rel in session.exec(
-                select(InstructorCompetencia).where(
-                    InstructorCompetencia.id_instructor == instructor_id
-                )
-            ).all():
-                session.delete(rel)
-
-            # 6) Usuario vinculado
-            if instructor.id_usuario:
-                usuario = session.get(Usuario, instructor.id_usuario)
-                if usuario:
-                    session.delete(usuario)
-
-            # 7) Instructor
-            session.delete(instructor)
-            session.commit()
-            return True
-        except Exception as e:
-            session.rollback()
-            raise ValueError(f"No se pudo eliminar el instructor: {e}") from e
+    @staticmethod
+    def reactivar(session: Session, instructor_id: int) -> bool:
+        """Reactiva un instructor previamente desactivado."""
+        instructor = session.get(Instructor, instructor_id)
+        if not instructor:
+            return False
+        if not instructor.id_usuario:
+            raise ValueError("El instructor no tiene usuario vinculado.")
+        usuario = session.get(Usuario, instructor.id_usuario)
+        if not usuario:
+            raise ValueError("Usuario del instructor no encontrado.")
+        usuario.activo = True
+        session.add(usuario)
+        session.commit()
+        return True
 
     @staticmethod
     def resetear_primer_acceso(session: Session, instructor_id: int) -> bool:

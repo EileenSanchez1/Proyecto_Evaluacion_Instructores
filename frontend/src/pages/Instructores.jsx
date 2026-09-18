@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor } from "../services/instructorService";
+import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor, reactivarInstructor } from "../services/instructorService";
 import { listarInstructoresPorFichaYPeriodo } from "../services/Fichainstructorservice";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
@@ -12,6 +12,7 @@ function Instructores() {
   const [instructores, setInstructores] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [busqueda, setBusqueda] = useState("");
 
   const cargarInstructores = async () => {
@@ -50,24 +51,38 @@ function Instructores() {
   useEffect(() => {
     cargarInstructores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mostrarInactivos]);
 
   const manejarEliminar = async (id) => {
     if (
       window.confirm(
-        "¿Está seguro de eliminar este instructor? Se borrarán también sus evaluaciones, respuestas y asignaciones a fichas."
+        "¿Desactivar este instructor?\nNo se borrarán sus datos ni evaluaciones. Podrás reactivarlo cuando regrese."
       )
     ) {
       try {
         await eliminarInstructor(id);
-        setInstructores(instructores.filter((inst) => inst.id_instructor !== id));
+        await cargarInstructores();
       } catch (err) {
         const d = err.response?.data?.detail;
         const msg = Array.isArray(d)
           ? d[0]?.msg || JSON.stringify(d)
-          : d || "Error al intentar eliminar el instructor.";
+          : d || "Error al desactivar el instructor.";
         alert(msg);
       }
+    }
+  };
+
+  const manejarReactivar = async (id, nombre) => {
+    if (!window.confirm(`¿Reactivar a ${nombre}? Volverá a aparecer y podrá iniciar sesión.`)) {
+      return;
+    }
+    try {
+      await reactivarInstructor(id);
+      await cargarInstructores();
+      alert("Instructor reactivado.");
+    } catch (err) {
+      const d = err.response?.data?.detail;
+      alert(typeof d === "string" ? d : "No se pudo reactivar.");
     }
   };
 
@@ -110,6 +125,16 @@ function Instructores() {
           <p className="subtitulo">
             Administra, consulta y actualiza los instructores registrados
           </p>
+          {esAdmin && (
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, cursor: "pointer", fontSize: "0.92rem" }}>
+              <input
+                type="checkbox"
+                checked={mostrarInactivos}
+                onChange={(e) => setMostrarInactivos(e.target.checked)}
+              />
+              Ver instructores inactivos
+            </label>
+          )}
         </div>
         {esAdmin && (
           <button className="btn-nuevo" onClick={() => navigate("/instructores/crear")}>
@@ -183,9 +208,23 @@ function Instructores() {
                   >
                     <i className="bi bi-key"></i>
                   </button>
-                  <button className="btn-eliminar-icon" title="Eliminar" onClick={() => manejarEliminar(inst.id_instructor)}>
-                    <i className="bi bi-trash"></i>
-                  </button>
+                  {inst.activo === false ? (
+                    <button
+                      className="btn-editar-icon"
+                      title="Reactivar"
+                      onClick={() => manejarReactivar(inst.id_instructor, `${inst.nombre} ${inst.apellido}`)}
+                    >
+                      <i className="bi bi-person-check"></i>
+                    </button>
+                  ) : (
+                    <button
+                      className="btn-eliminar-icon"
+                      title="Desactivar"
+                      onClick={() => manejarEliminar(inst.id_instructor)}
+                    >
+                      <i className="bi bi-person-x"></i>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

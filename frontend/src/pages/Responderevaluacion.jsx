@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { obtenerEvaluacion, actualizarEstadoEvaluacion } from "../services/Evaluacionservice";
+import { obtenerEvaluacion, actualizarEstadoEvaluacion, actualizarEvaluacion } from "../services/Evaluacionservice";
 import { listarPreguntasActivas } from "../services/Preguntaservice";
 import { crearRespuestasBulk, listarRespuestasPorEvaluacion } from "../services/Respuestaservice";
 import { obtenerInstructor } from "../services/instructorService";
@@ -113,16 +113,25 @@ function ResponderEvaluacion() {
     try {
       setEnviando(true);
 
-      const respuestasPayload = preguntas.map((p) => ({
-        id_evaluacion: Number(id),
-        id_pregunta: p.id_pregunta,
-        id_instructor: evaluacion.id_instructor,
-        respuesta: respuestas[p.id_pregunta].calificacion,
-        observaciones: respuestas[p.id_pregunta].observacion || null
-      }));
+      const gen = (observacionesGenerales || "").trim();
+      const respuestasPayload = preguntas.map((p) => {
+        const obsPreg = (respuestas[p.id_pregunta]?.observacion || "").trim();
+        return {
+          id_evaluacion: Number(id),
+          id_pregunta: p.id_pregunta,
+          id_instructor: evaluacion.id_instructor,
+          respuesta: respuestas[p.id_pregunta].calificacion,
+          observaciones: obsPreg || null,
+        };
+      });
 
       await crearRespuestasBulk(respuestasPayload);
-      await actualizarEstadoEvaluacion(Number(id), "Evaluado");
+      // Observación general separada (no se mezcla con preguntas)
+      if (gen) {
+        await actualizarEvaluacion(Number(id), { observacion_general: gen, estado: "Evaluado" });
+      } else {
+        await actualizarEstadoEvaluacion(Number(id), "Evaluado");
+      }
 
       navigate("/evaluaciones");
     } catch (err) {

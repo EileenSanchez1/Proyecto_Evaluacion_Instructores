@@ -72,14 +72,20 @@ async def crear_instructor(
     )
 
     try:
-        return InstructorService.crear(session, datos)
+        inst = InstructorService.crear(session, datos)
+        return InstructorService.to_read(session, inst)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/", response_model=List[InstructorRead])
-def listar_instructores(session: Session = Depends(get_session)):
-    return InstructorService.listar(session)
+def listar_instructores(
+    incluir_inactivos: bool = False,
+    session: Session = Depends(get_session),
+):
+    """Por defecto solo activos. Admin puede pasar incluir_inactivos=true."""
+    items = InstructorService.listar(session, incluir_inactivos=incluir_inactivos)
+    return [InstructorService.to_read(session, i) for i in items]
 
 
 @router.get("/{instructor_id}", response_model=InstructorRead)
@@ -87,7 +93,7 @@ def buscar_instructor(instructor_id: int, session: Session = Depends(get_session
     inst = InstructorService.buscar(session, instructor_id)
     if not inst:
         raise HTTPException(status_code=404, detail="Instructor no encontrado")
-    return inst
+    return InstructorService.to_read(session, inst)
 
 
 @router.put(
@@ -105,7 +111,7 @@ def actualizar_instructor(
         inst = InstructorService.actualizar(session, instructor_id, datos)
         if not inst:
             raise HTTPException(status_code=404, detail="Instructor no encontrado")
-        return inst
+        return InstructorService.to_read(session, inst)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -133,13 +139,28 @@ def reset_primer_acceso(instructor_id: int, session: Session = Depends(get_sessi
     dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
 )
 def eliminar_instructor(instructor_id: int, session: Session = Depends(get_session)):
+    """Desactiva (no borra) al instructor. Puede reactivarse después."""
     try:
-        eliminado = InstructorService.eliminar(session, instructor_id)
+        ok = InstructorService.eliminar(session, instructor_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    if not eliminado:
+    if not ok:
         raise HTTPException(status_code=404, detail="Instructor no encontrado")
-    return {"mensaje": "Instructor eliminado correctamente"}
+    return {"mensaje": "Instructor desactivado correctamente. Puedes reactivarlo cuando regrese."}
+
+
+@router.post(
+    "/{instructor_id}/reactivar",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def reactivar_instructor(instructor_id: int, session: Session = Depends(get_session)):
+    try:
+        ok = InstructorService.reactivar(session, instructor_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not ok:
+        raise HTTPException(status_code=404, detail="Instructor no encontrado")
+    return {"mensaje": "Instructor reactivado correctamente."}
 
 
 @router.post("/{instructor_id}/foto", response_model=InstructorRead)

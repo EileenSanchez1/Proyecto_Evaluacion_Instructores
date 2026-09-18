@@ -11,6 +11,8 @@ class Evaluacion(SQLModel, table=True):
     id_instructor: int = Field(foreign_key="instructores.id_instructor", nullable=False)
     estado: str = Field(default="Pendiente", max_length=20, nullable=False)
     fecha: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    # Comentario general del aprendiz (aparte de observaciones por pregunta)
+    observacion_general: Optional[str] = Field(default=None, max_length=1000)
 
     aprendiz: "Aprendiz" = Relationship(back_populates="evaluaciones")
     periodo: "Periodo" = Relationship(back_populates="evaluaciones")

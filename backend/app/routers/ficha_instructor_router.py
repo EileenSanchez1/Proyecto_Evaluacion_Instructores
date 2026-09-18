@@ -26,7 +26,17 @@ def por_ficha(id_ficha: int, session: Session = Depends(get_session)):
 
 @router.get("/ficha/{id_ficha}/periodo/{id_periodo}", response_model=List[FichaInstructorRead])
 def por_ficha_y_periodo(id_ficha: int, id_periodo: int, session: Session = Depends(get_session)):
-    return FichaInstructorService.listar_por_ficha_y_periodo(session, id_ficha, id_periodo)
+    """Solo instructores activos (desactivados no aparecen para evaluar)."""
+    from app.models.instructor import Instructor
+    from app.services.instructor_service import InstructorService
+
+    items = FichaInstructorService.listar_por_ficha_y_periodo(session, id_ficha, id_periodo)
+    activos = []
+    for item in items:
+        inst = session.get(Instructor, item.id_instructor)
+        if inst and InstructorService.es_activo(session, inst):
+            activos.append(item)
+    return activos
 
 @router.get("/instructor/{id_instructor}", response_model=List[FichaInstructorRead])
 def por_instructor(id_instructor: int, session: Session = Depends(get_session)):
