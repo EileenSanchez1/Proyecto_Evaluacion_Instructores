@@ -86,7 +86,42 @@ def eliminar_periodo(
     periodo_id: int,
     session: Session = Depends(get_session)
 ):
-    eliminado = PeriodoService.eliminar(session, periodo_id)
-    if not eliminado:
+    """Desactiva el periodo (no borra historial ni evaluaciones)."""
+    periodo = PeriodoService.desactivar(session, periodo_id)
+    if not periodo:
         raise HTTPException(status_code=404, detail="Periodo no encontrado")
-    return {"mensaje": "Periodo eliminado correctamente"}
+    return {
+        "mensaje": "Periodo desactivado correctamente. El historial se conserva.",
+        "periodo": periodo,
+    }
+
+
+@router.post(
+    "/{periodo_id}/reactivar",
+    response_model=PeriodoRead,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))]
+)
+def reactivar_periodo(
+    periodo_id: int,
+    session: Session = Depends(get_session)
+):
+    periodo = PeriodoService.reactivar(session, periodo_id)
+    if not periodo:
+        raise HTTPException(status_code=404, detail="Periodo no encontrado")
+    return periodo
+
+
+@router.post(
+    "/{periodo_id}/desactivar",
+    response_model=PeriodoRead,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))]
+)
+def desactivar_periodo(
+    periodo_id: int,
+    session: Session = Depends(get_session)
+):
+    periodo = PeriodoService.desactivar(session, periodo_id)
+    if not periodo:
+        raise HTTPException(status_code=404, detail="Periodo no encontrado")
+    return periodo
+

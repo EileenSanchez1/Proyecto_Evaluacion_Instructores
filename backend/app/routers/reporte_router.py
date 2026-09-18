@@ -327,18 +327,27 @@ def reporte_por_preguntas(
 @router.get("/mi-promedio")
 def mi_promedio_instructor(
     instructor_id: int = Query(...),
-    session: Session = Depends(get_session)
+    periodo_id: Optional[int] = Query(None),
+    session: Session = Depends(get_session),
 ):
-    """Desempeño del instructor logueado + fichas asignadas."""
-    data = reporte_por_preguntas(instructor_id=instructor_id, session=session)
+    """Desempeño del instructor + fichas. Filtra por periodo si se envía periodo_id."""
+    try:
+        data = reporte_por_preguntas(
+            instructor_id=instructor_id,
+            periodo_id=periodo_id,
+            ficha_id=None,
+            session=session,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al calcular promedio: {e}") from e
 
-    # Fichas asignadas al instructor (con número de ficha legible)
     from app.models.ficha_instructor import FichaInstructor
     from app.models.periodo import Periodo as PeriodoModel
 
-    asignaciones = session.exec(
-        select(FichaInstructor).where(FichaInstructor.id_instructor == instructor_id)
-    ).all()
+    stmt = select(FichaInstructor).where(FichaInstructor.id_instructor == instructor_id)
+    if periodo_id:
+        stmt = stmt.where(FichaInstructor.id_periodo == periodo_id)
+    asignaciones = session.exec(stmt).all()
 
     fichas_asignadas = []
     for a in asignaciones:
@@ -354,9 +363,12 @@ def mi_promedio_instructor(
         })
 
     instructor = session.get(Instructor, instructor_id)
+    if not isinstance(data, dict):
+        data = {}
     data["fichas_asignadas"] = fichas_asignadas
     data["total_fichas"] = len(fichas_asignadas)
     data["nombre_instructor"] = (
         f"{instructor.nombre} {instructor.apellido}" if instructor else None
     )
+    data["periodo_id"] = periodo_id
     return data

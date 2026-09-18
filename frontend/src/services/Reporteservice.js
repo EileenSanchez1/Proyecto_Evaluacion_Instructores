@@ -16,10 +16,6 @@ export const generarReporteInstructor = async (evaluacionId, instructorId) => {
   return response.data;
 };
 
-/**
- * Desempeño por pregunta de un instructor.
- * Usado por Admin (Reportes) e Instructor (Mi Promedio).
- */
 export const reportePreguntasInstructor = async (instructorId, params = {}) => {
   const response = await api.get(
     `${API_URL}/instructor/${instructorId}/preguntas`,
@@ -28,10 +24,10 @@ export const reportePreguntasInstructor = async (instructorId, params = {}) => {
   return response.data;
 };
 
-/** Atajo para el instructor logueado */
-export const miPromedioInstructor = async (instructorId) => {
+/** Promedio del instructor. params: { periodo_id?: number } */
+export const miPromedioInstructor = async (instructorId, params = {}) => {
   const response = await api.get(`${API_URL}/mi-promedio`, {
-    params: { instructor_id: instructorId },
+    params: { instructor_id: instructorId, ...params },
   });
   return response.data;
 };
@@ -46,15 +42,17 @@ export const historialEvaluaciones = async (params = {}) => {
   return response.data;
 };
 
-/** Evaluaciones recibidas por el instructor (anónimas: ficha, fecha, estado, programa) */
-export const misEvaluacionesInstructor = async (instructorId) => {
+/** Evaluaciones recibidas (anónimas). params: { periodo_id?: number } */
+export const misEvaluacionesInstructor = async (instructorId, params = {}) => {
   const response = await api.get(`${API_URL}/mis-evaluaciones`, {
-    params: { instructor_id: instructorId },
+    params: { instructor_id: instructorId, ...params },
   });
   return response.data;
 };
 
 export const detalleEvaluacion = async (evaluacionId) => {
-  const response = await api.get(`${API_URL}/evaluacion/${evaluacionId}/detalle`);
+  const response = await api.get(
+    `${API_URL}/evaluacion/${evaluacionId}/detalle`
+  );
   return response.data;
 };

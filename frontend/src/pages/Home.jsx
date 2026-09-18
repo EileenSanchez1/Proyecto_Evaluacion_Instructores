@@ -6,7 +6,8 @@ import {
   esAdminOCoordinador,
   esInstructor,
 } from "../utils/sesion";
-import { listarInstructoresPorFichaYPeriodo, listarFichasPorInstructor } from "../services/Fichainstructorservice";
+import { listarFichasPorInstructor } from "../services/Fichainstructorservice";
+import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { listarEvaluaciones } from "../services/Evaluacionservice";
 import { listarInstructores, obtenerInstructor } from "../services/instructorService";
 import { listarAprendices } from "../services/Aprendizservice";
@@ -24,6 +25,8 @@ function Home() {
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [periodoCerrado, setPeriodoCerrado] = useState(false);
+  const [periodoOperativo, setPeriodoOperativo] = useState(null);
 
   // Aprendiz
   const [instructoresAsignados, setInstructoresAsignados] = useState([]);
@@ -134,9 +137,9 @@ function Home() {
             setReporteInstructor(reporte);
           }
         } else {
-          // Aprendiz
+          // Aprendiz: periodo operativo = vigente activo (no el cerrado)
           const idFicha = usuario?.id_ficha;
-          const idPeriodo = usuario?.id_periodo;
+          const idPeriodoReg = usuario?.id_periodo;
 
           if (!idFicha) {
             setError("No tienes una ficha de formación asignada.");
@@ -144,12 +147,18 @@ function Home() {
             return;
           }
 
-          const [fichaInsts, evals, preguntas] = await Promise.all([
-            listarInstructoresPorFichaYPeriodo(idFicha, idPeriodo || 1).catch(() => []),
+          const contexto = await resolverPeriodoOperativoAprendiz(idFicha, idPeriodoReg);
+          if (!cancelado) {
+            setPeriodoOperativo(contexto.periodo);
+            setPeriodoCerrado(!!contexto.sinPeriodoActivo);
+          }
+
+          const [evals, preguntas] = await Promise.all([
             listarEvaluaciones().catch(() => []),
             listarPreguntasActivas().catch(() => []),
           ]);
 
+          const fichaInsts = contexto.asignaciones || [];
           const instructoresCompletos = await Promise.all(
             (fichaInsts || []).map(async (fi) => {
               try {
@@ -160,11 +169,16 @@ function Home() {
             })
           );
 
+          const idPeriodoOp = contexto.periodo?.id_periodo;
           const misEvals = (evals || []).filter((e) => e.id_aprendiz === usuario?.id_aprendiz);
+          // Progreso del periodo vigente; el historial completo sigue disponible en Evaluaciones
+          const evalsPeriodo = idPeriodoOp
+            ? misEvals.filter((e) => Number(e.id_periodo) === Number(idPeriodoOp))
+            : misEvals;
 
           if (!cancelado) {
             setInstructoresAsignados(instructoresCompletos.filter(Boolean));
-            setMisEvaluaciones(misEvals);
+            setMisEvaluaciones(evalsPeriodo);
             setPreguntasActivas(preguntas || []);
           }
         }
@@ -229,6 +243,34 @@ function Home() {
           })}
         </div>
       </div>
+
+      {periodoCerrado && (
+        <div className="home-alerta" style={{ background: "#fef3c7", color: "#92400e", padding: 12, borderRadius: 8, marginBottom: 12 }}>
+          No hay un periodo de evaluación activo. Cuando el administrador active el periodo vigente podrás evaluar instructores.
+        </div>
+      )}
+      {!periodoCerrado && periodoOperativo && (
+        <div
+          style={{
+            background: "#ecfdf5",
+            color: "#065f46",
+            padding: "12px 16px",
+            borderRadius: 10,
+            marginBottom: 12,
+            border: "1px solid #a7f3d0",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            alignItems: "center",
+          }}
+        >
+          <i className="bi bi-calendar-check"></i>
+          <span>
+            Estás en el periodo <strong>{periodoOperativo.nombre}</strong> (activo).
+            Aquí ves los instructores y evaluaciones de este trimestre.
+          </span>
+        </div>
+      )}
 
       {error && <div className="home-alerta home-alerta-error">{error}</div>}
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor, reactivarInstructor } from "../services/instructorService";
-import { listarInstructoresPorFichaYPeriodo } from "../services/Fichainstructorservice";
+import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
 
@@ -25,16 +25,22 @@ function Instructores() {
         setInstructores(datos);
       } else {
         const usuario = obtenerUsuarioSesion();
-        if (!usuario || !usuario.id_ficha || !usuario.id_periodo) {
-          setError("No se encontró información completa de la ficha o periodo del aprendiz.");
+        if (!usuario || !usuario.id_ficha) {
+          setError("No se encontró la ficha del aprendiz.");
           setCargando(false);
           return;
         }
-        const asignaciones = await listarInstructoresPorFichaYPeriodo(
+        const contexto = await resolverPeriodoOperativoAprendiz(
           usuario.id_ficha,
           usuario.id_periodo
         );
-
+        if (contexto.sinPeriodoActivo) {
+          setError(contexto.mensaje || "No hay periodo activo.");
+          setInstructores([]);
+          setCargando(false);
+          return;
+        }
+        const asignaciones = contexto.asignaciones || [];
         const detalles = await Promise.all(
           asignaciones.map((a) => obtenerInstructor(a.id_instructor).catch(() => null))
         );

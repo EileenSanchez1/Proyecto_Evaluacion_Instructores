@@ -33,6 +33,11 @@ class PeriodoService:
         return PeriodoRepository.listar_activos(session)
 
     @staticmethod
+    def listar_inactivos(session: Session) -> List[Periodo]:
+        todos = PeriodoRepository.listar(session, 0, 1000)
+        return [p for p in todos if str(getattr(p, "estado", "")).lower() != "activo"]
+
+    @staticmethod
     def actualizar(session: Session, periodo_id: int, periodo_update: PeriodoUpdate) -> Optional[Periodo]:
         periodo = PeriodoRepository.buscar(session, periodo_id)
         if not periodo:
@@ -50,5 +55,25 @@ class PeriodoService:
         return PeriodoRepository.actualizar(session, periodo_id, periodo_update)
 
     @staticmethod
+    def desactivar(session: Session, periodo_id: int) -> Optional[Periodo]:
+        """No elimina: marca el periodo como Inactivo. Conserva historial."""
+        periodo = PeriodoRepository.buscar(session, periodo_id)
+        if not periodo:
+            return None
+        return PeriodoRepository.actualizar(
+            session, periodo_id, PeriodoUpdate(estado="Inactivo")
+        )
+
+    @staticmethod
+    def reactivar(session: Session, periodo_id: int) -> Optional[Periodo]:
+        periodo = PeriodoRepository.buscar(session, periodo_id)
+        if not periodo:
+            return None
+        return PeriodoRepository.actualizar(
+            session, periodo_id, PeriodoUpdate(estado="Activo")
+        )
+
+    @staticmethod
     def eliminar(session: Session, periodo_id: int) -> bool:
-        return PeriodoRepository.eliminar(session, periodo_id)
+        """Compatibilidad: desactiva en lugar de borrar (soft delete)."""
+        return PeriodoService.desactivar(session, periodo_id) is not None
