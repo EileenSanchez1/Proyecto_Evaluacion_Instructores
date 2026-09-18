@@ -14,8 +14,13 @@ class EvaluacionService:
             raise ValueError("El aprendiz no existe.")
         if not InstructorRepository.buscar(session, evaluacion.id_instructor):
             raise ValueError("El instructor no existe.")
-        if not PeriodoRepository.buscar(session, evaluacion.id_periodo):
+        periodo = PeriodoRepository.buscar(session, evaluacion.id_periodo)
+        if not periodo:
             raise ValueError("El periodo no existe.")
+        if str(getattr(periodo, "estado", "")).lower() != "activo":
+            raise ValueError(
+                "El periodo de evaluación no está activo. Solo puedes evaluar en el periodo vigente."
+            )
         existente = EvaluacionRepository.buscar_por_aprendiz_instructor_periodo(
             session, evaluacion.id_aprendiz, evaluacion.id_instructor, evaluacion.id_periodo
         )

@@ -9,7 +9,10 @@ import {
 import "../styles/Home.css";
 
 function MiPromedio() {
-  const usuario = obtenerUsuarioSesion();
+  // Leer sesión una sola vez (evita bucle infinito de carga)
+  const [usuario] = useState(() => obtenerUsuarioSesion());
+  const idInstructor = usuario?.id_instructor || null;
+
   const [reporte, setReporte] = useState(null);
   const [periodos, setPeriodos] = useState([]);
   const [periodoId, setPeriodoId] = useState("");
@@ -17,8 +20,13 @@ function MiPromedio() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    listarPeriodos().then(setPeriodos).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+
     const cargarRendimiento = async () => {
-      const idInstructor = usuario?.id_instructor;
       if (!idInstructor) {
         setError(
           "No se encontró sesión activa de instructor. Cierra sesión e inicia de nuevo desde «Soy instructor»."
@@ -27,30 +35,38 @@ function MiPromedio() {
         return;
       }
 
+      setCargando(true);
+      setError("");
+      const params = periodoId ? { periodo_id: Number(periodoId) } : {};
+
       try {
         let data = null;
         try {
-          const params = periodoId ? { periodo_id: Number(periodoId) } : {};
           data = await miPromedioInstructor(idInstructor, params);
         } catch (e1) {
-          // Fallback al endpoint de admin/detalle
+          console.warn("mi-promedio falló, usando fallback preguntas", e1);
           data = await reportePreguntasInstructor(idInstructor, params);
         }
-        setReporte(data);
+        if (!cancelado) setReporte(data);
       } catch (err) {
         console.error("Error al cargar el rendimiento:", err);
-        setError(
-          err.response?.data?.detail ||
-            "No se pudo obtener la información de desempeño. Inténtalo de nuevo."
-        );
+        if (!cancelado) {
+          setError(
+            err.response?.data?.detail ||
+              "No se pudo obtener la información de desempeño. Inténtalo de nuevo."
+          );
+          setReporte(null);
+        }
       } finally {
-        setCargando(false);
+        if (!cancelado) setCargando(false);
       }
     };
 
-    listarPeriodos().then(setPeriodos).catch(() => {});
     cargarRendimiento();
-  }, [usuario, periodoId]);
+    return () => {
+      cancelado = true;
+    };
+  }, [idInstructor, periodoId]);
 
   const obtenerConfiguracionEstado = (porcentaje, nota) => {
     const n = nota != null ? Number(nota) : null;

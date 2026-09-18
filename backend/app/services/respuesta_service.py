@@ -10,8 +10,15 @@ from app.repositories.instructor_repository import InstructorRepository
 class RespuestaService:
     @staticmethod
     def crear(session: Session, respuesta: RespuestaCreate) -> Respuesta:
-        if not EvaluacionRepository.buscar(session, respuesta.id_evaluacion):
+        evaluacion = EvaluacionRepository.buscar(session, respuesta.id_evaluacion)
+        if not evaluacion:
             raise ValueError("La evaluación no existe.")
+        from app.repositories.periodo_repository import PeriodoRepository
+        periodo = PeriodoRepository.buscar(session, evaluacion.id_periodo)
+        if periodo and str(getattr(periodo, "estado", "")).lower() != "activo":
+            raise ValueError(
+                "El periodo de esta evaluación ya no está activo. No se pueden enviar respuestas."
+            )
         if not PreguntaRepository.buscar(session, respuesta.id_pregunta):
             raise ValueError("La pregunta no existe.")
         if not InstructorRepository.buscar(session, respuesta.id_instructor):

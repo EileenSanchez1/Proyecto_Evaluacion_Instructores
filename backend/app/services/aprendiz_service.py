@@ -28,8 +28,13 @@ class AprendizService:
             else:
                 raise ValueError("No hay un periodo activo. Crea un periodo primero.")
 
-        if not PeriodoRepository.buscar(session, id_periodo):
+        periodo = PeriodoRepository.buscar(session, id_periodo)
+        if not periodo:
             raise ValueError("El periodo seleccionado no existe.")
+        if str(getattr(periodo, "estado", "")).lower() != "activo":
+            raise ValueError(
+                "El periodo seleccionado no está activo. Elige el periodo vigente."
+            )
 
         pwd = LoginService.hash_password(aprendiz.contrasena)
         usuario = Usuario(nombre=aprendiz.nombre, apellido=aprendiz.apellido, correo=aprendiz.correo,

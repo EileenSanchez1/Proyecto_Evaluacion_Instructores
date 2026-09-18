@@ -123,6 +123,14 @@ function Evaluaciones() {
                   };
                 });
 
+          // Filtrar fichas por periodo seleccionado (si aplica)
+          if (periodoIdInst) {
+            const pid = Number(periodoIdInst);
+            fichas = (fichas || []).filter(
+              (f) => f.id_periodo == null || Number(f.id_periodo) === pid
+            );
+          }
+
           if (!cancelado) {
             setFichasInstructor(fichas);
             setReporteInst(reporte);
@@ -179,7 +187,7 @@ function Evaluaciones() {
     return () => {
       cancelado = true;
     };
-  }, [esAdminUser, esInstructorUser, usuario, periodoIdInst]);
+  }, [esAdminUser, esInstructorUser, usuario?.id_instructor, usuario?.id_ficha, usuario?.id_periodo, usuario?.id_aprendiz, periodoIdInst]);
 
   const obtenerEstadoInstructor = (idInstructor) => {
     const ev = evaluaciones.find(
