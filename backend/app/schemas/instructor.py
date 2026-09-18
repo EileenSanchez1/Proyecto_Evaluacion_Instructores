@@ -14,13 +14,13 @@ class InstructorBase(SQLModel):
 
 
 class InstructorCreate(InstructorBase):
-    # Lista de id_competencia a asignar al crear el instructor.
     competencias: List[int] = []
 
 
 class InstructorRead(InstructorBase):
     id_instructor: int
     competencias: List[CompetenciaRead] = []
+    activo: bool = True
 
 
 class InstructorUpdate(SQLModel):
@@ -29,6 +29,4 @@ class InstructorUpdate(SQLModel):
     correo: Optional[str] = None
     telefono: Optional[str] = None
     foto: Optional[str] = None
-    # Si se envía, REEMPLAZA por completo el conjunto de competencias
-    # del instructor. Si se omite (None), las competencias no se tocan.
     competencias: Optional[List[int]] = None

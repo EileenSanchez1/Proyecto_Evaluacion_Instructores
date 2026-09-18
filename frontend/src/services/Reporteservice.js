@@ -53,3 +53,8 @@ export const misEvaluacionesInstructor = async (instructorId) => {
   });
   return response.data;
 };
+
+export const detalleEvaluacion = async (evaluacionId) => {
+  const response = await api.get(`${API_URL}/evaluacion/${evaluacionId}/detalle`);
+  return response.data;
+};

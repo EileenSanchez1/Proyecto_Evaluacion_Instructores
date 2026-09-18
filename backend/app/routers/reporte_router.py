@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlmodel import Session, select
 from typing import Optional
 from collections import defaultdict
@@ -121,9 +121,78 @@ def historial_evaluaciones(
     return historial
 
 
+
+@router.get("/evaluacion/{evaluacion_id}/detalle")
+def detalle_evaluacion(
+    evaluacion_id: int,
+    session: Session = Depends(get_session),
+):
+    """Detalle admin: preguntas, notas, observaciones por pregunta y observación general."""
+    from app.models.respuesta import Respuesta as RespModel
+    from app.models.pregunta import Pregunta as PregModel
+
+    ev = session.get(Evaluacion, evaluacion_id)
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada")
+
+    aprendiz = session.get(Aprendiz, ev.id_aprendiz)
+    ficha = session.get(Ficha, aprendiz.id_ficha) if aprendiz else None
+    periodo = session.get(Periodo, ev.id_periodo)
+    instructor = session.get(Instructor, ev.id_instructor)
+
+    stmt = (
+        select(RespModel, PregModel)
+        .join(PregModel, RespModel.id_pregunta == PregModel.id_pregunta)
+        .where(RespModel.id_evaluacion == evaluacion_id)
+        .order_by(PregModel.orden)
+    )
+    rows = session.exec(stmt).all()
+
+    respuestas = []
+    observaciones_por_pregunta = []
+    for resp, preg in rows:
+        obs = (resp.observaciones or "").strip() or None
+        # Compat: quitar formato viejo mezclado con [General]
+        if obs and "[General]" in obs:
+            obs = obs.split("[General]")[0].strip() or None
+        item = {
+            "id_respuesta": resp.id_respuesta,
+            "id_pregunta": preg.id_pregunta,
+            "orden": getattr(preg, "orden", 0),
+            "pregunta": preg.descripcion,
+            "calificacion": resp.respuesta,
+            "observaciones": obs,
+        }
+        respuestas.append(item)
+        if obs:
+            observaciones_por_pregunta.append({
+                "pregunta": preg.descripcion,
+                "texto": obs,
+            })
+
+    obs_general = getattr(ev, "observacion_general", None)
+    if obs_general:
+        obs_general = str(obs_general).strip() or None
+
+    return {
+        "id_evaluacion": ev.id_evaluacion,
+        "fecha": ev.fecha.isoformat() if ev.fecha else None,
+        "estado": ev.estado,
+        "periodo": periodo.nombre if periodo else None,
+        "ficha": ficha.numero_ficha if ficha else None,
+        "programa": ficha.programa if ficha else None,
+        "aprendiz": f"{aprendiz.nombre} {aprendiz.apellido}" if aprendiz else None,
+        "instructor": f"{instructor.nombre} {instructor.apellido}" if instructor else None,
+        "respuestas": respuestas,
+        "observaciones": observaciones_por_pregunta,
+        "observacion_general": obs_general,
+    }
+
+
 @router.get("/mis-evaluaciones")
 def mis_evaluaciones_instructor(
     instructor_id: int = Query(...),
+    periodo_id: Optional[int] = Query(None),
     session: Session = Depends(get_session),
 ):
     """
@@ -138,6 +207,8 @@ def mis_evaluaciones_instructor(
         .where(Evaluacion.id_instructor == instructor_id)
         .order_by(Evaluacion.fecha.desc())
     )
+    if periodo_id:
+        statement = statement.where(Evaluacion.id_periodo == periodo_id)
     resultados = session.exec(statement).all()
 
     items = []

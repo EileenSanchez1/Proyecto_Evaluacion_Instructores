@@ -19,6 +19,20 @@ from app.routers.periodo_router import router as periodo_router
 from app.routers.notificacion_router import router as notificacion_router
 from app.routers.novedad_router import router as novedad_router
 
+
+def ensure_extra_columns():
+    """Columnas nuevas sin romper BD existente (Neon/local)."""
+    from sqlalchemy import text
+    from app.config.database import engine
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS observacion_general VARCHAR(1000)"
+            ))
+    except Exception as e:
+        print(f"[schema] Aviso ensure_extra_columns: {e}")
+
+
 app = FastAPI(
     title="Sistema de Evaluación de Instructores",
     version="1.0.0"
@@ -44,6 +58,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     create_db_and_tables()
+    ensure_extra_columns()
     _seed_roles_y_admin()
 
 def _seed_roles_y_admin():

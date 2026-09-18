@@ -1,3 +1,4 @@
+import { listarPeriodos } from "../services/PeriodoService";
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -40,9 +41,13 @@ function Evaluaciones() {
   const [fichasInstructor, setFichasInstructor] = useState([]);
   const [reporteInst, setReporteInst] = useState(null);
   const [historialInst, setHistorialInst] = useState([]);
+  const [periodos, setPeriodos] = useState([]);
+  const [periodoIdInst, setPeriodoIdInst] = useState("");
 
   useEffect(() => {
     let cancelado = false;
+
+    listarPeriodos().then(setPeriodos).catch(() => {});
 
     const cargarDatos = async () => {
       try {
@@ -84,7 +89,8 @@ function Evaluaciones() {
 
           const cargarReporte = async () => {
             try {
-              return await miPromedioInstructor(idInstructor);
+              const params = periodoIdInst ? { periodo_id: Number(periodoIdInst) } : {};
+                return await miPromedioInstructor(idInstructor, params);
             } catch {
               try {
                 return await reportePreguntasInstructor(idInstructor, {});
@@ -98,7 +104,7 @@ function Evaluaciones() {
             listarFichasPorInstructor(idInstructor).catch(() => []),
             cargarReporte(),
             listarFichas().catch(() => []),
-            misEvaluacionesInstructor(idInstructor).catch(() => []),
+            misEvaluacionesInstructor(idInstructor, periodoIdInst ? { periodo_id: Number(periodoIdInst) } : {}).catch(() => []),
           ]);
 
           const mapa = Object.fromEntries(
@@ -173,7 +179,7 @@ function Evaluaciones() {
     return () => {
       cancelado = true;
     };
-  }, [esAdminUser, esInstructorUser, usuario]);
+  }, [esAdminUser, esInstructorUser, usuario, periodoIdInst]);
 
   const obtenerEstadoInstructor = (idInstructor) => {
     const ev = evaluaciones.find(
@@ -236,6 +242,21 @@ function Evaluaciones() {
               ? "Resumen de fichas asignadas y evaluaciones que has recibido (anónimas)"
               : "Evalúa a los instructores asignados a tu ficha de formación"}
           </p>
+          {esInstructorUser && (
+            <div style={{ margin: "12px 0 8px", display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+              <label style={{ fontWeight: 600 }}>Periodo / trimestre:</label>
+              <select
+                value={periodoIdInst}
+                onChange={(e) => setPeriodoIdInst(e.target.value)}
+                style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db", minWidth: 220 }}
+              >
+                <option value="">Todos los periodos</option>
+                {periodos.map((p) => (
+                  <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

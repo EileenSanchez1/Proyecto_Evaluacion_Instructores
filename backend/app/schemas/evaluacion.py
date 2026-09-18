@@ -18,6 +18,8 @@ class EvaluacionRead(SQLModel):
     id_instructor: int
     estado: str
     fecha: datetime
+    observacion_general: Optional[str] = None
 
 class EvaluacionUpdate(SQLModel):
     estado: Optional[str] = None
+    observacion_general: Optional[str] = None

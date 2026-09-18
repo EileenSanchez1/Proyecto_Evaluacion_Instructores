@@ -13,8 +13,10 @@ const prepararFormData = (datos) => {
   return formData;
 };
 
-export const listarInstructores = async () => {
-  const response = await api.get(API_URL);
+export const listarInstructores = async (incluirInactivos = false) => {
+  const response = await api.get(API_URL, {
+    params: incluirInactivos ? { incluir_inactivos: true } : {},
+  });
   return response.data;
 };
 
@@ -96,5 +98,10 @@ export const eliminarInstructor = async (id) => {
 
 export const resetPrimerAccesoInstructor = async (id) => {
   const response = await api.post(`${API_URL}${id}/reset-primer-acceso`);
+  return response.data;
+};
+
+export const reactivarInstructor = async (id) => {
+  const response = await api.post(`${API_URL}${id}/reactivar`);
   return response.data;
 };

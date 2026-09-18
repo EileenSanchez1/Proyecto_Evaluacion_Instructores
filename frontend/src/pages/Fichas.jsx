@@ -159,9 +159,19 @@ function Fichas() {
     try {
       const relaciones = await listarInstructoresPorFicha(ficha.id_ficha);
       const instructores = await Promise.all(
-        relaciones.map((rel) => obtenerInstructor(rel.id_instructor))
+        relaciones.map(async (rel) => {
+          const inst = await obtenerInstructor(rel.id_instructor).catch(() => null);
+          if (!inst) return null;
+          const periodo = periodos.find((p) => p.id_periodo === rel.id_periodo);
+          return {
+            ...inst,
+            id_relacion: rel.id,
+            id_periodo: rel.id_periodo,
+            nombre_periodo: periodo?.nombre || `Periodo #${rel.id_periodo}`,
+          };
+        })
       );
-      setInstructoresFicha(instructores);
+      setInstructoresFicha(instructores.filter(Boolean));
     } catch (err) {
       console.error("No se pudieron cargar los instructores de la ficha", err);
     } finally {
@@ -385,7 +395,7 @@ function Fichas() {
                           <option value="">Selecciona instructor</option>
                           {instructores.map((inst) => (
                             <option key={inst.id_instructor} value={inst.id_instructor}>
-                              {inst.nombre} {inst.apellido}
+                              {inst.nombre} {inst.apellido}{inst.nombre_periodo ? ` · ${inst.nombre_periodo}` : ""}
                             </option>
                           ))}
                         </select>
@@ -421,7 +431,7 @@ function Fichas() {
                 {!cargandoDetalle && instructoresFicha.length > 0 && (
                   <ul>
                     {instructoresFicha.map((inst) => (
-                      <li key={inst.id_instructor} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <li key={`${inst.id_instructor}-${inst.id_periodo || inst.id_relacion}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                         <span>
                           <i className="bi bi-person-fill"></i>
                           {inst.nombre} {inst.apellido} —{" "}
@@ -430,8 +440,7 @@ function Fichas() {
                         <button className="btn btn-sm btn-outline-danger"
                           onClick={() => {
                             listarInstructoresPorFicha(fichaSeleccionada.id_ficha).then((rels) => {
-                              const rel = rels.find((r) => r.id_instructor === inst.id_instructor);
-                              if (rel) manejarDesasignarInstructor(rel.id);
+                              if (inst.id_relacion) manejarDesasignarInstructor(inst.id_relacion);
                             });
                           }} title="Eliminar asignación">
                           <i className="bi bi-trash"></i>

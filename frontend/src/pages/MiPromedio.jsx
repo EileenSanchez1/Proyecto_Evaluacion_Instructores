@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { listarPeriodos } from "../services/PeriodoService";
 import { obtenerUsuarioSesion } from "../utils/sesion";
 import {
   miPromedioInstructor,
@@ -10,6 +11,8 @@ import "../styles/Home.css";
 function MiPromedio() {
   const usuario = obtenerUsuarioSesion();
   const [reporte, setReporte] = useState(null);
+  const [periodos, setPeriodos] = useState([]);
+  const [periodoId, setPeriodoId] = useState("");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
@@ -27,10 +30,11 @@ function MiPromedio() {
       try {
         let data = null;
         try {
-          data = await miPromedioInstructor(idInstructor);
+          const params = periodoId ? { periodo_id: Number(periodoId) } : {};
+          data = await miPromedioInstructor(idInstructor, params);
         } catch (e1) {
           // Fallback al endpoint de admin/detalle
-          data = await reportePreguntasInstructor(idInstructor, {});
+          data = await reportePreguntasInstructor(idInstructor, params);
         }
         setReporte(data);
       } catch (err) {
@@ -44,8 +48,9 @@ function MiPromedio() {
       }
     };
 
+    listarPeriodos().then(setPeriodos).catch(() => {});
     cargarRendimiento();
-  }, [usuario]);
+  }, [usuario, periodoId]);
 
   const obtenerConfiguracionEstado = (porcentaje, nota) => {
     const n = nota != null ? Number(nota) : null;
@@ -106,7 +111,27 @@ function MiPromedio() {
     );
   }
 
-  const preguntas = reporte?.preguntas || [];
+  
+  const selectorPeriodo = (
+    <div style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+      <label style={{ fontWeight: 600, color: "#374151" }}>
+        <i className="bi bi-calendar3"></i> Periodo / trimestre:
+      </label>
+      <select
+        value={periodoId}
+        onChange={(e) => setPeriodoId(e.target.value)}
+        style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db", minWidth: 220 }}
+      >
+        <option value="">Todos los periodos</option>
+        {periodos.map((p) => (
+          <option key={p.id_periodo} value={p.id_periodo}>
+            {p.nombre}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+const preguntas = reporte?.preguntas || [];
   const promedio = reporte?.promedio_general ?? 0;
   const porcentajeG = reporte?.porcentaje_general ?? 0;
   const totalResp = reporte?.total_respuestas ?? 0;
@@ -114,6 +139,7 @@ function MiPromedio() {
 
   return (
     <div className="home-page">
+      {selectorPeriodo}
       <div
         style={{
           background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
