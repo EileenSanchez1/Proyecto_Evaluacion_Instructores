@@ -21,8 +21,12 @@ function Instructores() {
       setError("");
 
       if (esAdmin) {
-        const datos = await listarInstructores();
-        setInstructores(datos);
+        // Trae todos; la vista muestra solo activos o solo inactivos
+        const datos = await listarInstructores(true);
+        const filtrados = (datos || []).filter((inst) =>
+          mostrarInactivos ? inst.activo === false : inst.activo !== false
+        );
+        setInstructores(filtrados);
       } else {
         const usuario = obtenerUsuarioSesion();
         if (!usuario || !usuario.id_ficha) {
@@ -132,14 +136,45 @@ function Instructores() {
             Administra, consulta y actualiza los instructores registrados
           </p>
           {esAdmin && (
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, cursor: "pointer", fontSize: "0.92rem" }}>
-              <input
-                type="checkbox"
-                checked={mostrarInactivos}
-                onChange={(e) => setMostrarInactivos(e.target.checked)}
-              />
-              Ver instructores inactivos
-            </label>
+            <div
+              style={{
+                display: "inline-flex",
+                marginTop: 12,
+                borderRadius: 10,
+                overflow: "hidden",
+                border: "1px solid #d1d5db",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setMostrarInactivos(false)}
+                style={{
+                  padding: "8px 16px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  background: !mostrarInactivos ? "#39a900" : "#fff",
+                  color: !mostrarInactivos ? "#fff" : "#374151",
+                }}
+              >
+                <i className="bi bi-person-check"></i> Activos
+              </button>
+              <button
+                type="button"
+                onClick={() => setMostrarInactivos(true)}
+                style={{
+                  padding: "8px 16px",
+                  border: "none",
+                  borderLeft: "1px solid #d1d5db",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  background: mostrarInactivos ? "#6b7280" : "#fff",
+                  color: mostrarInactivos ? "#fff" : "#374151",
+                }}
+              >
+                <i className="bi bi-person-x"></i> Inactivos
+              </button>
+            </div>
           )}
         </div>
         {esAdmin && (
@@ -168,7 +203,9 @@ function Instructores() {
         <div className="estado-vacio">
           <i className="bi bi-search"></i>
           <h4>No se encontraron instructores</h4>
-          <p>{instructores.length === 0 ? "Aún no hay instructores registrados." : "Intenta con otro término de búsqueda"}</p>
+          <p>{instructores.length === 0
+            ? (mostrarInactivos ? "No hay instructores inactivos." : "Aún no hay instructores activos.")
+            : "Intenta con otro término de búsqueda"}</p>
         </div>
       )}
 
