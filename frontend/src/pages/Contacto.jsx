@@ -21,9 +21,20 @@ function Contacto() {
     setMensaje("");
     setEsError(false);
 
-    if (!textoMensaje.trim()) {
+    const texto = textoMensaje.trim();
+    if (!texto) {
       setEsError(true);
       setMensaje("Escribe un mensaje antes de enviar.");
+      return;
+    }
+
+    // Mínimo más de 1 palabra (evitar mensajes tipo "xd", "ok", etc.)
+    const palabras = texto.split(/\s+/).filter((p) => p.length > 0);
+    if (palabras.length < 2 || texto.length < 10) {
+      setEsError(true);
+      setMensaje(
+        "El mensaje debe tener al menos 2 palabras y 10 caracteres. Escribe un mensaje serio para el administrador."
+      );
       return;
     }
 
@@ -36,8 +47,8 @@ function Contacto() {
     try {
       setEnviando(true);
       const cuerpo = asunto.trim()
-        ? `Asunto: ${asunto.trim()}\n\n${textoMensaje.trim()}`
-        : textoMensaje.trim();
+        ? `Asunto: ${asunto.trim()}\n\n${texto}`
+        : texto;
 
       await enviarNovedad({
         nombre,

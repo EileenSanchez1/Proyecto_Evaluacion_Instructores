@@ -95,6 +95,7 @@ def eliminar_competencia(
     competencia_id: int,
     session: Session = Depends(get_session)
 ):
+    """Desactiva (no borra) la competencia. Puede reactivarse después."""
     eliminado = CompetenciaService.eliminar(session, competencia_id)
 
     if not eliminado:
@@ -103,4 +104,23 @@ def eliminar_competencia(
             detail="Competencia no encontrada"
         )
 
-    return {"mensaje": "Competencia eliminada correctamente"}
+    return {
+        "mensaje": "Competencia desactivada correctamente. Puedes reactivarla cuando lo necesites."
+    }
+
+
+@router.post(
+    "/{competencia_id}/reactivar",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))]
+)
+def reactivar_competencia(
+    competencia_id: int,
+    session: Session = Depends(get_session)
+):
+    ok = CompetenciaService.reactivar(session, competencia_id)
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="Competencia no encontrada"
+        )
+    return {"mensaje": "Competencia reactivada correctamente."}

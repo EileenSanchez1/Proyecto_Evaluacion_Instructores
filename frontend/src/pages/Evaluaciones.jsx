@@ -22,6 +22,7 @@ import {
 } from "../services/Reporteservice";
 import "../styles/Evaluaciones.css";
 import "../styles/Home.css";
+import "../styles/Instructores.css";
 
 function Evaluaciones() {
   const navigate = useNavigate();
@@ -236,14 +237,14 @@ function Evaluaciones() {
     <div className="pagina-evaluaciones">
       <div className="encabezado-evaluacion">
         <div>
-          <h2>
+          <h1 className="titulo">
             {esAdminUser
-              ? "Historial de Evaluaciones"
+              ? "Gestión de Evaluaciones"
               : esInstructorUser
               ? "Mis evaluaciones recibidas"
               : "Evaluación de Instructores"}
-          </h2>
-          <p>
+          </h1>
+          <p className="subtitulo">
             {esAdminUser
               ? "Consulta el historial completo de evaluaciones del sistema"
               : esInstructorUser

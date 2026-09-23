@@ -4,8 +4,10 @@ import {
   crearCompetencia,
   actualizarCompetencia,
   eliminarCompetencia,
+  reactivarCompetencia,
 } from "../services/competenciaService";
 import "../styles/Estructura.css";
+import "../styles/Instructores.css";
 
 const FORMULARIO_VACIO = { nombre: "", descripcion: "", estado: true };
 
@@ -80,8 +82,13 @@ function Competencias() {
     }
   };
 
-  const manejarEliminar = async (id) => {
-    if (!window.confirm("¿Eliminar esta competencia?")) return;
+  const manejarDesactivar = async (id) => {
+    if (
+      !window.confirm(
+        "¿Desactivar esta competencia?\nNo se borrarán las asignaciones a instructores. Podrás reactivarla después."
+      )
+    )
+      return;
 
     try {
       await eliminarCompetencia(id);
@@ -89,8 +96,19 @@ function Competencias() {
     } catch (err) {
       console.error(err);
       alert(
-        err.response?.data?.detail ||
-          "No se pudo eliminar (puede estar asignada a instructores)."
+        err.response?.data?.detail || "No se pudo desactivar la competencia."
+      );
+    }
+  };
+
+  const manejarReactivar = async (id) => {
+    try {
+      await reactivarCompetencia(id);
+      await cargar();
+    } catch (err) {
+      console.error(err);
+      alert(
+        err.response?.data?.detail || "No se pudo reactivar la competencia."
       );
     }
   };
@@ -99,9 +117,10 @@ function Competencias() {
     <div className="pagina-estructura">
       <div className="encabezado">
         <div>
-          <h1 className="titulo">Competencias</h1>
+          <h1 className="titulo">Gestión de Competencias</h1>
           <p className="subtitulo">
-            Gestiona las competencias que se pueden asignar a los instructores
+            Gestiona las competencias que se pueden asignar a los instructores.
+            Desactivar no borra el historial ni las asignaciones.
           </p>
         </div>
       </div>
@@ -179,12 +198,27 @@ function Competencias() {
                   </span>
                 </td>
                 <td className="acciones-tabla">
-                  <button className="editar" onClick={() => iniciarEdicion(c)}>
+                  <button className="editar" onClick={() => iniciarEdicion(c)} title="Editar">
                     <i className="bi bi-pencil"></i>
                   </button>
-                  <button className="eliminar" onClick={() => manejarEliminar(c.id_competencia)}>
-                    <i className="bi bi-trash"></i>
-                  </button>
+                  {c.estado ? (
+                    <button
+                      className="eliminar"
+                      onClick={() => manejarDesactivar(c.id_competencia)}
+                      title="Desactivar"
+                    >
+                      <i className="bi bi-pause-circle"></i>
+                    </button>
+                  ) : (
+                    <button
+                      className="editar"
+                      onClick={() => manejarReactivar(c.id_competencia)}
+                      title="Reactivar"
+                      style={{ background: "#39a900", color: "#fff" }}
+                    >
+                      <i className="bi bi-play-circle"></i>
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

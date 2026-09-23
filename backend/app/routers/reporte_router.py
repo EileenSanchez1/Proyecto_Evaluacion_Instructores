@@ -127,7 +127,7 @@ def detalle_evaluacion(
     evaluacion_id: int,
     session: Session = Depends(get_session),
 ):
-    """Detalle admin: preguntas, notas, observaciones por pregunta y observación general."""
+    """Detalle admin: preguntas, notas y solo observación general (sin obs por pregunta)."""
     from app.models.respuesta import Respuesta as RespModel
     from app.models.pregunta import Pregunta as PregModel
 
@@ -149,26 +149,17 @@ def detalle_evaluacion(
     rows = session.exec(stmt).all()
 
     respuestas = []
-    observaciones_por_pregunta = []
     for resp, preg in rows:
-        obs = (resp.observaciones or "").strip() or None
-        # Compat: quitar formato viejo mezclado con [General]
-        if obs and "[General]" in obs:
-            obs = obs.split("[General]")[0].strip() or None
         item = {
             "id_respuesta": resp.id_respuesta,
             "id_pregunta": preg.id_pregunta,
             "orden": getattr(preg, "orden", 0),
             "pregunta": preg.descripcion,
             "calificacion": resp.respuesta,
-            "observaciones": obs,
+            # Ya no se usan observaciones por pregunta
+            "observaciones": None,
         }
         respuestas.append(item)
-        if obs:
-            observaciones_por_pregunta.append({
-                "pregunta": preg.descripcion,
-                "texto": obs,
-            })
 
     obs_general = getattr(ev, "observacion_general", None)
     if obs_general:
@@ -184,7 +175,7 @@ def detalle_evaluacion(
         "aprendiz": f"{aprendiz.nombre} {aprendiz.apellido}" if aprendiz else None,
         "instructor": f"{instructor.nombre} {instructor.apellido}" if instructor else None,
         "respuestas": respuestas,
-        "observaciones": observaciones_por_pregunta,
+        "observaciones": [],  # compat: lista vacía; solo se usa observacion_general
         "observacion_general": obs_general,
     }
 

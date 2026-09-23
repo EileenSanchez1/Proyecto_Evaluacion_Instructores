@@ -6,6 +6,7 @@ import {
   eliminarPregunta,
 } from "../services/Preguntaservice";
 import "../styles/Preguntas.css";
+import "../styles/Instructores.css";
 
 const FORM_VACIO = { descripcion: "", orden: "" };
 
@@ -142,12 +143,12 @@ function Preguntas() {
 
   return (
     <div className="container-fluid py-4">
-      <div className="evaluation-header mb-4">
+      <div className="encabezado mb-4">
         <div>
-          <h2>
-            <i className="bi bi-pencil-square"></i> Editor de Cuestionarios
-          </h2>
-          <p>
+          <h1 className="titulo">
+            <i className="bi bi-pencil-square"></i> Gestión de Preguntas
+          </h1>
+          <p className="subtitulo">
             Modifique, agregue o elimine las preguntas que componen la
             evaluación de instructores.
           </p>
