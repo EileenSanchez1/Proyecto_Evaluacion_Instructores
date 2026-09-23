@@ -158,11 +158,11 @@ const preguntas = reporte?.preguntas || [];
       {selectorPeriodo}
       <div
         style={{
-          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          background: "linear-gradient(135deg, #1a472a 0%, #2d7a4f 100%)",
           color: "#fff",
           padding: "24px",
           borderRadius: "12px",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 4px 12px rgba(57, 169, 0, 0.25)",
           marginBottom: 24,
         }}
       >

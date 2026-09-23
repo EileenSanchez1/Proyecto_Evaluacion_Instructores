@@ -6,6 +6,7 @@ import {
   desactivarPeriodo,
   reactivarPeriodo,
 } from "../services/PeriodoService";
+import "../styles/Instructores.css";
 
 function Periodos() {
   const [periodos, setPeriodos] = useState([]);
@@ -138,10 +139,10 @@ function Periodos() {
     <div className="container-fluid page-content py-4">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-          <h2>
-            <i className="bi bi-calendar-range"></i> Periodos Académicos
-          </h2>
-          <p className="text-muted mb-0">
+          <h1 className="titulo">
+            <i className="bi bi-calendar-range"></i> Gestión de Periodos
+          </h1>
+          <p className="subtitulo">
             Gestiona los periodos de evaluación. Desactivar no borra el historial.
           </p>
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listarNovedades, marcarNovedadLeida } from "../services/NovedadService";
 import "../styles/Novedades.css";
+import "../styles/Instructores.css";
 
 function Novedades() {
   const [novedades, setNovedades] = useState([]);
@@ -48,10 +49,10 @@ function Novedades() {
     <div className="novedades-page">
       <header className="novedades-header">
         <div>
-          <h1>
-            <i className="bi bi-bell"></i> Novedades
+          <h1 className="titulo">
+            <i className="bi bi-bell"></i> Gestión de Novedades
           </h1>
-          <p>Mensajes enviados por los aprendices desde Contacto.</p>
+          <p className="subtitulo">Mensajes enviados por los aprendices desde Contacto.</p>
         </div>
         {novedades.length > 0 && (
           <div className="novedades-resumen">

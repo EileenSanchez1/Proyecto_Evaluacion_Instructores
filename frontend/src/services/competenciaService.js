@@ -33,6 +33,16 @@ export const actualizarCompetencia = async (id, datos) => {
 };
 
 export const eliminarCompetencia = async (id) => {
+  // Soft delete: desactiva la competencia (igual que instructores y periodos)
   const response = await axios.delete(`${API_URL}/${id}`, getAuthHeaders());
+  return response.data;
+};
+
+export const reactivarCompetencia = async (id) => {
+  const response = await axios.post(
+    `${API_URL}/${id}/reactivar`,
+    {},
+    getAuthHeaders()
+  );
   return response.data;
 };

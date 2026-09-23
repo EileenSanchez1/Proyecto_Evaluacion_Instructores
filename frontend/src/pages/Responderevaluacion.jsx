@@ -47,30 +47,26 @@ function ResponderEvaluacion() {
 
           const respuestasMap = {};
           let suma = 0;
-          let observacionGeneral = "";
 
           respuestasGuardadas.forEach((r) => {
             respuestasMap[r.id_pregunta] = {
               calificacion: r.respuesta,
-              observacion: r.observaciones || ""
             };
             suma += r.respuesta;
-            if (r.observaciones && !observacionGeneral) {
-              observacionGeneral = r.observaciones;
-            }
           });
 
           setRespuestas(respuestasMap);
-          setObservacionesGenerales(observacionGeneral);
+          // Solo observación general (ya no hay observaciones por pregunta)
+          setObservacionesGenerales(ev.observacion_general || "");
 
           if (respuestasGuardadas.length > 0) {
             setPromedio((suma / respuestasGuardadas.length).toFixed(1));
           }
         } else {
-          // Inicializar respuestas vacías
+          // Inicializar respuestas vacías (solo calificación)
           const respuestasIniciales = {};
           p.forEach((preg) => {
-            respuestasIniciales[preg.id_pregunta] = { calificacion: 0, observacion: "" };
+            respuestasIniciales[preg.id_pregunta] = { calificacion: 0 };
           });
           setRespuestas(respuestasIniciales);
           setPromedio(0);
@@ -93,13 +89,6 @@ function ResponderEvaluacion() {
     }));
   };
 
-  const manejarObservacionPregunta = (idPregunta, valor) => {
-    setRespuestas((prev) => ({
-      ...prev,
-      [idPregunta]: { ...prev[idPregunta], observacion: valor }
-    }));
-  };
-
   const manejarEnviar = async (e) => {
     e.preventDefault();
     setError("");
@@ -114,19 +103,17 @@ function ResponderEvaluacion() {
       setEnviando(true);
 
       const gen = (observacionesGenerales || "").trim();
-      const respuestasPayload = preguntas.map((p) => {
-        const obsPreg = (respuestas[p.id_pregunta]?.observacion || "").trim();
-        return {
-          id_evaluacion: Number(id),
-          id_pregunta: p.id_pregunta,
-          id_instructor: evaluacion.id_instructor,
-          respuesta: respuestas[p.id_pregunta].calificacion,
-          observaciones: obsPreg || null,
-        };
-      });
+      // Solo calificación por pregunta; observación únicamente general
+      const respuestasPayload = preguntas.map((p) => ({
+        id_evaluacion: Number(id),
+        id_pregunta: p.id_pregunta,
+        id_instructor: evaluacion.id_instructor,
+        respuesta: respuestas[p.id_pregunta].calificacion,
+        observaciones: null,
+      }));
 
       await crearRespuestasBulk(respuestasPayload);
-      // Observación general separada (no se mezcla con preguntas)
+      // Observación general separada (única observación permitida)
       if (gen) {
         await actualizarEvaluacion(Number(id), { observacion_general: gen, estado: "Evaluado" });
       } else {
@@ -285,16 +272,6 @@ function ResponderEvaluacion() {
                 </div>
               </div>
 
-              <div className="campo-observacion">
-                <label>Observaciones sobre este criterio <span className="opcional">(opcional)</span></label>
-                <textarea
-                  rows={2}
-                  placeholder="Escribe tus comentarios sobre este criterio..."
-                  value={respuestas[pregunta.id_pregunta]?.observacion || ""}
-                  onChange={(e) => manejarObservacionPregunta(pregunta.id_pregunta, e.target.value)}
-                  disabled={yaEvaluado}
-                />
-              </div>
             </div>
           ))}
 

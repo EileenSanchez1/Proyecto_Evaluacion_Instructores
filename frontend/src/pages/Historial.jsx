@@ -285,21 +285,6 @@ function Historial() {
                           {r.calificacion} / 5
                         </span>
                       </div>
-                      {r.observaciones && (
-                        <p
-                          style={{
-                            margin: "8px 0 0",
-                            padding: "8px 12px",
-                            background: "#f8fafc",
-                            borderRadius: 8,
-                            color: "#374151",
-                            fontSize: "0.92rem",
-                          }}
-                        >
-                          <i className="bi bi-chat-left-text"></i>{" "}
-                          <em>Observación:</em> {r.observaciones}
-                        </p>
-                      )}
                     </li>
                   ))}
                 </ul>
@@ -324,12 +309,11 @@ function Historial() {
                   </div>
                 )}
 
-                {!detalle.observacion_general &&
-                  (detalle.observaciones || []).length === 0 && (
-                    <p style={{ color: "#9ca3af", marginTop: 12 }}>
-                      Esta evaluación no tiene observaciones registradas.
-                    </p>
-                  )}
+                {!detalle.observacion_general && (
+                  <p style={{ color: "#9ca3af", marginTop: 12 }}>
+                    Esta evaluación no tiene observación general registrada.
+                  </p>
+                )}
               </>
             )}
           </div>

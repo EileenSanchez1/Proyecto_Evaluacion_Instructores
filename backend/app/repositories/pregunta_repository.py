@@ -96,6 +96,8 @@ class PreguntaRepository:
         session: Session,
         pregunta_id: int
     ) -> bool:
+        """Elimina la pregunta y sus respuestas asociadas para respetar FKs."""
+        from app.models.respuesta import Respuesta
 
         db_pregunta = session.get(
             Pregunta,
@@ -104,6 +106,13 @@ class PreguntaRepository:
 
         if not db_pregunta:
             return False
+
+        # Borrar respuestas que referencian esta pregunta
+        respuestas = session.exec(
+            select(Respuesta).where(Respuesta.id_pregunta == pregunta_id)
+        ).all()
+        for r in respuestas:
+            session.delete(r)
 
         session.delete(db_pregunta)
         session.commit()

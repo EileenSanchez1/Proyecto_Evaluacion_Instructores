@@ -10,6 +10,13 @@ router = APIRouter(prefix="/novedades", tags=["Novedades"])
 
 @router.post("/", response_model=dict)
 def crear_novedad(datos: NovedadCreate, session: Session = Depends(get_session)):
+    mensaje = (datos.mensaje or "").strip()
+    palabras = [p for p in mensaje.split() if p]
+    if len(palabras) < 2 or len(mensaje) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="El mensaje debe tener al menos 2 palabras y 10 caracteres.",
+        )
     novedad = Novedad(**datos.model_dump())
     session.add(novedad)
     session.commit()

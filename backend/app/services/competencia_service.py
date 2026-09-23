@@ -94,8 +94,19 @@ class CompetenciaService:
         session: Session,
         competencia_id: int
     ) -> bool:
-
+        """Desactiva la competencia (soft delete). No borra asignaciones ni historial."""
         return CompetenciaRepository.eliminar(
+            session,
+            competencia_id
+        )
+
+    @staticmethod
+    def reactivar(
+        session: Session,
+        competencia_id: int
+    ) -> bool:
+        """Reactiva una competencia desactivada."""
+        return CompetenciaRepository.reactivar(
             session,
             competencia_id
         )

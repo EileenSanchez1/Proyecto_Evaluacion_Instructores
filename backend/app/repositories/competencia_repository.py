@@ -95,7 +95,7 @@ class CompetenciaRepository:
         session: Session,
         competencia_id: int
     ) -> bool:
-
+        """Soft delete: desactiva la competencia (estado=False). Conserva historial."""
         db_competencia = session.get(
             Competencia,
             competencia_id
@@ -104,7 +104,28 @@ class CompetenciaRepository:
         if not db_competencia:
             return False
 
-        session.delete(db_competencia)
+        db_competencia.estado = False
+        session.add(db_competencia)
+        session.commit()
+
+        return True
+
+    @staticmethod
+    def reactivar(
+        session: Session,
+        competencia_id: int
+    ) -> bool:
+        """Reactiva una competencia previamente desactivada."""
+        db_competencia = session.get(
+            Competencia,
+            competencia_id
+        )
+
+        if not db_competencia:
+            return False
+
+        db_competencia.estado = True
+        session.add(db_competencia)
         session.commit()
 
         return True
