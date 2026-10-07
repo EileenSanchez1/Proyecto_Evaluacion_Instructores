@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor, reactivarInstructor } from "../services/instructorService";
+import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor, reactivarInstructor, cargaMasivaInstructores } from "../services/instructorService";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
@@ -14,6 +14,32 @@ function Instructores() {
   const [error, setError] = useState("");
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const [archivoCarga, setArchivoCarga] = useState(null);
+  const [enviandoCarga, setEnviandoCarga] = useState(false);
+  const [resultadoCarga, setResultadoCarga] = useState(null);
+
+  const manejarCargaMasiva = async (e) => {
+    e.preventDefault();
+    if (!archivoCarga) {
+      alert("Selecciona un archivo CSV.");
+      return;
+    }
+    try {
+      setEnviandoCarga(true);
+      setResultadoCarga(null);
+      const fd = new FormData();
+      fd.append("archivo", archivoCarga);
+      const res = await cargaMasivaInstructores(fd);
+      setResultadoCarga(res);
+      setArchivoCarga(null);
+      await cargarInstructores();
+    } catch (err) {
+      const d = err.response?.data?.detail;
+      alert(typeof d === "string" ? d : "Error en la carga masiva.");
+    } finally {
+      setEnviandoCarga(false);
+    }
+  };
 
   const cargarInstructores = async () => {
     try {
@@ -183,6 +209,50 @@ function Instructores() {
           </button>
         )}
       </div>
+
+      {esAdmin && (
+        <div
+          style={{
+            margin: "16px 0",
+            padding: 16,
+            background: "#f8fafc",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>
+            <i className="bi bi-upload"></i> Carga masiva de instructores (sin foto)
+          </h3>
+          <p style={{ margin: "0 0 12px", color: "#6b7280", fontSize: 14 }}>
+            CSV con columnas: <code>nombre, apellido, correo, telefono</code>.
+            El correo debe ser @sena.edu.co. La foto la sube cada instructor al entrar a su perfil.
+          </p>
+          <form onSubmit={manejarCargaMasiva} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              type="file"
+              accept=".csv,.txt"
+              onChange={(e) => setArchivoCarga(e.target.files?.[0] || null)}
+            />
+            <button type="submit" className="btn-nuevo" disabled={enviandoCarga || !archivoCarga}>
+              {enviandoCarga ? "Cargando..." : "Subir CSV"}
+            </button>
+          </form>
+          {resultadoCarga && (
+            <div style={{ marginTop: 12, fontSize: 14 }}>
+              <strong>{resultadoCarga.mensaje}</strong>
+              {resultadoCarga.detalle_errores?.length > 0 && (
+                <ul style={{ marginTop: 6 }}>
+                  {resultadoCarga.detalle_errores.slice(0, 8).map((er, idx) => (
+                    <li key={idx}>
+                      Fila {er.fila} ({er.correo}): {er.error}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="barra-superior">
         <div className="buscador">

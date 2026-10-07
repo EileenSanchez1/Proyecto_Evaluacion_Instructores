@@ -11,6 +11,7 @@ from app.config.database import get_session
 from app.config.auth_dependencies import require_roles
 from app.schemas.instructor import InstructorCreate, InstructorRead, InstructorUpdate
 from app.services.instructor_service import InstructorService
+from app.services.carga_instructores_service import parsear_csv, cargar_desde_filas
 from app.models.usuario import Usuario
 
 router = APIRouter(prefix="/instructores", tags=["Instructores"])
@@ -80,6 +81,34 @@ async def crear_instructor(
         return InstructorService.to_read(session, inst)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+
+@router.post(
+    "/carga-masiva",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+async def carga_masiva_instructores(
+    archivo: UploadFile = File(...),
+    session: Session = Depends(get_session),
+):
+    """Carga masiva CSV sin foto. Columnas: nombre, apellido, correo, telefono (opcional)."""
+    if not archivo.filename or not (
+        archivo.filename.lower().endswith(".csv")
+        or archivo.filename.lower().endswith(".txt")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Sube un archivo CSV (.csv o .txt).",
+        )
+    contenido = await archivo.read()
+    try:
+        filas = parsear_csv(contenido)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo leer el CSV: {e}")
+    if not filas:
+        raise HTTPException(status_code=400, detail="El archivo no tiene filas de datos.")
+    return cargar_desde_filas(session, filas)
 
 
 @router.get("/", response_model=List[InstructorRead])

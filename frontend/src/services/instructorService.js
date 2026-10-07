@@ -105,3 +105,10 @@ export const reactivarInstructor = async (id) => {
   const response = await api.post(`${API_URL}${id}/reactivar`);
   return response.data;
 };
+
+export const cargaMasivaInstructores = async (formData) => {
+  const response = await api.post(`${API_URL}carga-masiva`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};

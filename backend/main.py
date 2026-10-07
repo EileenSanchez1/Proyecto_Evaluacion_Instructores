@@ -36,6 +36,10 @@ def ensure_extra_columns():
             conn.execute(text(
                 "ALTER TABLE horarios ADD COLUMN IF NOT EXISTS ambiente VARCHAR(80)"
             ))
+            # Asignación ficha-instructor: RA que dicta en esa ficha/periodo
+            conn.execute(text(
+                "ALTER TABLE ficha_instructor ADD COLUMN IF NOT EXISTS id_resultado INTEGER"
+            ))
     except Exception as e:
         print(f"[schema] Aviso ensure_extra_columns: {e}")
 
