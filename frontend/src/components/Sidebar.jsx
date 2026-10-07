@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { contarNovedadesNoLeidas } from "../services/NovedadService";
 import {
   esAdmin,
   esAdminOCoordinador,
@@ -13,6 +15,29 @@ function Sidebar() {
   const instructor = esInstructor();
   const rol = obtenerRol();
   const esAprendiz = rol === "Aprendiz";
+  const [novedadesNuevas, setNovedadesNuevas] = useState(0);
+
+  useEffect(() => {
+    if (!adminOCoordinador) return;
+    let vivo = true;
+    const cargar = async () => {
+      try {
+        const data = await contarNovedadesNoLeidas();
+        if (vivo) setNovedadesNuevas(Number(data?.count || 0));
+      } catch {
+        /* silencioso */
+      }
+    };
+    cargar();
+    const id = setInterval(cargar, 30000); // cada 30s
+    return () => {
+      vivo = false;
+      clearInterval(id);
+    };
+  }, [adminOCoordinador]);
+
+  const badgeNovedades =
+    novedadesNuevas > 99 ? "99+" : novedadesNuevas > 0 ? String(novedadesNuevas) : null;
 
   return (
     <aside className="sidebar">
@@ -31,6 +56,13 @@ function Sidebar() {
           className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
         >
           <i className="bi bi-house"></i> Inicio
+        </NavLink>
+
+        <NavLink
+          to="/cambiar-contrasena"
+          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+        >
+          <i className="bi bi-key"></i> Cambiar contraseña
         </NavLink>
 
         {instructor && (
@@ -99,6 +131,9 @@ function Sidebar() {
               }
             >
               <i className="bi bi-bell"></i> Novedades
+              {badgeNovedades && (
+                <span className="nav-badge-novedades">{badgeNovedades}</span>
+              )}
             </NavLink>
 
             <NavLink
@@ -111,12 +146,12 @@ function Sidebar() {
             </NavLink>
 
             <NavLink
-              to="/competencias"
+              to="/resultados-aprendizaje"
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
             >
-              <i className="bi bi-award"></i> Competencias
+              <i className="bi bi-award"></i> Resultados de Aprendizaje
             </NavLink>
 
             <NavLink

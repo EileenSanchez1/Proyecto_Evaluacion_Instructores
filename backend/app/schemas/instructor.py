@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from sqlmodel import SQLModel
 
-from app.schemas.competencia import CompetenciaRead
+from app.schemas.resultado_aprendizaje import ResultadoAprendizajeRead
 
 
 class InstructorBase(SQLModel):
@@ -14,12 +14,15 @@ class InstructorBase(SQLModel):
 
 
 class InstructorCreate(InstructorBase):
-    competencias: List[int] = []
+    # IDs de resultados de aprendizaje asignados al instructor
+    resultados_aprendizaje: List[int] = []
+    # Alias de compatibilidad (frontend antiguo puede enviar "competencias")
+    competencias: Optional[List[int]] = None
 
 
 class InstructorRead(InstructorBase):
     id_instructor: int
-    competencias: List[CompetenciaRead] = []
+    resultados_aprendizaje: List[ResultadoAprendizajeRead] = []
     activo: bool = True
 
 
@@ -29,4 +32,5 @@ class InstructorUpdate(SQLModel):
     correo: Optional[str] = None
     telefono: Optional[str] = None
     foto: Optional[str] = None
+    resultados_aprendizaje: Optional[List[int]] = None
     competencias: Optional[List[int]] = None

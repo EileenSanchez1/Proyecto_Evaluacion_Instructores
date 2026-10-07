@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import LoginInstructor from './pages/LoginInstructor';
-import Registro from './pages/Registro';
 import RecuperarContrasena from './pages/RecuperarContrasena';
 import RestablecerContrasena from './pages/RestablecerContrasena';
 import Home from './pages/Home';
+import CambiarContrasena from './pages/CambiarContrasena';
 import Contacto from './pages/Contacto';
 import Novedades from './pages/Novedades';
 import PerfilInstructor from './pages/PerfilInstructor';
@@ -17,7 +17,7 @@ import Evaluaciones from './pages/Evaluaciones';
 import ResponderEvaluacion from './pages/Responderevaluacion';
 import Preguntas from './pages/Preguntas';
 import Fichas from './pages/Fichas';
-import Competencias from './pages/Competencias';
+import ResultadosAprendizaje from './pages/ResultadosAprendizaje';
 import Reportes from './pages/Reportes';
 import Historial from './pages/Historial';
 import Periodos from './pages/Periodos';
@@ -32,7 +32,6 @@ function App() {
         {/* RUTAS PUBLICAS */}
         <Route path='/login' element={<Login />} />
         <Route path='/login-instructor' element={<LoginInstructor />} />
-        <Route path='/registro' element={<Registro />} />
         <Route path='/recuperar-contrasena' element={<RecuperarContrasena />} />
         <Route path='/restablecer-contrasena' element={<RestablecerContrasena />} />
 
@@ -41,6 +40,7 @@ function App() {
           <Route element={<Layout />}>
             {/* HOME */}
             <Route path='/' element={<Home />} />
+            <Route path='/cambiar-contrasena' element={<CambiarContrasena />} />
 
             {/* INSTRUCTOR */}
             <Route element={<AdminRoute roles={['Instructor']} />}>
@@ -72,7 +72,8 @@ function App() {
             {/* Admin/Coordinador */}
             <Route element={<AdminRoute roles={['Administrador', 'Coordinador']} />}>
               <Route path='/fichas' element={<Fichas />} />
-              <Route path='/competencias' element={<Competencias />} />
+              <Route path='/resultados-aprendizaje' element={<ResultadosAprendizaje />} />
+              <Route path='/competencias' element={<ResultadosAprendizaje />} />
               <Route path='/periodos' element={<Periodos />} />
               <Route path='/reportes' element={<Reportes />} />
               <Route path='/historial' element={<Historial />} />

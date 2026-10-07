@@ -16,6 +16,7 @@ DIAS_VALIDOS = [
 
 
 class Horario(SQLModel, table=True):
+    """Horario de clase. La temática es un Resultado de Aprendizaje (RA)."""
     __tablename__ = "horarios"
 
     id_horario: Optional[int] = Field(
@@ -35,6 +36,14 @@ class Horario(SQLModel, table=True):
         index=True
     )
 
+    # Resultado de aprendizaje / temática (ej. 220501-04 CODIFICAR EL SOFTWARE...)
+    id_resultado: Optional[int] = Field(
+        default=None,
+        foreign_key="resultados_aprendizaje.id_resultado",
+        nullable=True,
+        index=True
+    )
+
     dia: str = Field(
         max_length=15,
         nullable=False
@@ -48,11 +57,21 @@ class Horario(SQLModel, table=True):
         nullable=False
     )
 
+    ambiente: Optional[str] = Field(
+        default=None,
+        max_length=80,
+        description="Ej. 212 Av.Carnicas_con_52"
+    )
+
     instructor: "Instructor" = Relationship(
         back_populates="horarios"
     )
 
     ficha: "Ficha" = Relationship(
+        back_populates="horarios"
+    )
+
+    resultado_aprendizaje: Optional["ResultadoAprendizaje"] = Relationship(
         back_populates="horarios"
     )
 

@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from app.models.instructor import Instructor
 from app.models.usuario import Usuario
 from app.models.rol import Rol
-from app.models.instructor_competencia import InstructorCompetencia
+from app.models.instructor_resultado_aprendizaje import InstructorResultadoAprendizaje
 from app.models.ficha_instructor import FichaInstructor
 from app.models.respuesta import Respuesta
 from app.models.evaluacion import Evaluacion
@@ -58,14 +58,14 @@ class InstructorService:
         session.add(db)
         session.flush()
 
-        if instructor.competencias:
-            for id_comp in instructor.competencias:
-                session.add(
-                    InstructorCompetencia(
-                        id_instructor=db.id_instructor,
-                        id_competencia=id_comp,
-                    )
+        ids_ra = instructor.resultados_aprendizaje or instructor.competencias or []
+        for id_ra in ids_ra:
+            session.add(
+                InstructorResultadoAprendizaje(
+                    id_instructor=db.id_instructor,
+                    id_resultado=id_ra,
                 )
+            )
 
         session.commit()
         session.refresh(db)
@@ -91,22 +91,23 @@ class InstructorService:
 
     @staticmethod
     def to_read(session: Session, instructor: Instructor) -> dict:
-        from app.models.competencia import Competencia
+        from app.models.resultado_aprendizaje import ResultadoAprendizaje
 
-        comps = []
+        ras = []
         for rel in session.exec(
-            select(InstructorCompetencia).where(
-                InstructorCompetencia.id_instructor == instructor.id_instructor
+            select(InstructorResultadoAprendizaje).where(
+                InstructorResultadoAprendizaje.id_instructor == instructor.id_instructor
             )
         ).all():
-            c = session.get(Competencia, rel.id_competencia)
-            if c:
-                comps.append(
+            ra = session.get(ResultadoAprendizaje, rel.id_resultado)
+            if ra:
+                ras.append(
                     {
-                        "id_competencia": c.id_competencia,
-                        "nombre": c.nombre,
-                        "descripcion": getattr(c, "descripcion", None),
-                        "estado": getattr(c, "estado", True),
+                        "id_resultado": ra.id_resultado,
+                        "codigo": getattr(ra, "codigo", None),
+                        "nombre": ra.nombre,
+                        "descripcion": getattr(ra, "descripcion", None),
+                        "estado": getattr(ra, "estado", True),
                     }
                 )
         return {
@@ -116,7 +117,7 @@ class InstructorService:
             "correo": instructor.correo,
             "telefono": instructor.telefono,
             "foto": instructor.foto,
-            "competencias": comps,
+            "resultados_aprendizaje": ras,
             "activo": InstructorService.es_activo(session, instructor),
         }
 
@@ -163,10 +164,13 @@ class InstructorService:
                     usuario.correo = instructor.correo
                 session.add(usuario)
 
-        if instructor_update.competencias is not None:
+        ids_ra_update = instructor_update.resultados_aprendizaje
+        if ids_ra_update is None and instructor_update.competencias is not None:
+            ids_ra_update = instructor_update.competencias
+        if ids_ra_update is not None:
             existentes = session.exec(
-                select(InstructorCompetencia).where(
-                    InstructorCompetencia.id_instructor == instructor_id
+                select(InstructorResultadoAprendizaje).where(
+                    InstructorResultadoAprendizaje.id_instructor == instructor_id
                 )
             ).all()
             for e in existentes:
@@ -175,20 +179,20 @@ class InstructorService:
 
             ids_unicos = []
             vistos = set()
-            for id_comp in instructor_update.competencias:
+            for id_ra in ids_ra_update:
                 try:
-                    cid = int(id_comp)
+                    rid = int(id_ra)
                 except (TypeError, ValueError):
                     continue
-                if cid not in vistos:
-                    vistos.add(cid)
-                    ids_unicos.append(cid)
+                if rid not in vistos:
+                    vistos.add(rid)
+                    ids_unicos.append(rid)
 
-            for id_comp in ids_unicos:
+            for id_ra in ids_unicos:
                 session.add(
-                    InstructorCompetencia(
+                    InstructorResultadoAprendizaje(
                         id_instructor=instructor_id,
-                        id_competencia=id_comp,
+                        id_resultado=id_ra,
                     )
                 )
 

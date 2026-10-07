@@ -550,17 +550,17 @@ function Evaluaciones() {
                     </div>
 
                     <div className="card-competencias">
-                      {(inst.competencias || []).slice(0, 3).map((c) => (
+                      {(inst.resultados_aprendizaje || []).slice(0, 3).map((c) => (
                         <span
                           className="badge-competencia"
-                          key={c.id_competencia}
+                          key={c.id_resultado}
                         >
                           {c.nombre}
                         </span>
                       ))}
-                      {(inst.competencias || []).length > 3 && (
+                      {(inst.resultados_aprendizaje || []).length > 3 && (
                         <span className="badge-competencia mas">
-                          +{(inst.competencias || []).length - 3}
+                          +{(inst.resultados_aprendizaje || []).length - 3}
                         </span>
                       )}
                     </div>

@@ -30,6 +30,7 @@ async def crear_instructor(
     correo: str = Form(...),
     telefono: str = Form(...),
     competencias: str = Form("[]"),
+    resultados_aprendizaje: str = Form("[]"),
     foto: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
 ):
@@ -40,13 +41,16 @@ async def crear_instructor(
             detail="El correo del instructor debe ser institucional (@sena.edu.co).",
         )
 
-    try:
-        lista_comp = json.loads(competencias) if competencias else []
-        if not isinstance(lista_comp, list):
-            lista_comp = []
-        lista_comp = [int(x) for x in lista_comp]
-    except (json.JSONDecodeError, TypeError, ValueError):
-        lista_comp = []
+    def _parse_ids(raw: str) -> list:
+        try:
+            lista = json.loads(raw) if raw else []
+            if not isinstance(lista, list):
+                return []
+            return [int(x) for x in lista]
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return []
+
+    lista_ra = _parse_ids(resultados_aprendizaje) or _parse_ids(competencias)
 
     foto_url = None
     if foto and foto.filename:
@@ -68,7 +72,7 @@ async def crear_instructor(
         correo=correo,
         telefono=telefono.strip(),
         foto=foto_url,
-        competencias=lista_comp,
+        resultados_aprendizaje=lista_ra,
     )
 
     try:

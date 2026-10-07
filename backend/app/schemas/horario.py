@@ -5,6 +5,7 @@ from pydantic import field_validator
 from sqlmodel import SQLModel
 
 from app.models.horario import DIAS_VALIDOS
+from app.schemas.resultado_aprendizaje import ResultadoAprendizajeRead
 
 
 class HorarioBase(SQLModel):
@@ -13,6 +14,8 @@ class HorarioBase(SQLModel):
     dia: str
     hora_inicio: time
     hora_fin: time
+    id_resultado: Optional[int] = None
+    ambiente: Optional[str] = None
 
     @field_validator("dia")
     @classmethod
@@ -30,6 +33,7 @@ class HorarioCreate(HorarioBase):
 
 class HorarioRead(HorarioBase):
     id_horario: int
+    resultado_aprendizaje: Optional[ResultadoAprendizajeRead] = None
 
 
 class HorarioUpdate(SQLModel):
@@ -38,6 +42,8 @@ class HorarioUpdate(SQLModel):
     dia: Optional[str] = None
     hora_inicio: Optional[time] = None
     hora_fin: Optional[time] = None
+    id_resultado: Optional[int] = None
+    ambiente: Optional[str] = None
 
     @field_validator("dia")
     @classmethod

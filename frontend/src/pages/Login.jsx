@@ -3,16 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { login } from "../services/authService";
 import "../styles/Login.css";
 
-function validarContrasenaSegura(contrasena) {
-  if (contrasena.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
-  if (!/[A-Z]/.test(contrasena)) return "Debe contener al menos una mayúscula.";
-  if (!/[a-z]/.test(contrasena)) return "Debe contener al menos una minúscula.";
-  if (!/\d/.test(contrasena)) return "Debe contener al menos un número.";
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(contrasena))
-    return "Debe contener al menos un carácter especial (!@#$%^&* etc.).";
-  return null;
-}
-
 function Login() {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -27,20 +17,19 @@ function Login() {
     setMensaje("");
     setEsError(false);
 
-    const errorPass = validarContrasenaSegura(contrasena);
-    if (errorPass) {
+    if (!correo.trim() || !contrasena) {
       setEsError(true);
-      setMensaje(errorPass);
+      setMensaje("Ingresa correo y contraseña.");
       return;
     }
 
     setCargando(true);
     try {
-      const respuesta = await login({ correo, contrasena });
+      const respuesta = await login({ correo: correo.trim(), contrasena });
       localStorage.setItem("token", respuesta.access_token);
       localStorage.setItem("usuario", JSON.stringify(respuesta.usuario));
       setMensaje("Inicio de sesión exitoso");
-      setTimeout(() => navigate("/"), 500);
+      setTimeout(() => navigate("/"), 400);
     } catch (error) {
       setEsError(true);
       setMensaje(
@@ -62,7 +51,9 @@ function Login() {
 
         <div className="lado-formulario">
           <h1>Login</h1>
-          <p className="subtitulo">Ingresa tus credenciales para continuar</p>
+          <p className="subtitulo">
+            Usa el correo y la contraseña que te enviaron al inicio del periodo.
+          </p>
 
           {mensaje && (
             <div className={`mensaje-login ${esError ? "error" : "exito"}`}>
@@ -101,21 +92,12 @@ function Login() {
                   <i className={`bi ${mostrarPass ? "bi-eye-slash" : "bi-eye"}`}></i>
                 </button>
               </div>
-              <small className="hint-pass">
-                Mín. 8 caracteres, mayúscula, minúscula, número y carácter especial.
-              </small>
             </div>
 
             <button type="submit" disabled={cargando}>
               {cargando ? "Ingresando..." : "Ingresar"}
             </button>
           </form>
-
-          <div className="registro-link">
-            <p>
-              ¿No tienes una cuenta? <Link to="/registro">Regístrate aquí</Link>
-            </p>
-          </div>
 
           <div className="recuperar">
             <Link to="/recuperar-contrasena">¿Olvidaste tu contraseña?</Link>

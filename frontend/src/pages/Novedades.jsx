@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listarNovedades, marcarNovedadLeida } from "../services/NovedadService";
+import { listarNovedades, marcarNovedadLeida, resolverNovedad } from "../services/NovedadService";
 import "../styles/Novedades.css";
 import "../styles/Instructores.css";
 
@@ -33,6 +33,24 @@ function Novedades() {
       );
     } catch (err) {
       alert("No se pudo marcar como leída.");
+    }
+  };
+
+  const resolverYNotificar = async (id) => {
+    if (
+      !window.confirm(
+        "¿Marcar como solucionada y enviar correo al aprendiz avisando que ya fue atendida?"
+      )
+    )
+      return;
+    try {
+      const res = await resolverNovedad(id);
+      setNovedades((prev) =>
+        prev.map((n) => (n.id_novedad === id ? { ...n, leido: true } : n))
+      );
+      alert(res?.mensaje || "Novedad solucionada.");
+    } catch (err) {
+      alert(err.response?.data?.detail || "No se pudo resolver la novedad.");
     }
   };
 
@@ -134,15 +152,27 @@ function Novedades() {
                 )}
               </div>
 
-              {!n.leido && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                {!n.leido && (
+                  <button
+                    type="button"
+                    className="btn-marcar-leida"
+                    onClick={() => marcarLeida(n.id_novedad)}
+                  >
+                    <i className="bi bi-check2-all"></i> Marcar como leída
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-marcar-leida"
-                  onClick={() => marcarLeida(n.id_novedad)}
+                  style={{ background: n.leido ? "#39a900" : "#2563eb" }}
+                  onClick={() => resolverYNotificar(n.id_novedad)}
+                  title="Marca como solucionada y envía correo al aprendiz"
                 >
-                  <i className="bi bi-check2-all"></i> Marcar como leída
+                  <i className="bi bi-envelope-check"></i>{" "}
+                  {n.leido ? "Reenviar aviso de solucionada" : "Solucionar y enviar correo"}
                 </button>
-              )}
+              </div>
             </article>
           );
         })}
