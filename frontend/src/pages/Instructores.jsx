@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor, reactivarInstructor, cargaMasivaInstructores } from "../services/instructorService";
+import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
@@ -17,6 +18,7 @@ function Instructores() {
   const [archivoCarga, setArchivoCarga] = useState(null);
   const [enviandoCarga, setEnviandoCarga] = useState(false);
   const [resultadoCarga, setResultadoCarga] = useState(null);
+  const [mapaRA, setMapaRA] = useState({}); // id_resultado -> nombre
 
   const manejarCargaMasiva = async (e) => {
     e.preventDefault();
@@ -71,8 +73,25 @@ function Instructores() {
           return;
         }
         const asignaciones = contexto.asignaciones || [];
+        // Cargar catálogo de RA para mostrar nombres
+        const ras = await listarResultadosAprendizaje().catch(() => []);
+        const mapa = {};
+        (ras || []).forEach((r) => {
+          mapa[r.id_resultado] = r.nombre || r.codigo || `RA #${r.id_resultado}`;
+        });
+        setMapaRA(mapa);
+
         const detalles = await Promise.all(
-          asignaciones.map((a) => obtenerInstructor(a.id_instructor).catch(() => null))
+          asignaciones.map(async (a) => {
+            const inst = await obtenerInstructor(a.id_instructor).catch(() => null);
+            if (!inst) return null;
+            return {
+              ...inst,
+              id_resultado_asignado: a.id_resultado ?? null,
+              id_periodo_asignado: a.id_periodo ?? null,
+              id_relacion: a.id ?? a.id_ficha_instructor ?? null,
+            };
+          })
         );
         setInstructores(detalles.filter(Boolean));
       }
@@ -308,7 +327,16 @@ function Instructores() {
               </div>
               <hr />
               <p><i className="bi bi-envelope"></i> {inst.correo}</p>
-              <p><i className="bi bi-telephone"></i> {inst.telefono}</p>
+              {esAdmin ? (
+                <p><i className="bi bi-telephone"></i> {inst.telefono}</p>
+              ) : (
+                <p style={{ marginTop: 6 }}>
+                  <i className="bi bi-bookmark-check"></i>{" "}
+                  {inst.id_resultado_asignado
+                    ? (mapaRA[inst.id_resultado_asignado] || `RA #${inst.id_resultado_asignado}`)
+                    : "Sin resultado de aprendizaje asignado"}
+                </p>
+              )}
               {esAdmin && (
                 <div className="acciones">
                   <button className="btn-editar" title="Editar" onClick={() => navigate(`/instructores/editar/${inst.id_instructor}`)}>

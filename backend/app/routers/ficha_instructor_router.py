@@ -19,7 +19,6 @@ def crear(ficha_instructor: FichaInstructorCreate, session: Session = Depends(ge
 def listar(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), session: Session = Depends(get_session)):
     return FichaInstructorService.listar(session, offset, limit)
 
-# Rutas específicas ANTES de /{relacion_id} para evitar conflictos
 @router.get("/ficha/{id_ficha}", response_model=List[FichaInstructorRead])
 def por_ficha(id_ficha: int, session: Session = Depends(get_session)):
     return FichaInstructorService.listar_por_ficha(session, id_ficha)
@@ -28,8 +27,8 @@ def por_ficha(id_ficha: int, session: Session = Depends(get_session)):
 def por_ficha_y_periodo(id_ficha: int, id_periodo: int, session: Session = Depends(get_session)):
     """
     Instructores de una ficha en un periodo.
-    - Si el periodo está Inactivo → lista vacía (el aprendiz no evalúa trimestres cerrados).
-    - Solo instructores activos (no desactivados).
+    - Si el periodo está Inactivo → lista vacía.
+    - Solo asignaciones activas e instructores activos.
     """
     from app.models.instructor import Instructor
     from app.models.periodo import Periodo
@@ -42,6 +41,8 @@ def por_ficha_y_periodo(id_ficha: int, id_periodo: int, session: Session = Depen
     items = FichaInstructorService.listar_por_ficha_y_periodo(session, id_ficha, id_periodo)
     activos = []
     for item in items:
+        if not getattr(item, "activo", True):
+            continue
         inst = session.get(Instructor, item.id_instructor)
         if inst and InstructorService.es_activo(session, inst):
             activos.append(item)
@@ -68,8 +69,22 @@ def actualizar(relacion_id: int, update: FichaInstructorUpdate, session: Session
         raise HTTPException(status_code=404, detail="Asignación no encontrada")
     return r
 
+@router.post("/{relacion_id}/desactivar", dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
+def desactivar(relacion_id: int, session: Session = Depends(get_session)):
+    if not FichaInstructorService.desactivar(session, relacion_id):
+        raise HTTPException(status_code=404, detail="Asignación no encontrada")
+    return {"mensaje": "Asignación desactivada correctamente"}
+
+@router.post("/{relacion_id}/reactivar", response_model=FichaInstructorRead, dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
+def reactivar(relacion_id: int, session: Session = Depends(get_session)):
+    r = FichaInstructorService.reactivar(session, relacion_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="Asignación no encontrada")
+    return r
+
 @router.delete("/{relacion_id}", dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
 def eliminar(relacion_id: int, session: Session = Depends(get_session)):
+    """Desactiva la asignación (soft-delete). No borra el registro."""
     if not FichaInstructorService.eliminar(session, relacion_id):
         raise HTTPException(status_code=404, detail="Asignación no encontrada")
-    return {"mensaje": "Asignación eliminada correctamente"}
+    return {"mensaje": "Asignación desactivada correctamente"}

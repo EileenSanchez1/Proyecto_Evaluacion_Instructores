@@ -28,6 +28,22 @@ export const crearFichaInstructor = async (datos) => {
   return response.data;
 };
 
+export const actualizarFichaInstructor = async (idRelacion, datos) => {
+  const response = await api.put(`${API_URL}/${idRelacion}`, datos);
+  return response.data;
+};
+
+export const desactivarFichaInstructor = async (idRelacion) => {
+  const response = await api.post(`${API_URL}/${idRelacion}/desactivar`);
+  return response.data;
+};
+
+export const reactivarFichaInstructor = async (idRelacion) => {
+  const response = await api.post(`${API_URL}/${idRelacion}/reactivar`);
+  return response.data;
+};
+
+/** Soft-delete (desactiva) */
 export const eliminarFichaInstructor = async (idRelacion) => {
   const response = await api.delete(`${API_URL}/${idRelacion}`);
   return response.data;

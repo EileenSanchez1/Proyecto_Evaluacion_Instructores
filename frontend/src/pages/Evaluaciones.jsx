@@ -21,6 +21,7 @@ import {
   misEvaluacionesInstructor,
 } from "../services/Reporteservice";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
+import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import "../styles/Evaluaciones.css";
 import "../styles/Home.css";
 import "../styles/Instructores.css";
@@ -45,6 +46,7 @@ function Evaluaciones() {
   const [historialInst, setHistorialInst] = useState([]);
   const [periodos, setPeriodos] = useState([]);
   const [periodoIdInst, setPeriodoIdInst] = useState("");
+  const [mapaRA, setMapaRA] = useState({});
 
   useEffect(() => {
     let cancelado = false;
@@ -164,15 +166,27 @@ function Evaluaciones() {
             listarPreguntasActivas().catch(() => []),
           ]);
 
+          const ras = await listarResultadosAprendizaje().catch(() => []);
+          const mapa = {};
+          (ras || []).forEach((r) => {
+            mapa[r.id_resultado] = r.nombre || r.codigo || `RA #${r.id_resultado}`;
+          });
+          if (!cancelado) setMapaRA(mapa);
+
           const instructoresCompletos = await Promise.all(
             (fichaInstructores || []).map(async (fi) => {
               try {
                 const inst = await obtenerInstructor(fi.id_instructor);
+                const idRes = fi.id_resultado ?? null;
                 return {
                   ...inst,
                   id_ficha_instructor: fi.id_ficha_instructor || fi.id,
                   id_periodo: fi.id_periodo,
-                  id_resultado: fi.id_resultado ?? null,
+                  id_resultado: idRes,
+                  // Solo el RA asignado por el admin a esta ficha/periodo
+                  nombre_resultado_asignado: idRes
+                    ? mapa[idRes] || `RA #${idRes}`
+                    : null,
                 };
               } catch {
                 return null;
@@ -566,17 +580,13 @@ function Evaluaciones() {
                     </div>
 
                     <div className="card-competencias">
-                      {(inst.resultados_aprendizaje || []).slice(0, 3).map((c) => (
-                        <span
-                          className="badge-competencia"
-                          key={c.id_resultado}
-                        >
-                          {c.nombre}
+                      {inst.nombre_resultado_asignado ? (
+                        <span className="badge-competencia">
+                          {inst.nombre_resultado_asignado}
                         </span>
-                      ))}
-                      {(inst.resultados_aprendizaje || []).length > 3 && (
-                        <span className="badge-competencia mas">
-                          +{(inst.resultados_aprendizaje || []).length - 3}
+                      ) : (
+                        <span className="badge-competencia" style={{ opacity: 0.7 }}>
+                          Sin RA asignado
                         </span>
                       )}
                     </div>
