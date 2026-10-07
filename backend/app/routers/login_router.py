@@ -10,11 +10,13 @@ from app.schemas.login import (
     VerificarCodigoRequest, RestablecerPasswordRequest,
     LoginInstructorRequest, VerificarCodigoInstructorRequest,
     InstructorCorreoRequest, InstructorCrearPasswordRequest,
+    CambiarPasswordRequest,
 )
 from app.services.login_service import LoginService
 from app.models.aprendiz import Aprendiz
 from app.models.usuario import Usuario
 from app.models.rol import Rol
+from app.config.auth_dependencies import get_current_user
 
 router = APIRouter(prefix="/login", tags=["Login"])
 
@@ -30,11 +32,8 @@ def _usuario_a_dict(usuario):
 
 @router.post("/", response_model=LoginResponse)
 def login(datos: LoginRequest, session: Session = Depends(get_session)):
-    # Validar contraseña segura antes de intentar login
-    es_segura, msg = LoginService.validar_contrasena_segura(datos.contrasena)
-    if not es_segura:
-        raise HTTPException(status_code=400, detail=f"Contraseña no cumple requisitos: {msg}")
-
+    # NO validar fortaleza aquí: las contraseñas temporales del cartero
+    # (carga masiva) deben poder usarse para el primer ingreso.
     usuario, mensaje = LoginService.validar_login(session, datos.correo, datos.contrasena)
     if usuario is None:
         raise HTTPException(status_code=401, detail=mensaje)
@@ -100,6 +99,29 @@ def restablecer_password(datos: RestablecerPasswordRequest, session: Session = D
     limpiar_codigo(correo, tipo="recuperacion")
     return {"mensaje": mensaje}
 
+
+@router.post("/cambiar-password")
+def cambiar_password(
+    datos: CambiarPasswordRequest,
+    session: Session = Depends(get_session),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Cambio de contraseña estando autenticado (aprendiz/instructor/admin)."""
+    if not LoginService.verificar_password(datos.contrasena_actual, usuario.contrasena):
+        raise HTTPException(status_code=400, detail="La contraseña actual no es correcta.")
+    es_segura, msg = LoginService.validar_contrasena_segura(datos.nueva_contrasena)
+    if not es_segura:
+        raise HTTPException(status_code=400, detail=msg)
+    LoginService.restablecer_password(session, usuario, datos.nueva_contrasena)
+    # Sincronizar hash en tabla aprendices si aplica
+    aprendiz = session.exec(
+        select(Aprendiz).where(Aprendiz.id_usuario == usuario.id_usuario)
+    ).first()
+    if aprendiz:
+        aprendiz.contrasena = usuario.contrasena
+        session.add(aprendiz)
+        session.commit()
+    return {"mensaje": "Contraseña actualizada correctamente."}
 
 
 # =========================

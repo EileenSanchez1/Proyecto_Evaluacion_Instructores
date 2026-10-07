@@ -5,7 +5,15 @@ import {
   actualizarFicha,
   eliminarFicha,
 } from "../services/FichaServices";
-import { listarAprendices } from "../services/Aprendizservice";
+import {
+  listarAprendices,
+  listarAprendicesPorFicha,
+  cargaMasivaAprendices,
+  actualizarAprendiz,
+  desactivarAprendiz,
+  reactivarAprendiz,
+  reenviarCorreosFicha,
+} from "../services/Aprendizservice";
 import {
   listarInstructoresPorFicha,
   crearFichaInstructor,
@@ -42,6 +50,17 @@ function Fichas() {
   const [idInstructorSeleccionado, setIdInstructorSeleccionado] = useState("");
   const [idPeriodoSeleccionado, setIdPeriodoSeleccionado] = useState("");
   const [guardandoAsignacion, setGuardandoAsignacion] = useState(false);
+  const [archivoCarga, setArchivoCarga] = useState(null);
+  const [periodoCarga, setPeriodoCarga] = useState("");
+  const [enviandoCarga, setEnviandoCarga] = useState(false);
+  const [resultadoCarga, setResultadoCarga] = useState(null);
+  const [aprendicesFicha, setAprendicesFicha] = useState([]);
+  const [editAprendiz, setEditAprendiz] = useState(null);
+  const [formAprendiz, setFormAprendiz] = useState({ nombre: "", apellido: "", correo: "" });
+  const [guardandoAprendiz, setGuardandoAprendiz] = useState(false);
+  const [enviandoCorreosFicha, setEnviandoCorreosFicha] = useState(false);
+
+
 
   const cargarDatos = async () => {
     try {
@@ -152,11 +171,15 @@ function Fichas() {
   const abrirDetalle = async (ficha) => {
     setFichaSeleccionada(ficha);
     setInstructoresFicha([]);
+    setAprendicesFicha([]);
+    setEditAprendiz(null);
     setCargandoDetalle(true);
     setMostrarAsignar(false);
     setIdInstructorSeleccionado("");
     setIdPeriodoSeleccionado("");
     try {
+      const aprs = await listarAprendicesPorFicha(ficha.id_ficha).catch(() => []);
+      setAprendicesFicha(Array.isArray(aprs) ? aprs : []);
       const relaciones = await listarInstructoresPorFicha(ficha.id_ficha);
       const instructores = await Promise.all(
         relaciones.map(async (rel) => {
@@ -182,8 +205,82 @@ function Fichas() {
   const cerrarDetalle = () => {
     setFichaSeleccionada(null);
     setInstructoresFicha([]);
+    setAprendicesFicha([]);
+    setEditAprendiz(null);
     setMostrarAsignar(false);
   };
+
+  const abrirEditarAprendiz = (a) => {
+    setEditAprendiz(a);
+    setFormAprendiz({
+      nombre: a.nombre || "",
+      apellido: a.apellido || "",
+      correo: a.correo || "",
+    });
+  };
+
+  const guardarAprendiz = async (e) => {
+    e.preventDefault();
+    if (!editAprendiz) return;
+    try {
+      setGuardandoAprendiz(true);
+      setError("");
+      await actualizarAprendiz(editAprendiz.id_aprendiz, {
+        nombre: formAprendiz.nombre.trim(),
+        apellido: formAprendiz.apellido.trim(),
+        correo: formAprendiz.correo.trim().toLowerCase(),
+      });
+      const aprs = await listarAprendicesPorFicha(fichaSeleccionada.id_ficha);
+      setAprendicesFicha(aprs);
+      setEditAprendiz(null);
+      await cargarDatos();
+    } catch (err) {
+      const detalle = err.response?.data?.detail;
+      setError(typeof detalle === "string" ? detalle : "No se pudo actualizar el aprendiz.");
+    } finally {
+      setGuardandoAprendiz(false);
+    }
+  };
+
+
+  const reenviarCorreos = async () => {
+    if (!fichaSeleccionada) return;
+    if (
+      !window.confirm(
+        "Se generará una nueva contraseña temporal y se enviará correo a TODOS los aprendices ACTIVOS de esta ficha. ¿Continuar?"
+      )
+    )
+      return;
+    try {
+      setEnviandoCorreosFicha(true);
+      const res = await reenviarCorreosFicha(fichaSeleccionada.id_ficha);
+      alert(res?.mensaje || "Proceso de envío terminado.");
+    } catch (err) {
+      const detalle = err.response?.data?.detail;
+      alert(typeof detalle === "string" ? detalle : "No se pudieron enviar los correos.");
+    } finally {
+      setEnviandoCorreosFicha(false);
+    }
+  };
+
+  const toggleActivoAprendiz = async (a) => {
+    const accion = a.activo ? "desactivar" : "reactivar";
+    const msg = a.activo
+      ? `¿Desactivar a ${a.nombre} ${a.apellido}? No podrá iniciar sesión (desertor/baja).`
+      : `¿Reactivar a ${a.nombre} ${a.apellido}?`;
+    if (!window.confirm(msg)) return;
+    try {
+      if (a.activo) await desactivarAprendiz(a.id_aprendiz);
+      else await reactivarAprendiz(a.id_aprendiz);
+      const aprs = await listarAprendicesPorFicha(fichaSeleccionada.id_ficha);
+      setAprendicesFicha(aprs);
+      await cargarDatos();
+    } catch (err) {
+      const detalle = err.response?.data?.detail;
+      alert(typeof detalle === "string" ? detalle : `No se pudo ${accion} el aprendiz.`);
+    }
+  };
+
 
   const manejarAsignarInstructor = async (e) => {
     e.preventDefault();
@@ -212,6 +309,33 @@ function Fichas() {
     }
   };
 
+
+  const manejarCargaMasiva = async (e) => {
+    e.preventDefault();
+    if (!archivoCarga) {
+      setError("Selecciona un archivo CSV.");
+      return;
+    }
+    try {
+      setEnviandoCarga(true);
+      setError("");
+      setResultadoCarga(null);
+      const fd = new FormData();
+      fd.append("archivo", archivoCarga);
+      if (periodoCarga) fd.append("id_periodo", periodoCarga);
+      fd.append("enviar_correo", "true");
+      const res = await cargaMasivaAprendices(fd);
+      setResultadoCarga(res);
+      setArchivoCarga(null);
+      await cargarDatos();
+    } catch (err) {
+      const detalle = err.response?.data?.detail;
+      setError(typeof detalle === "string" ? detalle : "Error en la carga masiva.");
+    } finally {
+      setEnviandoCarga(false);
+    }
+  };
+
   const manejarDesasignarInstructor = async (idRelacion) => {
     if (!window.confirm("¿Eliminar esta asignación de instructor?")) return;
     try {
@@ -235,6 +359,51 @@ function Fichas() {
         <button className="btn btn-success" onClick={abrirCrear}>
           <i className="bi bi-plus-circle"></i> Nueva Ficha
         </button>
+      </div>
+
+
+      <div className="form-inline-card" style={{ marginBottom: "1.5rem" }}>
+        <h4><i className="bi bi-upload"></i> Carga masiva de aprendices (coordinación)</h4>
+        <p className="subtitulo" style={{ marginBottom: 12 }}>
+          Sube un CSV con columnas: <code>nombre,apellido,correo,numero_ficha</code>.
+          Cada aprendiz queda asignado a su ficha y recibe correo con usuario y contraseña.
+        </p>
+        <form onSubmit={manejarCargaMasiva} className="form-inline-row" style={{ flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <label>Archivo CSV</label>
+            <input
+              type="file"
+              accept=".csv,.txt,.tsv"
+              onChange={(e) => setArchivoCarga(e.target.files?.[0] || null)}
+            />
+          </div>
+          <div>
+            <label>Periodo (opcional)</label>
+            <select value={periodoCarga} onChange={(e) => setPeriodoCarga(e.target.value)}>
+              <option value="">Periodo activo</option>
+              {periodos.filter((p) => String(p.estado).toLowerCase() === "activo").map((p) => (
+                <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ alignSelf: "flex-end" }}>
+            <button type="submit" className="btn btn-success" disabled={enviandoCarga}>
+              {enviandoCarga ? "Cargando..." : "Subir y enviar correos"}
+            </button>
+          </div>
+        </form>
+        {resultadoCarga && (
+          <div style={{ marginTop: 12, padding: 12, background: "#f0fdf4", borderRadius: 8 }}>
+            <strong>{resultadoCarga.mensaje}</strong>
+            {resultadoCarga.detalle_errores?.length > 0 && (
+              <ul style={{ marginTop: 8 }}>
+                {resultadoCarga.detalle_errores.slice(0, 10).map((er, idx) => (
+                  <li key={idx}>Fila {er.fila} ({er.correo}): {er.error}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="barra-superior">
@@ -369,7 +538,123 @@ function Fichas() {
               <hr />
               <p><i className="bi bi-mortarboard"></i><span><strong>Programa:</strong> {fichaSeleccionada.programa}</span></p>
               <p><i className="bi bi-card-text"></i><span><strong>Descripcion:</strong> {fichaSeleccionada.descripcion || "Sin descripcion registrada."}</span></p>
-              <p><i className="bi bi-people"></i><span><strong>Aprendices:</strong> {contarAprendices(fichaSeleccionada.id_ficha)}</span></p>
+              <p><i className="bi bi-people"></i><span><strong>Aprendices:</strong> {aprendicesFicha.length}</span></p>
+
+              <div className="detalle-aprendices" style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <p style={{ marginBottom: 0 }}>
+                    <i className="bi bi-people-fill"></i>
+                    <span><strong>Lista de aprendices</strong> (editar / desactivar)</span>
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-success btn-sm btn-reenviar-correos"
+                    disabled={enviandoCorreosFicha || aprendicesFicha.length === 0}
+                    onClick={reenviarCorreos}
+                    title="Envía usuario y contraseña temporal a todos los activos de esta ficha"
+                  >
+                    <i className="bi bi-envelope-arrow-up"></i>{" "}
+                    {enviandoCorreosFicha ? "Enviando..." : "Enviar correos a la ficha"}
+                  </button>
+                </div>
+                {cargandoDetalle && <p className="text-muted">Cargando aprendices...</p>}
+                {!cargandoDetalle && aprendicesFicha.length === 0 && (
+                  <p className="text-muted">Esta ficha no tiene aprendices. Usa la carga masiva CSV.</p>
+                )}
+                {!cargandoDetalle && aprendicesFicha.length > 0 && (
+                  <div style={{ maxHeight: 320, overflowY: "auto", overflowX: "hidden", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                    <table className="tabla-simple" style={{ width: "100%", margin: 0 }}>
+                      <thead>
+                        <tr>
+                          <th>Nombre</th>
+                          <th>Correo</th>
+                          <th>Estado</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aprendicesFicha.map((a) => (
+                          <tr key={a.id_aprendiz} style={{ opacity: a.activo ? 1 : 0.65 }}>
+                            <td>{a.nombre} {a.apellido}</td>
+                            <td style={{ fontSize: "0.85rem" }}>{a.correo}</td>
+                            <td>
+                              <span className={`estado-badge ${a.activo ? "activo" : "inactivo"}`}>
+                                {a.activo ? "Activo" : "Inactivo"}
+                              </span>
+                            </td>
+                            <td className="acciones-tabla" style={{ whiteSpace: "nowrap" }}>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary"
+                                title="Editar datos"
+                                onClick={() => abrirEditarAprendiz(a)}
+                              >
+                                <i className="bi bi-pencil"></i>
+                              </button>{" "}
+                              <button
+                                type="button"
+                                className={`btn btn-sm ${a.activo ? "btn-outline-danger" : "btn-outline-success"}`}
+                                title={a.activo ? "Desactivar (desertor)" : "Reactivar"}
+                                onClick={() => toggleActivoAprendiz(a)}
+                              >
+                                <i className={`bi ${a.activo ? "bi-person-x" : "bi-person-check"}`}></i>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {editAprendiz && (
+                  <form
+                    onSubmit={guardarAprendiz}
+                    style={{ marginTop: 12, padding: 12, background: "#f0fdf4", borderRadius: 8 }}
+                  >
+                    <h5 style={{ marginTop: 0 }}>Editar aprendiz</h5>
+                    {error && <div className="alert alert-danger">{error}</div>}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <label className="form-label">Nombre</label>
+                        <input
+                          className="form-control"
+                          value={formAprendiz.nombre}
+                          onChange={(e) => setFormAprendiz({ ...formAprendiz, nombre: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label">Apellido</label>
+                        <input
+                          className="form-control"
+                          value={formAprendiz.apellido}
+                          onChange={(e) => setFormAprendiz({ ...formAprendiz, apellido: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 200 }}>
+                        <label className="form-label">Correo</label>
+                        <input
+                          type="email"
+                          className="form-control"
+                          value={formAprendiz.correo}
+                          onChange={(e) => setFormAprendiz({ ...formAprendiz, correo: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                      <button type="submit" className="btn btn-success" disabled={guardandoAprendiz}>
+                        {guardandoAprendiz ? "Guardando..." : "Guardar cambios"}
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setEditAprendiz(null)}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
 
               <div className="detalle-instructores">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -435,7 +720,7 @@ function Fichas() {
                         <span>
                           <i className="bi bi-person-fill"></i>
                           {inst.nombre} {inst.apellido} —{" "}
-                          {(inst.competencias || []).map((c) => c.nombre).join(", ") || "sin competencias"}
+                          {(inst.resultados_aprendizaje || []).map((c) => c.nombre).join(", ") || "sin RA"}
                         </span>
                         <button className="btn btn-sm btn-outline-danger"
                           onClick={() => {

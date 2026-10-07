@@ -245,6 +245,50 @@
   flex-direction: column;
 }
 
+.modal-caja-grande {
+  max-width: 920px;
+  width: min(920px, 96vw);
+}
+
+.detalle-aprendices {
+  text-align: left;
+}
+
+.detalle-aprendices .tabla-simple {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.detalle-aprendices .tabla-simple th,
+.detalle-aprendices .tabla-simple td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.88rem;
+}
+
+.detalle-aprendices .tabla-simple th:nth-child(1),
+.detalle-aprendices .tabla-simple td:nth-child(1) { width: 22%; }
+.detalle-aprendices .tabla-simple th:nth-child(2),
+.detalle-aprendices .tabla-simple td:nth-child(2) { width: 38%; }
+.detalle-aprendices .tabla-simple th:nth-child(3),
+.detalle-aprendices .tabla-simple td:nth-child(3) { width: 14%; }
+.detalle-aprendices .tabla-simple th:nth-child(4),
+.detalle-aprendices .tabla-simple td:nth-child(4) { width: 26%; }
+
+.detalle-aprendices .acciones-tabla {
+  white-space: nowrap;
+}
+
+.btn-reenviar-correos {
+  margin-top: 10px;
+}
+
+
 .modal-header {
   background: var(--sena-verde);
   color: white;

@@ -52,3 +52,12 @@ export const restablecerContrasena = async ({ correo, codigo, nueva_contrasena }
   });
   return respuesta.data;
 };
+
+/** Cambio de contraseña estando autenticado */
+export const cambiarPassword = async ({ contrasena_actual, nueva_contrasena }) => {
+  const respuesta = await api.post("/login/cambiar-password", {
+    contrasena_actual,
+    nueva_contrasena,
+  });
+  return respuesta.data;
+};

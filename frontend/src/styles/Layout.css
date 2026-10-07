@@ -258,3 +258,23 @@ body {
   cursor: pointer;
   margin-right: 10px;
 }
+
+/* Badge de novedades nuevas (admin) */
+.nav-item {
+  position: relative;
+}
+.nav-badge-novedades {
+  margin-left: auto;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}

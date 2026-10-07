@@ -78,3 +78,24 @@ class InstructorCrearPasswordRequest(BaseModel):
         if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", v):
             raise ValueError("Debe contener al menos un carácter especial.")
         return v
+
+
+class CambiarPasswordRequest(BaseModel):
+    """Usuario autenticado cambia su contraseña (requiere la actual)."""
+    contrasena_actual: str
+    nueva_contrasena: str
+
+    @field_validator("nueva_contrasena")
+    @classmethod
+    def validar_contrasena_segura(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres.")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Debe contener al menos una mayúscula.")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Debe contener al menos una minúscula.")
+        if not re.search(r"\d", v):
+            raise ValueError("Debe contener al menos un número.")
+        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", v):
+            raise ValueError("Debe contener al menos un carácter especial.")
+        return v

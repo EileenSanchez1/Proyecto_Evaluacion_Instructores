@@ -106,6 +106,57 @@ def enviar_codigo_recuperacion(destinatario: str, codigo: str) -> bool:
     return enviar_correo(destinatario, asunto, texto, html)
 
 
+def enviar_credenciales_aprendiz(
+    destinatario: str,
+    nombre: str,
+    usuario: str,
+    contrasena: str,
+    numero_ficha: str | None = None,
+    programa: str | None = None,
+) -> bool:
+    """
+    Envía usuario y contraseña al aprendiz (estilo SGVA / cartero).
+    El aprendiz ya queda asignado a su ficha y solo debe iniciar sesión.
+    """
+    ficha_txt = f"\nFicha: {numero_ficha}" if numero_ficha else ""
+    prog_txt = f"\nPrograma: {programa}" if programa else ""
+    asunto = "Credenciales de acceso — Evaluación de Instructores SENA"
+    texto = (
+        f"Hola {nombre},\n\n"
+        f"Has sido registrado en el Sistema de Evaluación de Instructores SENA."
+        f"{ficha_txt}{prog_txt}\n\n"
+        f"Tus datos de acceso son:\n"
+        f"  Usuario (correo): {usuario}\n"
+        f"  Contraseña temporal: {contrasena}\n\n"
+        f"Te recomendamos cambiar la contraseña después del primer ingreso.\n\n"
+        f"— SENA · Evaluación de Instructores\n"
+    )
+    html = f"""
+    <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+      <h2 style="color:#39a900;margin:0 0 12px;">Bienvenido/a al sistema</h2>
+      <p>Hola <strong>{nombre}</strong>,</p>
+      <p>Has sido registrado en el
+      <strong>Sistema de Evaluación de Instructores SENA</strong>
+      y ya estás asignado a tu ficha.</p>
+      {"<p><strong>Ficha:</strong> " + numero_ficha + "</p>" if numero_ficha else ""}
+      {"<p><strong>Programa:</strong> " + programa + "</p>" if programa else ""}
+      <p style="font-size:15px;margin-top:16px;">Tus datos de acceso:</p>
+      <div style="background:#f3f4f6;padding:14px 20px;border-radius:10px;">
+        <p style="margin:6px 0;"><strong>Usuario:</strong> {usuario}</p>
+        <p style="margin:6px 0;"><strong>Contraseña temporal:</strong>
+          <span style="font-family:monospace;letter-spacing:1px;">{contrasena}</span>
+        </p>
+      </div>
+      <p style="color:#6b7280;font-size:13px;margin-top:14px;">
+        Te recomendamos cambiar la contraseña después del primer ingreso.
+      </p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+      <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+    </div>
+    """
+    return enviar_correo(destinatario, asunto, texto, html)
+
+
 def enviar_codigo_instructor(destinatario: str, codigo: str) -> bool:
     """Mismo mecanismo que recuperación: código al correo del instructor."""
     asunto = "Código de verificación de instructor — SENA"
@@ -127,6 +178,43 @@ def enviar_codigo_instructor(destinatario: str, codigo: str) -> bool:
         {codigo}
       </p>
       <p style="color:#6b7280;font-size:13px;">Válido por 15 minutos. Revisa también la bandeja de spam.</p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+      <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+    </div>
+    """
+    return enviar_correo(destinatario, asunto, texto, html)
+
+
+def enviar_novedad_resuelta(
+    destinatario: str,
+    nombre: str,
+    mensaje_original: str | None = None,
+) -> bool:
+    """Avisa al aprendiz que su novedad/mensaje ya fue atendida."""
+    asunto = "Tu novedad fue atendida — SENA Evaluación de Instructores"
+    preview = (mensaje_original or "").strip()
+    if len(preview) > 180:
+        preview = preview[:180] + "…"
+    texto = (
+        f"Hola {nombre},\n\n"
+        f"Te informamos que la novedad o mensaje que enviaste al administrador "
+        f"ya fue revisada y marcada como solucionada.\n\n"
+    )
+    if preview:
+        texto += f"Resumen de tu mensaje:\n{preview}\n\n"
+    texto += (
+        "Si aún necesitas ayuda, puedes enviar una nueva novedad desde Contacto "
+        "en la plataforma.\n\n"
+        "— SENA · Evaluación de Instructores\n"
+    )
+    html = f"""
+    <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+      <h2 style="color:#39a900;margin:0 0 12px;">Novedad atendida</h2>
+      <p>Hola <strong>{nombre}</strong>,</p>
+      <p>Tu novedad o mensaje enviado al administrador
+      <strong>ya fue revisada y marcada como solucionada</strong>.</p>
+      {"<p style='background:#f3f4f6;padding:12px;border-radius:8px;font-size:13px;color:#374151;'><strong>Tu mensaje:</strong><br/>" + preview.replace(chr(10), '<br/>') + "</p>" if preview else ""}
+      <p style="color:#6b7280;font-size:13px;">Si aún necesitas ayuda, envía una nueva novedad desde <strong>Contacto</strong> en la plataforma.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
       <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
     </div>

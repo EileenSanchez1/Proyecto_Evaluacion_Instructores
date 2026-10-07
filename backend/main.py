@@ -6,7 +6,7 @@ import os
 from app.config.database import create_db_and_tables, engine
 
 from app.routers.aprendiz_router import router as aprendiz_router
-from app.routers.competencia_router import router as competencia_router
+from app.routers.resultado_aprendizaje_router import router as resultado_aprendizaje_router
 from app.routers.evaluacion_router import router as evaluacion_router
 from app.routers.ficha_router import router as ficha_router
 from app.routers.ficha_instructor_router import router as ficha_instructor_router
@@ -28,6 +28,13 @@ def ensure_extra_columns():
         with engine.begin() as conn:
             conn.execute(text(
                 "ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS observacion_general VARCHAR(1000)"
+            ))
+            # Horario: enlace a Resultado de Aprendizaje + ambiente
+            conn.execute(text(
+                "ALTER TABLE horarios ADD COLUMN IF NOT EXISTS id_resultado INTEGER"
+            ))
+            conn.execute(text(
+                "ALTER TABLE horarios ADD COLUMN IF NOT EXISTS ambiente VARCHAR(80)"
             ))
     except Exception as e:
         print(f"[schema] Aviso ensure_extra_columns: {e}")
@@ -96,7 +103,7 @@ def _seed_roles_y_admin():
 # =========================
 app.include_router(login_router)
 app.include_router(aprendiz_router)
-app.include_router(competencia_router)
+app.include_router(resultado_aprendizaje_router)
 app.include_router(evaluacion_router)
 app.include_router(ficha_router)
 app.include_router(ficha_instructor_router)

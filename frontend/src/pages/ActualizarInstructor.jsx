@@ -4,7 +4,7 @@ import {
   obtenerInstructor,
   actualizarInstructor,
 } from "../services/instructorService";
-import { listarCompetencias } from "../services/competenciaService";
+import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import "../styles/Instructores.css";
 import "../styles/agregar-a-Instructores.css";
 
@@ -23,8 +23,8 @@ function ActualizarInstructor() {
   const [fotoPreview, setFotoPreview] = useState(null);
   const [fotoActual, setFotoActual] = useState(null);
 
-  const [competenciasDisponibles, setCompetenciasDisponibles] = useState([]);
-  const [competenciasSeleccionadas, setCompetenciasSeleccionadas] = useState([]);
+  const [resultadosDisponibles, setResultadosDisponibles] = useState([]);
+  const [resultadosSeleccionados, setResultadosSeleccionados] = useState([]);
 
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -42,9 +42,9 @@ function ActualizarInstructor() {
         if (instructor.foto) {
           setFotoActual(instructor.foto);
         }
-        if (instructor.competencias) {
-          setCompetenciasSeleccionadas(
-            instructor.competencias.map((c) => c.id_competencia)
+        if (instructor.resultados_aprendizaje) {
+          setResultadosSeleccionados(
+            instructor.resultados_aprendizaje.map((c) => c.id_resultado)
           );
         }
       } catch (err) {
@@ -55,9 +55,9 @@ function ActualizarInstructor() {
 
     cargarDatos();
 
-    listarCompetencias()
-      .then((datos) => setCompetenciasDisponibles(datos.filter((c) => c.estado)))
-      .catch((err) => console.error("No se pudieron cargar las competencias", err));
+    listarResultadosAprendizaje()
+      .then((datos) => setResultadosDisponibles(datos.filter((c) => c.estado)))
+      .catch((err) => console.error("No se pudieron cargar los resultados de aprendizaje", err));
   }, [id]);
 
   const manejarCambio = (e) => {
@@ -84,8 +84,8 @@ function ActualizarInstructor() {
     }
   };
 
-  const alternarCompetencia = (idCompetencia) => {
-    setCompetenciasSeleccionadas((prev) =>
+  const alternarResultado = (idCompetencia) => {
+    setResultadosSeleccionados((prev) =>
       prev.includes(idCompetencia)
         ? prev.filter((id) => id !== idCompetencia)
         : [...prev, idCompetencia]
@@ -106,8 +106,8 @@ function ActualizarInstructor() {
       return;
     }
 
-    if (competenciasSeleccionadas.length === 0) {
-      setError("Selecciona al menos una competencia.");
+    if (resultadosSeleccionados.length === 0) {
+      setError("Selecciona al menos un resultado de aprendizaje.");
       return;
     }
 
@@ -119,7 +119,7 @@ function ActualizarInstructor() {
       formData.append("apellido", formulario.apellido.trim());
       formData.append("correo", formulario.correo.trim());
       formData.append("telefono", String(formulario.telefono).trim());
-      formData.append("competencias", JSON.stringify(competenciasSeleccionadas));
+      formData.append("resultados_aprendizaje", JSON.stringify(resultadosSeleccionados));
 
       if (fotoArchivo) {
         formData.append("foto", fotoArchivo);
@@ -243,20 +243,20 @@ function ActualizarInstructor() {
           />
 
           <label className="form-label">
-            <i className="bi bi-book"></i> Competencias * (selecciona una o varias)
+            <i className="bi bi-book"></i> Resultados de Aprendizaje * (selecciona una o varias)
           </label>
           <div className="checkbox-grupo">
-            {competenciasDisponibles.length === 0 && (
+            {resultadosDisponibles.length === 0 && (
               <p className="text-muted">
-                No hay competencias registradas todavia.
+                No hay resultados de aprendizaje registrados todavía.
               </p>
             )}
-            {competenciasDisponibles.map((c) => (
-              <label key={c.id_competencia} className="checkbox-item">
+            {resultadosDisponibles.map((c) => (
+              <label key={c.id_resultado} className="checkbox-item">
                 <input
                   type="checkbox"
-                  checked={competenciasSeleccionadas.includes(c.id_competencia)}
-                  onChange={() => alternarCompetencia(c.id_competencia)}
+                  checked={resultadosSeleccionados.includes(c.id_resultado)}
+                  onChange={() => alternarResultado(c.id_resultado)}
                 />
                 {c.nombre}
               </label>
