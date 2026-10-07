@@ -289,6 +289,18 @@ function Fichas() {
       setError("Debes seleccionar un instructor y un periodo.");
       return;
     }
+    const periodoSel = periodos.find(
+      (p) => String(p.id_periodo) === String(idPeriodoSeleccionado)
+    );
+    if (
+      periodoSel &&
+      String(periodoSel.estado || "").toLowerCase() !== "activo"
+    ) {
+      setError(
+        "No se puede asignar: el periodo está desactivado. Elige un periodo activo."
+      );
+      return;
+    }
     try {
       setGuardandoAsignacion(true);
       await crearFichaInstructor({
@@ -691,11 +703,18 @@ function Fichas() {
                           value={idPeriodoSeleccionado}
                           onChange={(e) => setIdPeriodoSeleccionado(e.target.value)} required>
                           <option value="">Selecciona periodo</option>
-                          {periodos.map((p) => (
-                            <option key={p.id_periodo} value={p.id_periodo}>
-                              {p.nombre} {p.estado === "Activo" ? "(Activo)" : ""}
-                            </option>
-                          ))}
+                          {periodos.map((p) => {
+                            const activo = String(p.estado || "").toLowerCase() === "activo";
+                            return (
+                              <option
+                                key={p.id_periodo}
+                                value={p.id_periodo}
+                                disabled={!activo}
+                              >
+                                {p.nombre} {activo ? "(Activo)" : "(No activo)"}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                       <button type="submit" className="btn btn-success" disabled={guardandoAsignacion}>
