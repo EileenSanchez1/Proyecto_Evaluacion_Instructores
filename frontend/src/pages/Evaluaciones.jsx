@@ -20,6 +20,7 @@ import {
   reportePreguntasInstructor,
   misEvaluacionesInstructor,
 } from "../services/Reporteservice";
+import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import "../styles/Evaluaciones.css";
 import "../styles/Home.css";
 import "../styles/Instructores.css";
@@ -138,9 +139,11 @@ function Evaluaciones() {
             setHistorialInst(hist || []);
           }
         } else {
-          // Aprendiz
+          // Aprendiz: usar el mismo periodo operativo que Home
+          // (periodo activo con asignaciones), no el id_periodo de registro
+          // que puede estar cerrado y devolver lista vacía.
           const idFicha = usuario?.id_ficha;
-          const idPeriodo = usuario?.id_periodo;
+          const idPeriodoReg = usuario?.id_periodo;
 
           if (!idFicha) {
             setError(
@@ -150,10 +153,15 @@ function Evaluaciones() {
             return;
           }
 
-          const [fichaInstructores, evals, p] = await Promise.all([
-            listarInstructoresPorFichaYPeriodo(idFicha, idPeriodo || 1),
-            listarEvaluaciones(),
-            listarPreguntasActivas(),
+          const contexto = await resolverPeriodoOperativoAprendiz(
+            idFicha,
+            idPeriodoReg
+          );
+          const fichaInstructores = contexto.asignaciones || [];
+
+          const [evals, p] = await Promise.all([
+            listarEvaluaciones().catch(() => []),
+            listarPreguntasActivas().catch(() => []),
           ]);
 
           const instructoresCompletos = await Promise.all(
@@ -163,6 +171,8 @@ function Evaluaciones() {
                 return {
                   ...inst,
                   id_ficha_instructor: fi.id_ficha_instructor || fi.id,
+                  id_periodo: fi.id_periodo,
+                  id_resultado: fi.id_resultado ?? null,
                 };
               } catch {
                 return null;
@@ -204,7 +214,13 @@ function Evaluaciones() {
 
   const manejarEvaluar = async (idInstructor) => {
     try {
-      const idPeriodo = usuario?.id_periodo || 1;
+      // Usar el periodo de la asignación del instructor (el del trimestre actual),
+      // no el id_periodo de registro del aprendiz (puede estar desfasado).
+      const inst = instructores.find(
+        (i) => Number(i.id_instructor) === Number(idInstructor)
+      );
+      const idPeriodo =
+        inst?.id_periodo || usuario?.id_periodo || 1;
       const ev = await iniciarEvaluacion(
         usuario.id_aprendiz,
         idInstructor,

@@ -22,6 +22,7 @@ import {
 import { listarInstructores } from "../services/instructorService";
 import { listarPeriodos } from "../services/PeriodoService";
 import { obtenerInstructor } from "../services/instructorService";
+import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import "../styles/Fichas.css";
 
 function Fichas() {
@@ -29,6 +30,7 @@ function Fichas() {
   const [aprendices, setAprendices] = useState([]);
   const [instructores, setInstructores] = useState([]);
   const [periodos, setPeriodos] = useState([]);
+  const [resultadosRA, setResultadosRA] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
@@ -47,8 +49,9 @@ function Fichas() {
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   const [mostrarAsignar, setMostrarAsignar] = useState(false);
-  const [idInstructorSeleccionado, setIdInstructorSeleccionado] = useState("");
+  const [idsInstructoresSeleccionados, setIdsInstructoresSeleccionados] = useState([]);
   const [idPeriodoSeleccionado, setIdPeriodoSeleccionado] = useState("");
+  const [idResultadoSeleccionado, setIdResultadoSeleccionado] = useState("");
   const [guardandoAsignacion, setGuardandoAsignacion] = useState(false);
   const [archivoCarga, setArchivoCarga] = useState(null);
   const [periodoCarga, setPeriodoCarga] = useState("");
@@ -66,17 +69,21 @@ function Fichas() {
     try {
       setCargando(true);
       setError("");
-      const [fichasData, aprendicesData, instructoresData, periodosData] =
+      const [fichasData, aprendicesData, instructoresData, periodosData, raData] =
         await Promise.all([
           listarFichas(),
           listarAprendices(),
           listarInstructores(),
           listarPeriodos(),
+          listarResultadosAprendizaje().catch(() => []),
         ]);
       setFichas(fichasData);
       setAprendices(aprendicesData);
       setInstructores(instructoresData);
       setPeriodos(periodosData);
+      setResultadosRA(
+        (raData || []).filter((r) => r.estado !== false && r.estado !== 0)
+      );
     } catch (err) {
       console.error(err);
       setError("No se pudieron cargar las fichas.");
@@ -175,8 +182,9 @@ function Fichas() {
     setEditAprendiz(null);
     setCargandoDetalle(true);
     setMostrarAsignar(false);
-    setIdInstructorSeleccionado("");
+    setIdsInstructoresSeleccionados([]);
     setIdPeriodoSeleccionado("");
+    setIdResultadoSeleccionado("");
     try {
       const aprs = await listarAprendicesPorFicha(ficha.id_ficha).catch(() => []);
       setAprendicesFicha(Array.isArray(aprs) ? aprs : []);
@@ -186,11 +194,18 @@ function Fichas() {
           const inst = await obtenerInstructor(rel.id_instructor).catch(() => null);
           if (!inst) return null;
           const periodo = periodos.find((p) => p.id_periodo === rel.id_periodo);
+          const ra = resultadosRA.find(
+            (r) => Number(r.id_resultado) === Number(rel.id_resultado)
+          );
           return {
             ...inst,
             id_relacion: rel.id,
             id_periodo: rel.id_periodo,
+            id_resultado: rel.id_resultado ?? null,
             nombre_periodo: periodo?.nombre || `Periodo #${rel.id_periodo}`,
+            nombre_resultado:
+              ra?.nombre ||
+              (rel.id_resultado ? `RA #${rel.id_resultado}` : null),
           };
         })
       );
@@ -208,6 +223,8 @@ function Fichas() {
     setAprendicesFicha([]);
     setEditAprendiz(null);
     setMostrarAsignar(false);
+    setIdsInstructoresSeleccionados([]);
+    setIdResultadoSeleccionado("");
   };
 
   const abrirEditarAprendiz = (a) => {
@@ -282,11 +299,17 @@ function Fichas() {
   };
 
 
+  const toggleInstructorCheck = (id) => {
+    setIdsInstructoresSeleccionados((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
   const manejarAsignarInstructor = async (e) => {
     e.preventDefault();
     setError("");
-    if (!idInstructorSeleccionado || !idPeriodoSeleccionado) {
-      setError("Debes seleccionar un instructor y un periodo.");
+    if (!idsInstructoresSeleccionados.length || !idPeriodoSeleccionado) {
+      setError("Debes seleccionar al menos un instructor y un periodo.");
       return;
     }
     const periodoSel = periodos.find(
@@ -303,14 +326,39 @@ function Fichas() {
     }
     try {
       setGuardandoAsignacion(true);
-      await crearFichaInstructor({
-        id_ficha: fichaSeleccionada.id_ficha,
-        id_instructor: Number(idInstructorSeleccionado),
-        id_periodo: Number(idPeriodoSeleccionado),
-      });
-      setMostrarAsignar(false);
-      setIdInstructorSeleccionado("");
-      setIdPeriodoSeleccionado("");
+      const errores = [];
+      for (const idInst of idsInstructoresSeleccionados) {
+        try {
+          await crearFichaInstructor({
+            id_ficha: fichaSeleccionada.id_ficha,
+            id_instructor: Number(idInst),
+            id_periodo: Number(idPeriodoSeleccionado),
+            id_resultado: idResultadoSeleccionado
+              ? Number(idResultadoSeleccionado)
+              : null,
+          });
+        } catch (err) {
+          const detalle = err.response?.data?.detail;
+          const nombre =
+            instructores.find((i) => Number(i.id_instructor) === Number(idInst))
+              ?.nombre || `ID ${idInst}`;
+          errores.push(
+            `${nombre}: ${typeof detalle === "string" ? detalle : "error"}`
+          );
+        }
+      }
+      if (errores.length) {
+        setError(
+          errores.length === idsInstructoresSeleccionados.length
+            ? errores.join(" · ")
+            : `Algunos no se asignaron: ${errores.join(" · ")}`
+        );
+      } else {
+        setMostrarAsignar(false);
+        setIdsInstructoresSeleccionados([]);
+        setIdPeriodoSeleccionado("");
+        setIdResultadoSeleccionado("");
+      }
       await abrirDetalle(fichaSeleccionada);
       await cargarDatos();
     } catch (err) {
@@ -683,43 +731,116 @@ function Fichas() {
                   <form onSubmit={manejarAsignarInstructor}
                     style={{ marginBottom: 16, padding: 12, background: "#f8f9fa", borderRadius: 8 }}>
                     {error && <div className="alert alert-danger">{error}</div>}
-                    <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-                      <div style={{ flex: 1 }}>
-                        <label className="form-label">Instructor</label>
-                        <select className="form-select"
-                          value={idInstructorSeleccionado}
-                          onChange={(e) => setIdInstructorSeleccionado(e.target.value)} required>
-                          <option value="">Selecciona instructor</option>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      <div>
+                        <label className="form-label">
+                          Instructores (marca varios a la vez)
+                          {idsInstructoresSeleccionados.length > 0 && (
+                            <span style={{ marginLeft: 8, fontWeight: 400, color: "#0d6efd" }}>
+                              {idsInstructoresSeleccionados.length} seleccionado(s)
+                            </span>
+                          )}
+                        </label>
+                        <div
+                          style={{
+                            maxHeight: 180,
+                            overflowY: "auto",
+                            border: "1px solid #ced4da",
+                            borderRadius: 6,
+                            padding: "8px 12px",
+                            background: "#fff",
+                          }}
+                        >
+                          {instructores.length === 0 && (
+                            <span className="text-muted">No hay instructores registrados</span>
+                          )}
                           {instructores.map((inst) => (
-                            <option key={inst.id_instructor} value={inst.id_instructor}>
-                              {inst.nombre} {inst.apellido}{inst.nombre_periodo ? ` · ${inst.nombre_periodo}` : ""}
-                            </option>
+                            <label
+                              key={inst.id_instructor}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "4px 0",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={idsInstructoresSeleccionados.includes(
+                                  inst.id_instructor
+                                )}
+                                onChange={() =>
+                                  toggleInstructorCheck(inst.id_instructor)
+                                }
+                              />
+                              <span>
+                                {inst.nombre} {inst.apellido}
+                              </span>
+                            </label>
                           ))}
-                        </select>
+                        </div>
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <label className="form-label">Periodo</label>
-                        <select className="form-select"
-                          value={idPeriodoSeleccionado}
-                          onChange={(e) => setIdPeriodoSeleccionado(e.target.value)} required>
-                          <option value="">Selecciona periodo</option>
-                          {periodos.map((p) => {
-                            const activo = String(p.estado || "").toLowerCase() === "activo";
-                            return (
-                              <option
-                                key={p.id_periodo}
-                                value={p.id_periodo}
-                                disabled={!activo}
-                              >
-                                {p.nombre} {activo ? "(Activo)" : "(No activo)"}
+                      <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+                        <div style={{ flex: 1, minWidth: 160 }}>
+                          <label className="form-label">Periodo</label>
+                          <select
+                            className="form-select"
+                            value={idPeriodoSeleccionado}
+                            onChange={(e) => setIdPeriodoSeleccionado(e.target.value)}
+                            required
+                          >
+                            <option value="">Selecciona periodo</option>
+                            {periodos.map((p) => {
+                              const activo =
+                                String(p.estado || "").toLowerCase() === "activo";
+                              return (
+                                <option
+                                  key={p.id_periodo}
+                                  value={p.id_periodo}
+                                  disabled={!activo}
+                                >
+                                  {p.nombre} {activo ? "(Activo)" : "(No activo)"}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 200 }}>
+                          <label className="form-label">
+                            Resultado de aprendizaje (de esta ficha)
+                          </label>
+                          <select
+                            className="form-select"
+                            value={idResultadoSeleccionado}
+                            onChange={(e) => setIdResultadoSeleccionado(e.target.value)}
+                          >
+                            <option value="">Sin RA / seleccionar</option>
+                            {resultadosRA.map((r) => (
+                              <option key={r.id_resultado} value={r.id_resultado}>
+                                {r.codigo ? `${r.codigo} — ` : ""}
+                                {r.nombre}
                               </option>
-                            );
-                          })}
-                        </select>
+                            ))}
+                          </select>
+                          <small className="text-muted">
+                            Solo aplica a esta ficha y periodo (1 RA por trimestre).
+                          </small>
+                        </div>
+                        <button
+                          type="submit"
+                          className="btn btn-success"
+                          disabled={guardandoAsignacion}
+                        >
+                          {guardandoAsignacion
+                            ? "Guardando..."
+                            : `Asignar${
+                                idsInstructoresSeleccionados.length > 1
+                                  ? ` (${idsInstructoresSeleccionados.length})`
+                                  : ""
+                              }`}
+                        </button>
                       </div>
-                      <button type="submit" className="btn btn-success" disabled={guardandoAsignacion}>
-                        {guardandoAsignacion ? "Guardando..." : "Asignar"}
-                      </button>
                     </div>
                   </form>
                 )}
@@ -739,7 +860,7 @@ function Fichas() {
                         <span>
                           <i className="bi bi-person-fill"></i>
                           {inst.nombre} {inst.apellido} —{" "}
-                          {(inst.resultados_aprendizaje || []).map((c) => c.nombre).join(", ") || "sin RA"}
+                          {inst.nombre_resultado || (inst.resultados_aprendizaje || []).map((c) => c.nombre).join(", ") || "sin RA"} · {inst.nombre_periodo || ""}
                         </span>
                         <button className="btn btn-sm btn-outline-danger"
                           onClick={() => {
