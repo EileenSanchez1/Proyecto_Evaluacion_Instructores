@@ -14,8 +14,14 @@ class FichaInstructorService:
             raise ValueError("La ficha no existe.")
         if not InstructorRepository.buscar(session, ficha_instructor.id_instructor):
             raise ValueError("El instructor no existe.")
-        if not PeriodoRepository.buscar(session, ficha_instructor.id_periodo):
+        periodo = PeriodoRepository.buscar(session, ficha_instructor.id_periodo)
+        if not periodo:
             raise ValueError("El periodo no existe.")
+        if str(getattr(periodo, "estado", "")).lower() != "activo":
+            raise ValueError(
+                "No se puede asignar instructor a un periodo desactivado. "
+                "Activa el periodo o elige uno activo."
+            )
         if FichaInstructorRepository.buscar_asignacion(session, ficha_instructor.id_ficha, ficha_instructor.id_instructor, ficha_instructor.id_periodo):
             raise ValueError("El instructor ya está asignado a esta ficha en el periodo seleccionado.")
         return FichaInstructorRepository.crear(session, ficha_instructor)
