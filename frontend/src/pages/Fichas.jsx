@@ -17,6 +17,9 @@ import {
 import {
   listarInstructoresPorFicha,
   crearFichaInstructor,
+  actualizarFichaInstructor,
+  desactivarFichaInstructor,
+  reactivarFichaInstructor,
   eliminarFichaInstructor,
 } from "../services/Fichainstructorservice";
 import { listarInstructores } from "../services/instructorService";
@@ -50,9 +53,12 @@ function Fichas() {
 
   const [mostrarAsignar, setMostrarAsignar] = useState(false);
   const [idsInstructoresSeleccionados, setIdsInstructoresSeleccionados] = useState([]);
-  const [idPeriodoSeleccionado, setIdPeriodoSeleccionado] = useState("");
-  const [idResultadoSeleccionado, setIdResultadoSeleccionado] = useState("");
+  // Configuración individual por instructor: { [id_instructor]: { id_periodo: "", id_resultado: "" } }
+  const [configPorInstructor, setConfigPorInstructor] = useState({});
   const [guardandoAsignacion, setGuardandoAsignacion] = useState(false);
+  // Edición de asignación existente: { id_relacion, id_instructor, id_periodo, id_resultado, nombre }
+  const [editandoAsignacion, setEditandoAsignacion] = useState(null);
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [archivoCarga, setArchivoCarga] = useState(null);
   const [periodoCarga, setPeriodoCarga] = useState("");
   const [enviandoCarga, setEnviandoCarga] = useState(false);
@@ -183,8 +189,8 @@ function Fichas() {
     setCargandoDetalle(true);
     setMostrarAsignar(false);
     setIdsInstructoresSeleccionados([]);
-    setIdPeriodoSeleccionado("");
-    setIdResultadoSeleccionado("");
+    setConfigPorInstructor({});
+    setEditandoAsignacion(null);
     try {
       const aprs = await listarAprendicesPorFicha(ficha.id_ficha).catch(() => []);
       setAprendicesFicha(Array.isArray(aprs) ? aprs : []);
@@ -197,11 +203,17 @@ function Fichas() {
           const ra = resultadosRA.find(
             (r) => Number(r.id_resultado) === Number(rel.id_resultado)
           );
+          const idRel =
+            rel.id ??
+            rel.id_relacion ??
+            rel.id_ficha_instructor ??
+            null;
           return {
             ...inst,
-            id_relacion: rel.id,
+            id_relacion: idRel,
             id_periodo: rel.id_periodo,
             id_resultado: rel.id_resultado ?? null,
+            activo_asignacion: rel.activo !== false && rel.activo !== 0,
             nombre_periodo: periodo?.nombre || `Periodo #${rel.id_periodo}`,
             nombre_resultado:
               ra?.nombre ||
@@ -224,7 +236,8 @@ function Fichas() {
     setEditAprendiz(null);
     setMostrarAsignar(false);
     setIdsInstructoresSeleccionados([]);
-    setIdResultadoSeleccionado("");
+    setConfigPorInstructor({});
+    setEditandoAsignacion(null);
   };
 
   const abrirEditarAprendiz = (a) => {
@@ -300,41 +313,93 @@ function Fichas() {
 
 
   const toggleInstructorCheck = (id) => {
-    setIdsInstructoresSeleccionados((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setIdsInstructoresSeleccionados((prev) => {
+      if (prev.includes(id)) {
+        // Quitar de la selección y de la config
+        setConfigPorInstructor((cfg) => {
+          const next = { ...cfg };
+          delete next[id];
+          return next;
+        });
+        return prev.filter((x) => x !== id);
+      }
+      // Agregar a la selección e inicializar config
+      setConfigPorInstructor((cfg) => ({
+        ...cfg,
+        [id]: { id_periodo: "", id_resultado: "" },
+      }));
+      return [...prev, id];
+    });
+  };
+
+  const actualizarConfigInstructor = (idInstructor, campo, valor) => {
+    setConfigPorInstructor((prev) => ({
+      ...prev,
+      [idInstructor]: {
+        ...(prev[idInstructor] || { id_periodo: "", id_resultado: "" }),
+        [campo]: valor,
+      },
+    }));
   };
 
   const manejarAsignarInstructor = async (e) => {
     e.preventDefault();
     setError("");
-    if (!idsInstructoresSeleccionados.length || !idPeriodoSeleccionado) {
-      setError("Debes seleccionar al menos un instructor y un periodo.");
+    if (!idsInstructoresSeleccionados.length) {
+      setError("Debes seleccionar al menos un instructor.");
       return;
     }
-    const periodoSel = periodos.find(
-      (p) => String(p.id_periodo) === String(idPeriodoSeleccionado)
-    );
-    if (
-      periodoSel &&
-      String(periodoSel.estado || "").toLowerCase() !== "activo"
-    ) {
+
+    // Validar que cada instructor tenga periodo seleccionado
+    const faltantes = [];
+    for (const idInst of idsInstructoresSeleccionados) {
+      const cfg = configPorInstructor[idInst] || {};
+      if (!cfg.id_periodo) {
+        const nombre =
+          instructores.find((i) => Number(i.id_instructor) === Number(idInst))
+            ?.nombre || `ID ${idInst}`;
+        faltantes.push(nombre);
+      }
+    }
+    if (faltantes.length) {
       setError(
-        "No se puede asignar: el periodo está desactivado. Elige un periodo activo."
+        `Debes seleccionar un periodo para: ${faltantes.join(", ")}.`
       );
       return;
     }
+
+    // Validar que los periodos estén activos
+    for (const idInst of idsInstructoresSeleccionados) {
+      const cfg = configPorInstructor[idInst];
+      const periodoSel = periodos.find(
+        (p) => String(p.id_periodo) === String(cfg.id_periodo)
+      );
+      if (
+        periodoSel &&
+        String(periodoSel.estado || "").toLowerCase() !== "activo"
+      ) {
+        const nombre =
+          instructores.find((i) => Number(i.id_instructor) === Number(idInst))
+            ?.nombre || `ID ${idInst}`;
+        setError(
+          `No se puede asignar a ${nombre}: el periodo está desactivado. Elige un periodo activo.`
+        );
+        return;
+      }
+    }
+
     try {
       setGuardandoAsignacion(true);
       const errores = [];
       for (const idInst of idsInstructoresSeleccionados) {
+        const cfg = configPorInstructor[idInst] || {};
         try {
           await crearFichaInstructor({
             id_ficha: fichaSeleccionada.id_ficha,
             id_instructor: Number(idInst),
-            id_periodo: Number(idPeriodoSeleccionado),
-            id_resultado: idResultadoSeleccionado
-              ? Number(idResultadoSeleccionado)
+            id_periodo: Number(cfg.id_periodo),
+            id_resultado: cfg.id_resultado
+              ? Number(cfg.id_resultado)
               : null,
           });
         } catch (err) {
@@ -356,8 +421,7 @@ function Fichas() {
       } else {
         setMostrarAsignar(false);
         setIdsInstructoresSeleccionados([]);
-        setIdPeriodoSeleccionado("");
-        setIdResultadoSeleccionado("");
+        setConfigPorInstructor({});
       }
       await abrirDetalle(fichaSeleccionada);
       await cargarDatos();
@@ -368,7 +432,6 @@ function Fichas() {
       setGuardandoAsignacion(false);
     }
   };
-
 
   const manejarCargaMasiva = async (e) => {
     e.preventDefault();
@@ -397,13 +460,105 @@ function Fichas() {
   };
 
   const manejarDesasignarInstructor = async (idRelacion) => {
-    if (!window.confirm("¿Eliminar esta asignación de instructor?")) return;
+    if (!idRelacion) {
+      alert("No se pudo identificar la asignación (id faltante). Recarga el detalle e intenta de nuevo.");
+      return;
+    }
+    if (
+      !window.confirm(
+        "¿Desactivar este instructor en la ficha para este periodo?\n" +
+          "No se borra: quedará en la lista de desactivados y podrás reactivarlo después."
+      )
+    )
+      return;
     try {
-      await eliminarFichaInstructor(idRelacion);
+      await desactivarFichaInstructor(idRelacion);
+      setEditandoAsignacion(null);
       await abrirDetalle(fichaSeleccionada);
       await cargarDatos();
     } catch (err) {
-      alert(err.response?.data?.detail || "Error al eliminar la asignación.");
+      // fallback a DELETE (también soft en backend)
+      try {
+        await eliminarFichaInstructor(idRelacion);
+        setEditandoAsignacion(null);
+        await abrirDetalle(fichaSeleccionada);
+        await cargarDatos();
+      } catch (err2) {
+        alert(
+          err2.response?.data?.detail ||
+            err.response?.data?.detail ||
+            "Error al desactivar la asignación."
+        );
+      }
+    }
+  };
+
+  const manejarReactivarAsignacion = async (idRelacion) => {
+    if (!idRelacion) return;
+    try {
+      await reactivarFichaInstructor(idRelacion);
+      await abrirDetalle(fichaSeleccionada);
+      await cargarDatos();
+    } catch (err) {
+      alert(err.response?.data?.detail || "Error al reactivar la asignación.");
+    }
+  };
+
+  const iniciarEditarAsignacion = (inst) => {
+    setEditandoAsignacion({
+      id_relacion: inst.id_relacion,
+      id_instructor: inst.id_instructor,
+      id_periodo: inst.id_periodo ? String(inst.id_periodo) : "",
+      id_resultado: inst.id_resultado ? String(inst.id_resultado) : "",
+      nombre: `${inst.nombre || ""} ${inst.apellido || ""}`.trim(),
+    });
+    setError("");
+  };
+
+  const manejarGuardarEdicionAsignacion = async (e) => {
+    e.preventDefault();
+    if (!editandoAsignacion?.id_relacion) return;
+    if (!editandoAsignacion.id_periodo) {
+      setError("Debes seleccionar un periodo.");
+      return;
+    }
+    const periodoSel = periodos.find(
+      (p) => String(p.id_periodo) === String(editandoAsignacion.id_periodo)
+    );
+    if (
+      periodoSel &&
+      String(periodoSel.estado || "").toLowerCase() !== "activo"
+    ) {
+      setError("El periodo seleccionado no está activo.");
+      return;
+    }
+    try {
+      setGuardandoEdicion(true);
+      setError("");
+      const idRel = Number(editandoAsignacion.id_relacion);
+      if (!idRel) {
+        setError("Id de asignación inválido. Cierra el detalle y ábrelo de nuevo.");
+        return;
+      }
+      await actualizarFichaInstructor(idRel, {
+        id_periodo: Number(editandoAsignacion.id_periodo),
+        id_resultado: editandoAsignacion.id_resultado
+          ? Number(editandoAsignacion.id_resultado)
+          : null,
+        activo: true,
+      });
+      setEditandoAsignacion(null);
+      await abrirDetalle(fichaSeleccionada);
+      await cargarDatos();
+    } catch (err) {
+      const detalle = err.response?.data?.detail;
+      setError(
+        typeof detalle === "string"
+          ? detalle
+          : "Error al actualizar la asignación."
+      );
+    } finally {
+      setGuardandoEdicion(false);
     }
   };
 
@@ -722,8 +877,19 @@ function Fichas() {
                     <i className="bi bi-person-badge"></i>
                     <span><strong>Instructores asignados:</strong></span>
                   </p>
-                  <button className="btn btn-sm btn-success" onClick={() => setMostrarAsignar(!mostrarAsignar)}>
-                    <i className="bi bi-plus-circle"></i> {mostrarAsignar ? "Cancelar" : "Asignar instructor"}
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={() => {
+                      if (mostrarAsignar) {
+                        setIdsInstructoresSeleccionados([]);
+                        setConfigPorInstructor({});
+                        setError("");
+                      }
+                      setMostrarAsignar(!mostrarAsignar);
+                    }}
+                  >
+                    <i className="bi bi-plus-circle"></i>{" "}
+                    {mostrarAsignar ? "Cancelar" : "Asignar instructor"}
                   </button>
                 </div>
 
@@ -781,56 +947,127 @@ function Fichas() {
                           ))}
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-                        <div style={{ flex: 1, minWidth: 160 }}>
-                          <label className="form-label">Periodo</label>
-                          <select
-                            className="form-select"
-                            value={idPeriodoSeleccionado}
-                            onChange={(e) => setIdPeriodoSeleccionado(e.target.value)}
-                            required
-                          >
-                            <option value="">Selecciona periodo</option>
-                            {periodos.map((p) => {
-                              const activo =
-                                String(p.estado || "").toLowerCase() === "activo";
-                              return (
-                                <option
-                                  key={p.id_periodo}
-                                  value={p.id_periodo}
-                                  disabled={!activo}
-                                >
-                                  {p.nombre} {activo ? "(Activo)" : "(No activo)"}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        </div>
-                        <div style={{ flex: 1, minWidth: 200 }}>
-                          <label className="form-label">
-                            Resultado de aprendizaje (de esta ficha)
+
+                      {/* Configuración individual por instructor seleccionado */}
+                      {idsInstructoresSeleccionados.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          <label className="form-label" style={{ marginBottom: 0 }}>
+                            Periodo y Resultado de aprendizaje <strong>por instructor</strong>
                           </label>
-                          <select
-                            className="form-select"
-                            value={idResultadoSeleccionado}
-                            onChange={(e) => setIdResultadoSeleccionado(e.target.value)}
-                          >
-                            <option value="">Sin RA / seleccionar</option>
-                            {resultadosRA.map((r) => (
-                              <option key={r.id_resultado} value={r.id_resultado}>
-                                {r.codigo ? `${r.codigo} — ` : ""}
-                                {r.nombre}
-                              </option>
-                            ))}
-                          </select>
-                          <small className="text-muted">
-                            Solo aplica a esta ficha y periodo (1 RA por trimestre).
+                          <small className="text-muted" style={{ marginTop: -6 }}>
+                            Cada instructor puede tener su propio periodo y RA (1 RA por trimestre).
                           </small>
+                          {idsInstructoresSeleccionados.map((idInst) => {
+                            const inst = instructores.find(
+                              (i) => Number(i.id_instructor) === Number(idInst)
+                            );
+                            const cfg = configPorInstructor[idInst] || {
+                              id_periodo: "",
+                              id_resultado: "",
+                            };
+                            return (
+                              <div
+                                key={idInst}
+                                style={{
+                                  border: "1px solid #dee2e6",
+                                  borderRadius: 8,
+                                  padding: "10px 12px",
+                                  background: "#fff",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 8,
+                                }}
+                              >
+                                <div style={{ fontWeight: 600, color: "#198754" }}>
+                                  <i className="bi bi-person-fill"></i>{" "}
+                                  {inst
+                                    ? `${inst.nombre} ${inst.apellido}`
+                                    : `Instructor #${idInst}`}
+                                </div>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    gap: 10,
+                                    flexWrap: "wrap",
+                                    alignItems: "flex-end",
+                                  }}
+                                >
+                                  <div style={{ flex: 1, minWidth: 160 }}>
+                                    <label className="form-label" style={{ fontSize: 13 }}>
+                                      Periodo
+                                    </label>
+                                    <select
+                                      className="form-select form-select-sm"
+                                      value={cfg.id_periodo}
+                                      onChange={(e) =>
+                                        actualizarConfigInstructor(
+                                          idInst,
+                                          "id_periodo",
+                                          e.target.value
+                                        )
+                                      }
+                                      required
+                                    >
+                                      <option value="">Selecciona periodo</option>
+                                      {periodos.map((p) => {
+                                        const activo =
+                                          String(p.estado || "").toLowerCase() ===
+                                          "activo";
+                                        return (
+                                          <option
+                                            key={p.id_periodo}
+                                            value={p.id_periodo}
+                                            disabled={!activo}
+                                          >
+                                            {p.nombre}{" "}
+                                            {activo ? "(Activo)" : "(No activo)"}
+                                          </option>
+                                        );
+                                      })}
+                                    </select>
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 200 }}>
+                                    <label className="form-label" style={{ fontSize: 13 }}>
+                                      Resultado de aprendizaje
+                                    </label>
+                                    <select
+                                      className="form-select form-select-sm"
+                                      value={cfg.id_resultado}
+                                      onChange={(e) =>
+                                        actualizarConfigInstructor(
+                                          idInst,
+                                          "id_resultado",
+                                          e.target.value
+                                        )
+                                      }
+                                    >
+                                      <option value="">Sin RA / seleccionar</option>
+                                      {resultadosRA.map((r) => (
+                                        <option
+                                          key={r.id_resultado}
+                                          value={r.id_resultado}
+                                        >
+                                          {r.codigo ? `${r.codigo} — ` : ""}
+                                          {r.nombre}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
+                      )}
+
+                      <div>
                         <button
                           type="submit"
                           className="btn btn-success"
-                          disabled={guardandoAsignacion}
+                          disabled={
+                            guardandoAsignacion ||
+                            idsInstructoresSeleccionados.length === 0
+                          }
                         >
                           {guardandoAsignacion
                             ? "Guardando..."
@@ -853,27 +1090,233 @@ function Fichas() {
                   <p className="text-muted" style={{ paddingLeft: 30 }}>Esta ficha no tiene instructores asignados.</p>
                 )}
 
-                {!cargandoDetalle && instructoresFicha.length > 0 && (
-                  <ul>
-                    {instructoresFicha.map((inst) => (
-                      <li key={`${inst.id_instructor}-${inst.id_periodo || inst.id_relacion}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                        <span>
-                          <i className="bi bi-person-fill"></i>
-                          {inst.nombre} {inst.apellido} —{" "}
-                          {inst.nombre_resultado || (inst.resultados_aprendizaje || []).map((c) => c.nombre).join(", ") || "sin RA"} · {inst.nombre_periodo || ""}
-                        </span>
-                        <button className="btn btn-sm btn-outline-danger"
-                          onClick={() => {
-                            listarInstructoresPorFicha(fichaSeleccionada.id_ficha).then((rels) => {
-                              if (inst.id_relacion) manejarDesasignarInstructor(inst.id_relacion);
-                            });
-                          }} title="Eliminar asignación">
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </li>
-                    ))}
+                {!cargandoDetalle && instructoresFicha.filter((i) => i.activo_asignacion !== false).length > 0 && (
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {instructoresFicha
+                      .filter((i) => i.activo_asignacion !== false)
+                      .map((inst) => {
+                      const key = `${inst.id_instructor}-${inst.id_periodo || inst.id_relacion}`;
+                      const estaEditando =
+                        editandoAsignacion &&
+                        Number(editandoAsignacion.id_relacion) ===
+                          Number(inst.id_relacion);
+
+                      if (estaEditando) {
+                        return (
+                          <li
+                            key={key}
+                            style={{
+                              marginBottom: 10,
+                              padding: 12,
+                              background: "#f0f7f4",
+                              borderRadius: 8,
+                              border: "1px solid #198754",
+                            }}
+                          >
+                            <form onSubmit={manejarGuardarEdicionAsignacion}>
+                              <div
+                                style={{
+                                  fontWeight: 600,
+                                  marginBottom: 8,
+                                  color: "#198754",
+                                }}
+                              >
+                                <i className="bi bi-pencil-square"></i>{" "}
+                                Editando: {editandoAsignacion.nombre}
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: 10,
+                                  flexWrap: "wrap",
+                                  alignItems: "flex-end",
+                                }}
+                              >
+                                <div style={{ flex: 1, minWidth: 140 }}>
+                                  <label className="form-label" style={{ fontSize: 13 }}>
+                                    Periodo
+                                  </label>
+                                  <select
+                                    className="form-select form-select-sm"
+                                    value={editandoAsignacion.id_periodo}
+                                    onChange={(e) =>
+                                      setEditandoAsignacion((prev) => ({
+                                        ...prev,
+                                        id_periodo: e.target.value,
+                                      }))
+                                    }
+                                    required
+                                  >
+                                    <option value="">Selecciona periodo</option>
+                                    {periodos.map((p) => {
+                                      const activo =
+                                        String(p.estado || "").toLowerCase() ===
+                                        "activo";
+                                      return (
+                                        <option
+                                          key={p.id_periodo}
+                                          value={p.id_periodo}
+                                          disabled={!activo}
+                                        >
+                                          {p.nombre}{" "}
+                                          {activo ? "(Activo)" : "(No activo)"}
+                                        </option>
+                                      );
+                                    })}
+                                  </select>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 180 }}>
+                                  <label className="form-label" style={{ fontSize: 13 }}>
+                                    Resultado de aprendizaje
+                                  </label>
+                                  <select
+                                    className="form-select form-select-sm"
+                                    value={editandoAsignacion.id_resultado}
+                                    onChange={(e) =>
+                                      setEditandoAsignacion((prev) => ({
+                                        ...prev,
+                                        id_resultado: e.target.value,
+                                      }))
+                                    }
+                                  >
+                                    <option value="">Sin RA</option>
+                                    {resultadosRA.map((r) => (
+                                      <option
+                                        key={r.id_resultado}
+                                        value={r.id_resultado}
+                                      >
+                                        {r.codigo ? `${r.codigo} — ` : ""}
+                                        {r.nombre}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button
+                                    type="submit"
+                                    className="btn btn-sm btn-success"
+                                    disabled={guardandoEdicion}
+                                  >
+                                    {guardandoEdicion ? "..." : "Guardar"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-secondary"
+                                    onClick={() => setEditandoAsignacion(null)}
+                                    disabled={guardandoEdicion}
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            </form>
+                          </li>
+                        );
+                      }
+
+                      return (
+                        <li
+                          key={key}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 12,
+                            flexWrap: "wrap",
+                            padding: "8px 10px",
+                            marginBottom: 6,
+                            background: "#f8f9fa",
+                            borderRadius: 8,
+                          }}
+                        >
+                          <span>
+                            <i className="bi bi-person-fill"></i>{" "}
+                            {inst.nombre} {inst.apellido} —{" "}
+                            {inst.nombre_resultado || "sin RA"} ·{" "}
+                            {inst.nombre_periodo || ""}
+                          </span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary"
+                              title="Editar periodo / RA"
+                              onClick={() => iniciarEditarAsignacion(inst)}
+                            >
+                              <i className="bi bi-pencil"></i>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() =>
+                                manejarDesasignarInstructor(inst.id_relacion)
+                              }
+                              title="Desactivar de esta ficha / periodo"
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
+
+                {/* Instructores desactivados de esta ficha */}
+                {!cargandoDetalle &&
+                  instructoresFicha.filter((i) => i.activo_asignacion === false)
+                    .length > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                      <p
+                        style={{
+                          marginBottom: 8,
+                          fontWeight: 600,
+                          color: "#6c757d",
+                        }}
+                      >
+                        <i className="bi bi-person-x"></i> Instructores
+                        desactivados de esta ficha
+                      </p>
+                      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                        {instructoresFicha
+                          .filter((i) => i.activo_asignacion === false)
+                          .map((inst) => (
+                            <li
+                              key={`off-${inst.id_relacion}-${inst.id_periodo}`}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: 12,
+                                flexWrap: "wrap",
+                                padding: "8px 10px",
+                                marginBottom: 6,
+                                background: "#fff3cd",
+                                borderRadius: 8,
+                                opacity: 0.95,
+                              }}
+                            >
+                              <span style={{ color: "#856404" }}>
+                                <i className="bi bi-person-dash"></i>{" "}
+                                {inst.nombre} {inst.apellido} —{" "}
+                                {inst.nombre_resultado || "sin RA"} ·{" "}
+                                {inst.nombre_periodo || ""}
+                              </span>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-success"
+                                title="Reactivar en esta ficha / periodo"
+                                onClick={() =>
+                                  manejarReactivarAsignacion(inst.id_relacion)
+                                }
+                              >
+                                <i className="bi bi-person-check"></i> Reactivar
+                              </button>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
+
               </div>
             </div>
             <div className="modal-footer">

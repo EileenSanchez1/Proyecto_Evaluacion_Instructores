@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Column, Boolean
 
 class FichaInstructor(SQLModel, table=True):
     __tablename__ = "ficha_instructor"
@@ -20,6 +20,8 @@ class FichaInstructor(SQLModel, table=True):
         nullable=True,
         index=True,
     )
+    # Soft-delete: False = desactivado de esta ficha/periodo (no se muestra a aprendices)
+    activo: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default="true"))
 
     ficha: "Ficha" = Relationship(back_populates="ficha_instructores")
     instructor: "Instructor" = Relationship(back_populates="ficha_instructores")
@@ -29,5 +31,5 @@ class FichaInstructor(SQLModel, table=True):
     def __repr__(self):
         return (
             f"<FichaInstructor ficha={self.id_ficha} instructor={self.id_instructor} "
-            f"periodo={self.id_periodo} resultado={self.id_resultado}>"
+            f"periodo={self.id_periodo} resultado={self.id_resultado} activo={self.activo}>"
         )
