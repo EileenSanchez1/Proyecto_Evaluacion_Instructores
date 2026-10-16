@@ -40,6 +40,18 @@ def ensure_extra_columns():
             conn.execute(text(
                 "ALTER TABLE ficha_instructor ADD COLUMN IF NOT EXISTS id_resultado INTEGER"
             ))
+            # Soft-delete de asignación instructor↔ficha (si falta, listar/crear falla y el
+            # navegador lo reporta como CORS porque la respuesta 500 no trae headers CORS).
+            conn.execute(text(
+                "ALTER TABLE ficha_instructor ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE"
+            ))
+            # Rellenar nulos por si la columna existía sin default en filas viejas
+            try:
+                conn.execute(text(
+                    "UPDATE ficha_instructor SET activo = TRUE WHERE activo IS NULL"
+                ))
+            except Exception:
+                pass
     except Exception as e:
         print(f"[schema] Aviso ensure_extra_columns: {e}")
 
@@ -56,11 +68,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://127.0.0.1:5173"
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # =========================

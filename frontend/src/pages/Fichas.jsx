@@ -53,8 +53,10 @@ function Fichas() {
 
   const [mostrarAsignar, setMostrarAsignar] = useState(false);
   const [idsInstructoresSeleccionados, setIdsInstructoresSeleccionados] = useState([]);
-  // Configuración individual por instructor: { [id_instructor]: { id_periodo: "", id_resultado: "" } }
+  // Config por instructor: { [id_instructor]: { id_resultado: "", busquedaRA: "" } }
   const [configPorInstructor, setConfigPorInstructor] = useState({});
+  // Periodo único para toda la asignación
+  const [periodoAsignacion, setPeriodoAsignacion] = useState("");
   const [guardandoAsignacion, setGuardandoAsignacion] = useState(false);
   // Edición de asignación existente: { id_relacion, id_instructor, id_periodo, id_resultado, nombre }
   const [editandoAsignacion, setEditandoAsignacion] = useState(null);
@@ -190,40 +192,68 @@ function Fichas() {
     setMostrarAsignar(false);
     setIdsInstructoresSeleccionados([]);
     setConfigPorInstructor({});
+    setPeriodoAsignacion("");
     setEditandoAsignacion(null);
     try {
       const aprs = await listarAprendicesPorFicha(ficha.id_ficha).catch(() => []);
       setAprendicesFicha(Array.isArray(aprs) ? aprs : []);
-      const relaciones = await listarInstructoresPorFicha(ficha.id_ficha);
-      const instructores = await Promise.all(
+      const relacionesRaw = await listarInstructoresPorFicha(ficha.id_ficha);
+      const relaciones = Array.isArray(relacionesRaw) ? relacionesRaw : [];
+
+      // Resolver datos del instructor desde el listado local (ya cargado)
+      // y solo llamar a la API si no está en memoria.
+      const mapeados = await Promise.all(
         relaciones.map(async (rel) => {
-          const inst = await obtenerInstructor(rel.id_instructor).catch(() => null);
-          if (!inst) return null;
-          const periodo = periodos.find((p) => p.id_periodo === rel.id_periodo);
+          const idInst = Number(rel.id_instructor);
+          let inst =
+            instructores.find((i) => Number(i.id_instructor) === idInst) || null;
+          if (!inst) {
+            inst = await obtenerInstructor(idInst).catch(() => null);
+          }
+          // Aunque no se encuentre el instructor, no descartar la asignación:
+          // se muestra con datos mínimos para que no "desaparezca".
+          const base = inst || {
+            id_instructor: idInst,
+            nombre: `Instructor`,
+            apellido: `#${idInst}`,
+            correo: "",
+          };
+          const periodo = periodos.find(
+            (p) => Number(p.id_periodo) === Number(rel.id_periodo)
+          );
           const ra = resultadosRA.find(
             (r) => Number(r.id_resultado) === Number(rel.id_resultado)
           );
           const idRel =
-            rel.id ??
-            rel.id_relacion ??
-            rel.id_ficha_instructor ??
-            null;
+            rel.id ?? rel.id_relacion ?? rel.id_ficha_instructor ?? null;
+          const activoAsig =
+            rel.activo !== false &&
+            rel.activo !== 0 &&
+            rel.activo !== "false" &&
+            rel.activo !== "0";
           return {
-            ...inst,
+            ...base,
             id_relacion: idRel,
             id_periodo: rel.id_periodo,
             id_resultado: rel.id_resultado ?? null,
-            activo_asignacion: rel.activo !== false && rel.activo !== 0,
-            nombre_periodo: periodo?.nombre || `Periodo #${rel.id_periodo}`,
+            activo_asignacion: activoAsig,
+            nombre_periodo:
+              periodo?.nombre ||
+              (rel.id_periodo != null ? `Periodo #${rel.id_periodo}` : "—"),
             nombre_resultado:
-              ra?.nombre ||
+              (ra
+                ? `${ra.codigo ? ra.codigo + " — " : ""}${ra.nombre}`
+                : null) ||
               (rel.id_resultado ? `RA #${rel.id_resultado}` : null),
           };
         })
       );
-      setInstructoresFicha(instructores.filter(Boolean));
+      setInstructoresFicha(mapeados);
     } catch (err) {
       console.error("No se pudieron cargar los instructores de la ficha", err);
+      setError(
+        "No se pudieron cargar los instructores asignados. Revisa la consola o recarga."
+      );
     } finally {
       setCargandoDetalle(false);
     }
@@ -315,7 +345,6 @@ function Fichas() {
   const toggleInstructorCheck = (id) => {
     setIdsInstructoresSeleccionados((prev) => {
       if (prev.includes(id)) {
-        // Quitar de la selección y de la config
         setConfigPorInstructor((cfg) => {
           const next = { ...cfg };
           delete next[id];
@@ -323,10 +352,9 @@ function Fichas() {
         });
         return prev.filter((x) => x !== id);
       }
-      // Agregar a la selección e inicializar config
       setConfigPorInstructor((cfg) => ({
         ...cfg,
-        [id]: { id_periodo: "", id_resultado: "" },
+        [id]: { id_resultado: "", busquedaRA: "" },
       }));
       return [...prev, id];
     });
@@ -336,7 +364,7 @@ function Fichas() {
     setConfigPorInstructor((prev) => ({
       ...prev,
       [idInstructor]: {
-        ...(prev[idInstructor] || { id_periodo: "", id_resultado: "" }),
+        ...(prev[idInstructor] || { id_resultado: "", busquedaRA: "" }),
         [campo]: valor,
       },
     }));
@@ -350,39 +378,91 @@ function Fichas() {
       return;
     }
 
-    // Validar que cada instructor tenga periodo seleccionado
-    const faltantes = [];
-    for (const idInst of idsInstructoresSeleccionados) {
-      const cfg = configPorInstructor[idInst] || {};
-      if (!cfg.id_periodo) {
-        const nombre =
-          instructores.find((i) => Number(i.id_instructor) === Number(idInst))
-            ?.nombre || `ID ${idInst}`;
-        faltantes.push(nombre);
-      }
+    if (!periodoAsignacion) {
+      setError("Debes seleccionar el periodo de la asignación.");
+      return;
     }
-    if (faltantes.length) {
+
+    const periodoSel = periodos.find(
+      (p) => String(p.id_periodo) === String(periodoAsignacion)
+    );
+    if (
+      periodoSel &&
+      String(periodoSel.estado || "").toLowerCase() !== "activo"
+    ) {
       setError(
-        `Debes seleccionar un periodo para: ${faltantes.join(", ")}.`
+        "No se puede asignar: el periodo está desactivado. Elige un periodo activo."
       );
       return;
     }
 
-    // Validar que los periodos estén activos
+    // Cada instructor debe tener un RA seleccionado
+    const sinRA = [];
     for (const idInst of idsInstructoresSeleccionados) {
-      const cfg = configPorInstructor[idInst];
-      const periodoSel = periodos.find(
-        (p) => String(p.id_periodo) === String(cfg.id_periodo)
-      );
-      if (
-        periodoSel &&
-        String(periodoSel.estado || "").toLowerCase() !== "activo"
-      ) {
+      const cfg = configPorInstructor[idInst] || {};
+      if (!cfg.id_resultado) {
         const nombre =
           instructores.find((i) => Number(i.id_instructor) === Number(idInst))
             ?.nombre || `ID ${idInst}`;
+        sinRA.push(nombre);
+      }
+    }
+    if (sinRA.length) {
+      setError(
+        `Debes seleccionar un resultado de aprendizaje para: ${sinRA.join(", ")}.`
+      );
+      return;
+    }
+
+    // No permitir el mismo RA en dos instructores del lote
+    const raUsados = {};
+    for (const idInst of idsInstructoresSeleccionados) {
+      const cfg = configPorInstructor[idInst] || {};
+      const idRa = String(cfg.id_resultado);
+      if (raUsados[idRa]) {
+        const nombre1 = raUsados[idRa];
+        const nombre2 =
+          instructores.find((i) => Number(i.id_instructor) === Number(idInst))
+            ?.nombre || `ID ${idInst}`;
+        const ra = resultadosRA.find(
+          (r) => String(r.id_resultado) === idRa
+        );
+        const nombreRa = ra
+          ? `${ra.codigo ? ra.codigo + " — " : ""}${ra.nombre}`
+          : `RA #${idRa}`;
         setError(
-          `No se puede asignar a ${nombre}: el periodo está desactivado. Elige un periodo activo.`
+          `El resultado de aprendizaje "${nombreRa}" ya está seleccionado para ${nombre1}. ` +
+            `No se puede asignar el mismo RA a ${nombre2}. Cada RA solo puede ir a un instructor.`
+        );
+        return;
+      }
+      raUsados[idRa] =
+        instructores.find((i) => Number(i.id_instructor) === Number(idInst))
+          ?.nombre || `ID ${idInst}`;
+    }
+
+    // RAs ya asignados en esta ficha+periodo (activos)
+    const rasYaAsignados = new Set(
+      (instructoresFicha || [])
+        .filter(
+          (inst) =>
+            inst.activo !== false &&
+            String(inst.id_periodo) === String(periodoAsignacion) &&
+            inst.id_resultado
+        )
+        .map((inst) => String(inst.id_resultado))
+    );
+    for (const idInst of idsInstructoresSeleccionados) {
+      const cfg = configPorInstructor[idInst] || {};
+      if (rasYaAsignados.has(String(cfg.id_resultado))) {
+        const ra = resultadosRA.find(
+          (r) => String(r.id_resultado) === String(cfg.id_resultado)
+        );
+        const nombreRa = ra
+          ? `${ra.codigo ? ra.codigo + " — " : ""}${ra.nombre}`
+          : `RA #${cfg.id_resultado}`;
+        setError(
+          `El resultado de aprendizaje "${nombreRa}" ya está asignado a otro instructor en esta ficha y periodo.`
         );
         return;
       }
@@ -397,19 +477,24 @@ function Fichas() {
           await crearFichaInstructor({
             id_ficha: fichaSeleccionada.id_ficha,
             id_instructor: Number(idInst),
-            id_periodo: Number(cfg.id_periodo),
-            id_resultado: cfg.id_resultado
-              ? Number(cfg.id_resultado)
-              : null,
+            id_periodo: Number(periodoAsignacion),
+            id_resultado: Number(cfg.id_resultado),
           });
         } catch (err) {
           const detalle = err.response?.data?.detail;
           const nombre =
             instructores.find((i) => Number(i.id_instructor) === Number(idInst))
               ?.nombre || `ID ${idInst}`;
-          errores.push(
-            `${nombre}: ${typeof detalle === "string" ? detalle : "error"}`
-          );
+          let msg = "error";
+          if (typeof detalle === "string") msg = detalle;
+          else if (Array.isArray(detalle))
+            msg = detalle
+              .map((d) => d.msg || d.message || JSON.stringify(d))
+              .join("; ");
+          else if (!err.response)
+            msg =
+              "Sin respuesta del servidor. Reinicia el backend (posible columna 'activo' faltante).";
+          errores.push(`${nombre}: ${msg}`);
         }
       }
       if (errores.length) {
@@ -422,12 +507,21 @@ function Fichas() {
         setMostrarAsignar(false);
         setIdsInstructoresSeleccionados([]);
         setConfigPorInstructor({});
+        setPeriodoAsignacion("");
       }
       await abrirDetalle(fichaSeleccionada);
       await cargarDatos();
     } catch (err) {
       const detalle = err.response?.data?.detail;
-      setError(typeof detalle === "string" ? detalle : "Error al asignar instructor.");
+      if (!err.response) {
+        setError(
+          "No hay conexión con el backend. Detén y vuelve a iniciar el servidor FastAPI."
+        );
+      } else {
+        setError(
+          typeof detalle === "string" ? detalle : "Error al asignar instructor."
+        );
+      }
     } finally {
       setGuardandoAsignacion(false);
     }
@@ -883,6 +977,7 @@ function Fichas() {
                       if (mostrarAsignar) {
                         setIdsInstructoresSeleccionados([]);
                         setConfigPorInstructor({});
+                        setPeriodoAsignacion("");
                         setError("");
                       }
                       setMostrarAsignar(!mostrarAsignar);
@@ -898,18 +993,53 @@ function Fichas() {
                     style={{ marginBottom: 16, padding: 12, background: "#f8f9fa", borderRadius: 8 }}>
                     {error && <div className="alert alert-danger">{error}</div>}
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {/* Periodo único para toda la asignación */}
                       <div>
                         <label className="form-label">
-                          Instructores (marca varios a la vez)
+                          Periodo <span className="text-danger">*</span>
+                        </label>
+                        <select
+                          className="form-select form-select-sm"
+                          value={periodoAsignacion}
+                          onChange={(e) => setPeriodoAsignacion(e.target.value)}
+                          required
+                          style={{ maxWidth: 320 }}
+                        >
+                          <option value="">Selecciona periodo</option>
+                          {periodos.map((p) => {
+                            const activo =
+                              String(p.estado || "").toLowerCase() === "activo";
+                            return (
+                              <option
+                                key={p.id_periodo}
+                                value={p.id_periodo}
+                                disabled={!activo}
+                              >
+                                {p.nombre} {activo ? "(Activo)" : "(No activo)"}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <small className="text-muted d-block mt-1">
+                          Todos los instructores se asignan al mismo periodo. Cada uno con un RA distinto.
+                        </small>
+                      </div>
+
+                      <div>
+                        <label className="form-label">
+                          Instructores y Resultado de aprendizaje
                           {idsInstructoresSeleccionados.length > 0 && (
                             <span style={{ marginLeft: 8, fontWeight: 400, color: "#0d6efd" }}>
                               {idsInstructoresSeleccionados.length} seleccionado(s)
                             </span>
                           )}
                         </label>
+                        <small className="text-muted d-block" style={{ marginBottom: 6 }}>
+                          Marca el instructor y elige su RA (puedes buscar por código o nombre). Un RA solo puede asignarse a un instructor.
+                        </small>
                         <div
                           style={{
-                            maxHeight: 180,
+                            maxHeight: 320,
                             overflowY: "auto",
                             border: "1px solid #ced4da",
                             borderRadius: 6,
@@ -920,145 +1050,137 @@ function Fichas() {
                           {instructores.length === 0 && (
                             <span className="text-muted">No hay instructores registrados</span>
                           )}
-                          {instructores.map((inst) => (
-                            <label
-                              key={inst.id_instructor}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                padding: "4px 0",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={idsInstructoresSeleccionados.includes(
-                                  inst.id_instructor
-                                )}
-                                onChange={() =>
-                                  toggleInstructorCheck(inst.id_instructor)
-                                }
-                              />
-                              <span>
-                                {inst.nombre} {inst.apellido}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Configuración individual por instructor seleccionado */}
-                      {idsInstructoresSeleccionados.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                          <label className="form-label" style={{ marginBottom: 0 }}>
-                            Periodo y Resultado de aprendizaje <strong>por instructor</strong>
-                          </label>
-                          <small className="text-muted" style={{ marginTop: -6 }}>
-                            Cada instructor puede tener su propio periodo y RA (1 RA por trimestre).
-                          </small>
-                          {idsInstructoresSeleccionados.map((idInst) => {
-                            const inst = instructores.find(
-                              (i) => Number(i.id_instructor) === Number(idInst)
+                          {instructores.map((inst) => {
+                            const seleccionado = idsInstructoresSeleccionados.includes(
+                              inst.id_instructor
                             );
-                            const cfg = configPorInstructor[idInst] || {
-                              id_periodo: "",
+                            const cfg = configPorInstructor[inst.id_instructor] || {
                               id_resultado: "",
+                              busquedaRA: "",
                             };
+                            const textoBusq = (cfg.busquedaRA || "").toLowerCase().trim();
+                            const rasFiltrados = resultadosRA.filter((r) => {
+                              if (!textoBusq) return true;
+                              const cod = (r.codigo || "").toLowerCase();
+                              const nom = (r.nombre || "").toLowerCase();
+                              return cod.includes(textoBusq) || nom.includes(textoBusq);
+                            });
+                            // RAs ya tomados por otros instructores del lote
+                            const rasOcupadosLote = new Set(
+                              idsInstructoresSeleccionados
+                                .filter((id) => Number(id) !== Number(inst.id_instructor))
+                                .map((id) => String((configPorInstructor[id] || {}).id_resultado || ""))
+                                .filter(Boolean)
+                            );
+                            // RAs ya asignados en ficha+periodo
+                            const rasOcupadosFicha = new Set(
+                              (instructoresFicha || [])
+                                .filter(
+                                  (fi) =>
+                                    fi.activo !== false &&
+                                    String(fi.id_periodo) === String(periodoAsignacion) &&
+                                    fi.id_resultado
+                                )
+                                .map((fi) => String(fi.id_resultado))
+                            );
+
                             return (
                               <div
-                                key={idInst}
+                                key={inst.id_instructor}
                                 style={{
-                                  border: "1px solid #dee2e6",
-                                  borderRadius: 8,
-                                  padding: "10px 12px",
-                                  background: "#fff",
                                   display: "flex",
                                   flexDirection: "column",
-                                  gap: 8,
+                                  gap: 6,
+                                  padding: "8px 0",
+                                  borderBottom: "1px solid #f0f0f0",
                                 }}
                               >
-                                <div style={{ fontWeight: 600, color: "#198754" }}>
-                                  <i className="bi bi-person-fill"></i>{" "}
-                                  {inst
-                                    ? `${inst.nombre} ${inst.apellido}`
-                                    : `Instructor #${idInst}`}
-                                </div>
-                                <div
+                                <label
                                   style={{
                                     display: "flex",
-                                    gap: 10,
-                                    flexWrap: "wrap",
-                                    alignItems: "flex-end",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    cursor: "pointer",
+                                    margin: 0,
                                   }}
                                 >
-                                  <div style={{ flex: 1, minWidth: 160 }}>
-                                    <label className="form-label" style={{ fontSize: 13 }}>
-                                      Periodo
-                                    </label>
-                                    <select
-                                      className="form-select form-select-sm"
-                                      value={cfg.id_periodo}
+                                  <input
+                                    type="checkbox"
+                                    checked={seleccionado}
+                                    onChange={() =>
+                                      toggleInstructorCheck(inst.id_instructor)
+                                    }
+                                  />
+                                  <span style={{ fontWeight: seleccionado ? 600 : 400 }}>
+                                    {inst.nombre} {inst.apellido}
+                                  </span>
+                                </label>
+
+                                {seleccionado && (
+                                  <div
+                                    style={{
+                                      marginLeft: 28,
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    <input
+                                      type="text"
+                                      className="form-control form-control-sm"
+                                      placeholder="Buscar RA por código o nombre..."
+                                      value={cfg.busquedaRA || ""}
                                       onChange={(e) =>
                                         actualizarConfigInstructor(
-                                          idInst,
-                                          "id_periodo",
+                                          inst.id_instructor,
+                                          "busquedaRA",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                    <select
+                                      className="form-select form-select-sm"
+                                      value={cfg.id_resultado || ""}
+                                      onChange={(e) =>
+                                        actualizarConfigInstructor(
+                                          inst.id_instructor,
+                                          "id_resultado",
                                           e.target.value
                                         )
                                       }
                                       required
                                     >
-                                      <option value="">Selecciona periodo</option>
-                                      {periodos.map((p) => {
-                                        const activo =
-                                          String(p.estado || "").toLowerCase() ===
-                                          "activo";
+                                      <option value="">Selecciona resultado de aprendizaje</option>
+                                      {rasFiltrados.map((r) => {
+                                        const idStr = String(r.id_resultado);
+                                        const ocupado =
+                                          rasOcupadosLote.has(idStr) ||
+                                          rasOcupadosFicha.has(idStr);
                                         return (
                                           <option
-                                            key={p.id_periodo}
-                                            value={p.id_periodo}
-                                            disabled={!activo}
+                                            key={r.id_resultado}
+                                            value={r.id_resultado}
+                                            disabled={ocupado}
                                           >
-                                            {p.nombre}{" "}
-                                            {activo ? "(Activo)" : "(No activo)"}
+                                            {r.codigo ? `${r.codigo} — ` : ""}
+                                            {r.nombre}
+                                            {ocupado ? " (ya asignado)" : ""}
                                           </option>
                                         );
                                       })}
                                     </select>
+                                    {cfg.id_resultado && (
+                                      <small className="text-success">
+                                        <i className="bi bi-check-circle"></i> RA seleccionado
+                                      </small>
+                                    )}
                                   </div>
-                                  <div style={{ flex: 1, minWidth: 200 }}>
-                                    <label className="form-label" style={{ fontSize: 13 }}>
-                                      Resultado de aprendizaje
-                                    </label>
-                                    <select
-                                      className="form-select form-select-sm"
-                                      value={cfg.id_resultado}
-                                      onChange={(e) =>
-                                        actualizarConfigInstructor(
-                                          idInst,
-                                          "id_resultado",
-                                          e.target.value
-                                        )
-                                      }
-                                    >
-                                      <option value="">Sin RA / seleccionar</option>
-                                      {resultadosRA.map((r) => (
-                                        <option
-                                          key={r.id_resultado}
-                                          value={r.id_resultado}
-                                        >
-                                          {r.codigo ? `${r.codigo} — ` : ""}
-                                          {r.nombre}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
+                                )}
                               </div>
                             );
                           })}
                         </div>
-                      )}
+                      </div>
 
                       <div>
                         <button
@@ -1066,7 +1188,8 @@ function Fichas() {
                           className="btn btn-success"
                           disabled={
                             guardandoAsignacion ||
-                            idsInstructoresSeleccionados.length === 0
+                            idsInstructoresSeleccionados.length === 0 ||
+                            !periodoAsignacion
                           }
                         >
                           {guardandoAsignacion

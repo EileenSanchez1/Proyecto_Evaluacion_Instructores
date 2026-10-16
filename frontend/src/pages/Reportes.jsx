@@ -64,13 +64,26 @@ function Reportes() {
     try {
       setCargandoDetalle(true);
       setInstructorSeleccionado(inst);
+      setDetallePreguntas([]);
       const params = {};
-      if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
-      if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
-      const data = await reportePreguntasInstructor(inst.id_instructor, params);
-      setDetallePreguntas(data.preguntas || []);
+      if (filtros.periodo_id) params.periodo_id = Number(filtros.periodo_id);
+      if (filtros.ficha_id) params.ficha_id = Number(filtros.ficha_id);
+      const idInst = Number(inst.id_instructor);
+      if (!idInst) {
+        console.error("Instructor sin id_instructor", inst);
+        setDetallePreguntas([]);
+        return;
+      }
+      const data = await reportePreguntasInstructor(idInst, params);
+      setDetallePreguntas(Array.isArray(data?.preguntas) ? data.preguntas : []);
     } catch (err) {
-      console.error(err);
+      console.error("Error al cargar detalle del instructor", err);
+      const detalle = err.response?.data?.detail;
+      alert(
+        typeof detalle === "string"
+          ? detalle
+          : "No se pudo cargar el detalle de este instructor. Revisa la consola."
+      );
       setDetallePreguntas([]);
     } finally {
       setCargandoDetalle(false);
