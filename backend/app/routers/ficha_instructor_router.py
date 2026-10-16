@@ -20,8 +20,17 @@ def listar(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000),
     return FichaInstructorService.listar(session, offset, limit)
 
 @router.get("/ficha/{id_ficha}", response_model=List[FichaInstructorRead])
-def por_ficha(id_ficha: int, session: Session = Depends(get_session)):
-    return FichaInstructorService.listar_por_ficha(session, id_ficha)
+def por_ficha(
+    id_ficha: int,
+    incluir_inactivos: bool = Query(False),
+    session: Session = Depends(get_session),
+):
+    """Lista asignaciones de instructores de una ficha.
+    Por defecto solo activas (las que ve el aprendiz y deben mostrarse en admin).
+    """
+    return FichaInstructorService.listar_por_ficha(
+        session, id_ficha, solo_activos=not incluir_inactivos
+    )
 
 @router.get("/ficha/{id_ficha}/periodo/{id_periodo}", response_model=List[FichaInstructorRead])
 def por_ficha_y_periodo(id_ficha: int, id_periodo: int, session: Session = Depends(get_session)):

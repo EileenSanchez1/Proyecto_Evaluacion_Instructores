@@ -24,6 +24,21 @@ class FichaInstructorService:
                 "Activa el periodo o elige uno activo."
             )
 
+        # Un mismo RA no puede estar asignado a dos instructores en la misma ficha+periodo
+        if ficha_instructor.id_resultado is not None:
+            otro_con_ra = FichaInstructorRepository.buscar_por_resultado(
+                session,
+                ficha_instructor.id_ficha,
+                ficha_instructor.id_periodo,
+                ficha_instructor.id_resultado,
+                solo_activos=True,
+            )
+            if otro_con_ra is not None:
+                raise ValueError(
+                    "Ese resultado de aprendizaje ya está asignado a otro instructor "
+                    "en esta ficha y periodo. Cada RA solo puede asignarse a un instructor."
+                )
+
         # Si ya existe (aunque desactivada) → reactivar y actualizar RA
         existente = FichaInstructorRepository.buscar_asignacion_cualquier(
             session,
@@ -54,8 +69,12 @@ class FichaInstructorService:
         return FichaInstructorRepository.listar(session, offset, limit)
 
     @staticmethod
-    def listar_por_ficha(session: Session, id_ficha: int) -> List[FichaInstructor]:
-        return FichaInstructorRepository.listar_por_ficha(session, id_ficha)
+    def listar_por_ficha(
+        session: Session, id_ficha: int, solo_activos: bool = True
+    ) -> List[FichaInstructor]:
+        return FichaInstructorRepository.listar_por_ficha(
+            session, id_ficha, solo_activos=solo_activos
+        )
 
     @staticmethod
     def listar_por_ficha_y_periodo(
@@ -94,6 +113,26 @@ class FichaInstructorService:
         periodo = PeriodoRepository.buscar(session, id_periodo)
         if not periodo:
             raise ValueError("El periodo no existe.")
+
+        id_resultado = (
+            update.id_resultado
+            if update.id_resultado is not None
+            else relacion.id_resultado
+        )
+        if id_resultado is not None:
+            otro_con_ra = FichaInstructorRepository.buscar_por_resultado(
+                session,
+                id_ficha,
+                id_periodo,
+                id_resultado,
+                solo_activos=True,
+                excluir_relacion_id=int(relacion_id),
+            )
+            if otro_con_ra is not None:
+                raise ValueError(
+                    "Ese resultado de aprendizaje ya está asignado a otro instructor "
+                    "en esta ficha y periodo. Cada RA solo puede asignarse a un instructor."
+                )
 
         # Conflicto solo con OTRA asignación ACTIVA del mismo triple
         ex = FichaInstructorRepository.buscar_asignacion(

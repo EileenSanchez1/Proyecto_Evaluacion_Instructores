@@ -27,10 +27,13 @@ class FichaInstructorRepository:
         return session.exec(select(FichaInstructor).offset(offset).limit(limit)).all()
 
     @staticmethod
-    def listar_por_ficha(session: Session, id_ficha: int) -> List[FichaInstructor]:
-        return session.exec(
-            select(FichaInstructor).where(FichaInstructor.id_ficha == id_ficha)
-        ).all()
+    def listar_por_ficha(
+        session: Session, id_ficha: int, solo_activos: bool = True
+    ) -> List[FichaInstructor]:
+        q = select(FichaInstructor).where(FichaInstructor.id_ficha == id_ficha)
+        if solo_activos:
+            q = q.where(FichaInstructor.activo == True)  # noqa: E712
+        return session.exec(q).all()
 
     @staticmethod
     def listar_por_ficha_y_periodo(
@@ -79,6 +82,27 @@ class FichaInstructorRepository:
                 FichaInstructor.id_periodo == id_periodo,
             )
         ).first()
+
+    @staticmethod
+    def buscar_por_resultado(
+        session: Session,
+        id_ficha: int,
+        id_periodo: int,
+        id_resultado: int,
+        solo_activos: bool = True,
+        excluir_relacion_id: Optional[int] = None,
+    ) -> Optional[FichaInstructor]:
+        """Busca si un RA ya está asignado a otro instructor en la misma ficha+periodo."""
+        q = select(FichaInstructor).where(
+            FichaInstructor.id_ficha == id_ficha,
+            FichaInstructor.id_periodo == id_periodo,
+            FichaInstructor.id_resultado == id_resultado,
+        )
+        if solo_activos:
+            q = q.where(FichaInstructor.activo == True)  # noqa: E712
+        if excluir_relacion_id is not None:
+            q = q.where(FichaInstructor.id != excluir_relacion_id)
+        return session.exec(q).first()
 
     @staticmethod
     def actualizar(
