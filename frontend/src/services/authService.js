@@ -61,3 +61,15 @@ export const cambiarPassword = async ({ contrasena_actual, nueva_contrasena }) =
   });
   return respuesta.data;
 };
+
+/** Admin paso 1: correo + contraseña → envía código al Gmail */
+export const adminIniciar = async ({ correo, contrasena }) => {
+  const respuesta = await api.post("/login/admin/iniciar", { correo, contrasena });
+  return respuesta.data;
+};
+
+/** Admin paso 2: correo + código → token */
+export const adminVerificar = async ({ correo, codigo }) => {
+  const respuesta = await api.post("/login/admin/verificar", { correo, codigo });
+  return respuesta.data;
+};

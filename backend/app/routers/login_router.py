@@ -214,3 +214,53 @@ def login_instructor_directo(datos: LoginInstructorRequest, session: Session = D
         usuario_data["foto"] = instructor.foto
 
     return LoginResponse(access_token=token, token_type="bearer", usuario=usuario_data)
+
+
+# =========================
+# ADMIN: segundo factor por código al Gmail
+# =========================
+@router.post("/admin/iniciar")
+def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
+    """
+    Valida correo + contraseña de un Administrador y, si es correcto,
+    envía un código de verificación al correo (Gmail) para segundo factor.
+    """
+    correo = datos.correo.strip().lower()
+    usuario, mensaje = LoginService.validar_login(session, correo, datos.contrasena)
+    if usuario is None:
+        raise HTTPException(status_code=401, detail=mensaje)
+
+    if not usuario.rol or usuario.rol.nombre not in ("Administrador", "Admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Esta cuenta no tiene rol de administrador.",
+        )
+
+    LoginService.enviar_codigo_admin(correo)
+    return {
+        "mensaje": "Se envió un código de verificación a tu correo. Ingrésalo para completar el acceso.",
+        "requiere_codigo": True,
+        "correo": correo,
+    }
+
+
+@router.post("/admin/verificar", response_model=LoginResponse)
+def admin_verificar(datos: VerificarCodigoRequest, session: Session = Depends(get_session)):
+    """Verifica el código de admin y emite el token de sesión."""
+    correo = datos.correo.strip().lower()
+    if not verificar_codigo(correo, datos.codigo.strip(), tipo="admin", consumir=True):
+        raise HTTPException(status_code=400, detail="Código inválido o expirado.")
+
+    usuario = LoginService.buscar_por_correo(session, correo)
+    if not usuario or not usuario.activo:
+        raise HTTPException(status_code=401, detail="Cuenta no activa.")
+    if not usuario.rol or usuario.rol.nombre not in ("Administrador", "Admin"):
+        raise HTTPException(status_code=403, detail="No es administrador.")
+
+    token = crear_access_token(
+        id_usuario=usuario.id_usuario,
+        correo=usuario.correo,
+        rol=usuario.rol.nombre,
+    )
+    usuario_data = _usuario_a_dict(usuario)
+    return LoginResponse(access_token=token, token_type="bearer", usuario=usuario_data)

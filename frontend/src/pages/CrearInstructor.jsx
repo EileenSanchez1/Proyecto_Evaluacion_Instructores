@@ -11,7 +11,7 @@ function CrearInstructor() {
     nombre: "",
     apellido: "",
     correo: "",
-    telefono: "",
+    telefono: "", // número de documento (campo del Excel)
   });
 
   const [resultadosDisponibles, setResultadosDisponibles] = useState([]);
@@ -154,17 +154,20 @@ function CrearInstructor() {
           />
 
           <label className="form-label">
-            <i className="bi bi-telephone"></i> Telefono *
+            <i className="bi bi-person-vcard"></i> N° Documento *
           </label>
           <input
             type="text"
             name="telefono"
             className="form-control-form"
-            placeholder="Ej: 3001234567"
+            placeholder="Ej: 52014102"
             value={formulario.telefono}
             onChange={manejarCambio}
             required
           />
+          <small className="text-muted">
+            Número de documento de identidad (el mismo del Excel de carga). No es teléfono.
+          </small>
 
           <label className="form-label">
             <i className="bi bi-book"></i> Resultados de Aprendizaje * (selecciona una o varias)
