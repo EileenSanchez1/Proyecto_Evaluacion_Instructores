@@ -24,7 +24,7 @@ from sqlmodel import Session
 
 from app.schemas.instructor import InstructorCreate
 from app.services.instructor_service import InstructorService
-from app.services.email_service import enviar_invitacion_instructor
+from app.services.email_service import enviar_credenciales_instructor
 
 
 def _normalizar_cabecera(nombre: str) -> str:
@@ -221,15 +221,7 @@ def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[st
                 resultados_aprendizaje=[],
             )
             inst = InstructorService.crear(session, data)
-
-            try:
-                enviar_invitacion_instructor(
-                    destinatario=correo,
-                    nombre=f"{nombre} {apellido}",
-                    plazo_horas=48,
-                )
-            except Exception as e:
-                print(f"[EMAIL] No se pudo enviar invitación a {correo}: {e}")
+            # InstructorService.crear ya genera contraseña y envía correo con credenciales
 
             creados.append({
                 "fila": i,
@@ -271,6 +263,6 @@ def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[st
             f"{len(omitidos)} omitidos (ya existían), "
             f"{len(errores)} con error. "
             "Sin foto: cada instructor la sube al iniciar sesión en su perfil. "
-            "Se envió correo de bienvenida a los nuevos."
+            "Se envió correo con contraseña temporal a los nuevos (igual que aprendices)."
         ),
     }

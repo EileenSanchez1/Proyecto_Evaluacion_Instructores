@@ -11,6 +11,24 @@ from app.models.evaluacion import Evaluacion
 from app.models.horario import Horario
 from app.schemas.instructor import InstructorCreate, InstructorUpdate
 from app.services.login_service import LoginService
+from app.services.email_service import enviar_credenciales_instructor
+import secrets
+import string
+
+
+def _generar_password_temporal(longitud: int = 10) -> str:
+    """Contraseña temporal legible (letras + dígitos + un símbolo)."""
+    simbolos = "!@#$%&*"
+    alfabeto = string.ascii_letters + string.digits
+    partes = [
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.digits),
+        secrets.choice(simbolos),
+    ]
+    partes += [secrets.choice(alfabeto) for _ in range(max(0, longitud - 4))]
+    secrets.SystemRandom().shuffle(partes)
+    return "".join(partes)
 
 
 class InstructorService:
@@ -34,7 +52,9 @@ class InstructorService:
                 "El rol 'Instructor' no existe. Ejecuta seed_roles.py primero."
             )
 
-        pwd = LoginService.hash_password(LoginService.PASSWORD_PENDIENTE_MARKER)
+        # Contraseña temporal (igual que aprendices) — se envía por correo
+        password_plana = _generar_password_temporal()
+        pwd = LoginService.hash_password(password_plana)
 
         usuario = Usuario(
             nombre=instructor.nombre.strip(),
@@ -80,6 +100,18 @@ class InstructorService:
 
         session.commit()
         session.refresh(db)
+
+        # Enviar credenciales por correo (igual que aprendices)
+        try:
+            enviar_credenciales_instructor(
+                destinatario=correo,
+                nombre=f"{db.nombre} {db.apellido}",
+                usuario=correo,
+                contrasena=password_plana,
+            )
+        except Exception as e:
+            print(f"[EMAIL] No se pudo enviar credenciales a {correo}: {e}")
+
         return db
 
     @staticmethod

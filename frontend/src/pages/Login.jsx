@@ -265,7 +265,7 @@ function Login() {
             {rol === "aprendiz" &&
               "Usa el correo y la contraseña que te enviaron al inicio del periodo."}
             {rol === "instructor" &&
-              "Correo institucional @sena.edu.co. En el primer acceso crearás tu contraseña."}
+              "Usa el correo institucional y la contraseña temporal que te enviaron al registrarte."}
             {rol === "admin" &&
               "Acceso restringido. Tras validar la contraseña se enviará un código a tu Gmail."}
           </p>
@@ -315,7 +315,7 @@ function Login() {
           )}
 
           {rol === "instructor" && pasoInstructor === 1 && (
-            <form onSubmit={handleInstructorCorreo}>
+            <form onSubmit={handleInstructorLogin}>
               <div>
                 <label>Correo institucional</label>
                 <input
@@ -326,9 +326,40 @@ function Login() {
                   required
                 />
               </div>
+              <div className="password-field">
+                <label>Contraseña</label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={mostrarPass ? "text" : "password"}
+                    placeholder="Contraseña temporal enviada por correo"
+                    value={contrasena}
+                    onChange={(e) => setContrasena(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="btn-ojito"
+                    onClick={() => setMostrarPass(!mostrarPass)}
+                    title={mostrarPass ? "Ocultar" : "Mostrar"}
+                  >
+                    <i className={`bi ${mostrarPass ? "bi-eye-slash" : "bi-eye"}`}></i>
+                  </button>
+                </div>
+              </div>
               <button type="submit" disabled={cargando}>
-                {cargando ? "Verificando..." : "Continuar"}
+                {cargando ? "Ingresando..." : "Iniciar sesión"}
               </button>
+              <p style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#6b7280" }}>
+                Si aún no tienes contraseña (registro antiguo),{" "}
+                <button
+                  type="button"
+                  onClick={handleInstructorCorreo}
+                  style={{ background: "none", border: "none", color: "#0d7377", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                >
+                  solicita el código para crearla
+                </button>
+                .
+              </p>
             </form>
           )}
 

@@ -530,7 +530,7 @@ function Fichas() {
   const manejarCargaMasiva = async (e) => {
     e.preventDefault();
     if (!archivoCarga) {
-      setError("Selecciona un archivo CSV.");
+      setError("Selecciona un archivo Excel (.xlsx) o CSV.");
       return;
     }
     try {
@@ -541,6 +541,9 @@ function Fichas() {
       fd.append("archivo", archivoCarga);
       if (periodoCarga) fd.append("id_periodo", periodoCarga);
       fd.append("enviar_correo", "true");
+      if (fichaSeleccionada?.id_ficha) {
+        fd.append("id_ficha", fichaSeleccionada.id_ficha);
+      }
       const res = await cargaMasivaAprendices(fd);
       setResultadoCarga(res);
       setArchivoCarga(null);
@@ -674,15 +677,15 @@ function Fichas() {
       <div className="form-inline-card" style={{ marginBottom: "1.5rem" }}>
         <h4><i className="bi bi-upload"></i> Carga masiva de aprendices (coordinación)</h4>
         <p className="subtitulo" style={{ marginBottom: 12 }}>
-          Sube un CSV con columnas: <code>nombre,apellido,correo,numero_ficha</code>.
+          Sube el <strong>Reporte de Aprendices</strong> SENA (.xlsx) con columnas: <code>Tipo de Documento, Número de Documento, Nombre, Apellidos, Celular, Correo Electrónico, Estado</code>. La ficha se lee de «Ficha de Caracterización» del archivo (o formato CSV simple).
           Cada aprendiz queda asignado a su ficha y recibe correo con usuario y contraseña.
         </p>
         <form onSubmit={manejarCargaMasiva} className="form-inline-row" style={{ flexWrap: "wrap", gap: 12 }}>
           <div>
-            <label>Archivo CSV</label>
+            <label>Archivo Excel / CSV</label>
             <input
               type="file"
-              accept=".csv,.txt,.tsv"
+              accept=".xlsx,.xls,.csv,.txt,.tsv"
               onChange={(e) => setArchivoCarga(e.target.files?.[0] || null)}
             />
           </div>

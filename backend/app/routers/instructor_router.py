@@ -75,15 +75,7 @@ async def crear_instructor(
 
     try:
         inst = InstructorService.crear(session, datos)
-        # Enviar correo de bienvenida / primer acceso (sin foto; la sube el instructor)
-        try:
-            enviar_invitacion_instructor(
-                destinatario=correo,
-                nombre=f"{inst.nombre} {inst.apellido}",
-                plazo_horas=48,
-            )
-        except Exception as e:
-            print(f"[EMAIL] No se pudo enviar invitación a {correo}: {e}")
+        # El servicio genera contraseña temporal y envía correo con credenciales
         return InstructorService.to_read(session, inst)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
