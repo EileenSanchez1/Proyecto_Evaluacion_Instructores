@@ -13,6 +13,7 @@ RESET_TOKEN_EXPIRE_MINUTES = 30
 
 _codigos_recuperacion = {}
 _codigos_instructor = {}
+_codigos_admin = {}
 
 
 def _norm_correo(correo: str) -> str:
@@ -96,6 +97,8 @@ def guardar_codigo(
         _codigos_recuperacion[key] = entry
     elif tipo == "instructor":
         _codigos_instructor[key] = entry
+    elif tipo == "admin":
+        _codigos_admin[key] = entry
 
 
 def verificar_codigo(
@@ -115,6 +118,8 @@ def verificar_codigo(
         store = _codigos_recuperacion
     elif tipo == "instructor":
         store = _codigos_instructor
+    elif tipo == "admin":
+        store = _codigos_admin
     else:
         return False
 
@@ -144,3 +149,5 @@ def limpiar_codigo(correo: str, tipo: str = "recuperacion"):
         _codigos_recuperacion.pop(key, None)
     elif tipo == "instructor":
         _codigos_instructor.pop(key, None)
+    elif tipo == "admin":
+        _codigos_admin.pop(key, None)

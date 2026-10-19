@@ -297,3 +297,32 @@ def enviar_nuevo_periodo_aprendiz(
     </div>
     """
     return enviar_correo(destinatario, asunto, texto, html)
+
+
+def enviar_codigo_admin(destinatario: str, codigo: str) -> bool:
+    """Código de verificación de segundo factor para acceso de administrador."""
+    asunto = "Código de acceso administrador — SENA Evaluación Instructores"
+    texto = (
+        f"Hola Administrador,\n\n"
+        f"Se solicitó acceso al panel de administración del Sistema de Evaluación "
+        f"de Instructores SENA.\n\n"
+        f"Tu código de verificación es: {codigo}\n\n"
+        f"Válido por 10 minutos. Si no fuiste tú, ignora este mensaje y revisa "
+        f"la seguridad de tu cuenta.\n\n"
+        f"— SENA · Evaluación de Instructores\n"
+    )
+    html = f"""
+    <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+      <h2 style="color:#39a900;margin:0 0 12px;">Acceso administrador</h2>
+      <p>Se solicitó acceso al panel de administración.</p>
+      <p style="font-size:15px;">Tu código de verificación es:</p>
+      <p style="font-size:28px;font-weight:700;letter-spacing:6px;color:#1f2937;
+         background:#f3f4f6;padding:14px 20px;border-radius:10px;text-align:center;">
+        {codigo}
+      </p>
+      <p style="color:#6b7280;font-size:13px;">Válido por 10 minutos. Si no solicitaste este acceso, ignora el mensaje.</p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+      <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+    </div>
+    """
+    return enviar_correo(destinatario, asunto, texto, html)

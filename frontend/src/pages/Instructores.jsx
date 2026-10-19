@@ -331,7 +331,7 @@ function Instructores() {
               <hr />
               <p><i className="bi bi-envelope"></i> {inst.correo}</p>
               {esAdmin ? (
-                <p><i className="bi bi-telephone"></i> {inst.telefono}</p>
+                <p title="N° Documento"><i className="bi bi-person-vcard"></i> {inst.telefono}</p>
               ) : (
                 <p style={{ marginTop: 6 }}>
                   <i className="bi bi-bookmark-check"></i>{" "}

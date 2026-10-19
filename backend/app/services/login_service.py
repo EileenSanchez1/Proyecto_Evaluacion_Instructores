@@ -10,10 +10,12 @@ try:
     from app.services.email_service import (
         enviar_codigo_recuperacion as mail_codigo_recuperacion,
         enviar_codigo_instructor as mail_codigo_instructor,
+        enviar_codigo_admin as mail_codigo_admin,
     )
 except Exception:
     mail_codigo_recuperacion = None
     mail_codigo_instructor = None
+    mail_codigo_admin = None
 
 password_hash = PasswordHash.recommended()
 
@@ -141,3 +143,22 @@ class LoginService:
     @staticmethod
     def buscar_instructor_por_correo(session: Session, correo: str):
         return session.exec(select(Instructor).where(Instructor.correo == correo)).first()
+
+    @staticmethod
+    def enviar_codigo_admin(correo: str) -> str:
+        """Genera y envía código de segundo factor para administrador."""
+        correo = (correo or "").strip().lower()
+        codigo = generar_codigo_numerico(6)
+        guardar_codigo(correo, codigo, tipo="admin", expiracion_minutos=10)
+        print(f"\n{"="*50}")
+        print(f"[EMAIL] Código de acceso ADMIN para {correo}: {codigo}")
+        print(f"{"="*50}\n")
+        if mail_codigo_admin:
+            try:
+                ok = mail_codigo_admin(correo, codigo)
+                if not ok:
+                    print("[EMAIL] No se pudo enviar código admin. Usa el de la consola.")
+            except Exception as e:
+                print(f"[EMAIL] Error admin: {e}")
+        return codigo
+
