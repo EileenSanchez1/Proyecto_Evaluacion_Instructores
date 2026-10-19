@@ -544,7 +544,7 @@ function Reportes() {
       {/* ── Pendientes de evaluación y sin foto ── */}
       <div className="home-card" style={{ marginTop: "28px" }}>
         <div className="home-card-header">
-          <h3><i className="bi bi-clipboard-check"></i> Pendientes y control de fotos</h3>
+          <h3><i className="bi bi-clipboard-check"></i> Aprendices pendientes por evaluar y control de subida de fotos instructores</h3>
         </div>
         <div className="home-card-body">
           <p style={{ color: "#6b7280", marginTop: 0 }}>
@@ -559,27 +559,27 @@ function Reportes() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
             <button type="button" onClick={cargarPendientes} disabled={cargandoPend}
               style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#39a900", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
-              Ver pendientes
+              Ver aprendices con evaluaciones pendientes
             </button>
             <button type="button" onClick={onDescargarPendientes}
               style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #39a900", background: "#fff", color: "#39a900", fontWeight: 600, cursor: "pointer" }}>
-              <i className="bi bi-file-earmark-excel"></i> Excel pendientes
+              <i className="bi bi-file-earmark-excel"></i> Descargar Excel evaluaciones pendientes
             </button>
             <button type="button" onClick={onEnviarRecordatorio}
               style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #d97706", background: "#fff7ed", color: "#92400e", fontWeight: 600, cursor: "pointer" }}>
-              Enviar recordatorio 24h
+              Enviar recordatorio evaluacion al aprendiz
             </button>
             <button type="button" onClick={cargarSinFoto} disabled={cargandoPend}
               style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#1f2937", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
-              Ver sin foto
+              Ver instructores aun sin foto
             </button>
             <button type="button" onClick={onDescargarSinFoto}
               style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #1f2937", background: "#fff", color: "#1f2937", fontWeight: 600, cursor: "pointer" }}>
-              <i className="bi bi-file-earmark-excel"></i> Excel sin foto
+              <i className="bi bi-file-earmark-excel"></i> Descargar Excel sin foto
             </button>
             <button type="button" onClick={onEnviarAdvertenciaFoto}
               style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #b91c1c", background: "#fef2f2", color: "#991b1b", fontWeight: 600, cursor: "pointer" }}>
-              Advertencia sin foto
+              Enviar advertencia de sin foto a instructor
             </button>
           </div>
 
