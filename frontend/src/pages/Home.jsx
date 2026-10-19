@@ -71,9 +71,9 @@ function Home() {
             setUltimasEvaluaciones((historial || []).slice(0, 5));
           }
         } else if (esInstructorUser) {
+          // El instructor NO consulta promedios ni evaluaciones: solo fichas y perfil.
           let idInstructor = usuario?.id_instructor;
-          if (!idInstructor) {
-            // Intentar recuperar id_instructor por correo si la sesión es antigua
+          if (!idInstructor && usuario?.correo) {
             try {
               const todos = await listarInstructores().catch(() => []);
               const yo = (todos || []).find(
@@ -89,33 +89,15 @@ function Home() {
             }
           }
           if (!idInstructor) {
-            setError("No se encontró el identificador de instructor en la sesión. Cierra sesión e inicia de nuevo como instructor.");
+            setError(
+              "No se encontró el identificador de instructor en la sesión. Cierra sesión e inicia de nuevo desde «Soy instructor»."
+            );
             setCargando(false);
             return;
           }
 
-          const [asignaciones, reporte] = await Promise.all([
-            listarFichasPorInstructor(idInstructor).catch(() => []),
-            (async () => {
-              try {
-                return await miPromedioInstructor(idInstructor);
-              } catch (e1) {
-                try {
-                  return await reportePreguntasInstructor(idInstructor, {});
-                } catch (e2) {
-                  console.error("No se pudo cargar el promedio del instructor", e1, e2);
-                  return null;
-                }
-              }
-            })(),
-          ]);
-
-          // Enriquecer fichas si el reporte ya trae detalle
-          let fichas = asignaciones || [];
-          if (reporte?.fichas_asignadas?.length) {
-            fichas = reporte.fichas_asignadas;
-          } else if (fichas.length) {
-            // Completar número de ficha consultando listado de fichas
+          let fichas = await listarFichasPorInstructor(idInstructor).catch(() => []);
+          if (fichas?.length) {
             try {
               const todas = await listarFichas().catch(() => []);
               const mapa = Object.fromEntries((todas || []).map((f) => [f.id_ficha, f]));
@@ -133,8 +115,8 @@ function Home() {
           }
 
           if (!cancelado) {
-            setFichasInstructor(fichas);
-            setReporteInstructor(reporte);
+            setFichasInstructor(fichas || []);
+            setReporteInstructor(null);
           }
         } else {
           // Aprendiz: periodo operativo = vigente activo (no el cerrado)
@@ -223,7 +205,7 @@ function Home() {
   const subtitulo = esAdminCoord
     ? "Panel de control del sistema de evaluación de instructores SENA"
     : esInstructorUser
-    ? "Panel del instructor — consulta tu desempeño y fichas asignadas"
+    ? "Panel del instructor — fichas asignadas y gestión de tu perfil"
     : "Bienvenido al sistema de evaluación de instructores del SENA";
 
   return (
@@ -281,18 +263,16 @@ function Home() {
             <div className="home-banner-texto">
               <h2>Tu espacio como instructor</h2>
               <p>
-                Revisa las fichas donde estás asignado, el promedio general de tus
-                evaluaciones y el detalle por pregunta para saber en qué aspectos
-                destacar y en cuáles mejorar.
+                Consulta las fichas donde estás asignado, actualiza tu foto de perfil y cambia tu contraseña. Los resultados de evaluación solo los ve coordinación.
               </p>
               <div className="home-banner-actions">
-                <Link to="/mi-promedio" className="home-banner-btn">
-                  <i className="bi bi-graph-up-arrow"></i>
-                  <span>Ver mi promedio</span>
-                </Link>
-                <Link to="/perfil-instructor" className="home-banner-btn home-banner-btn-secondary">
+                <Link to="/perfil-instructor" className="home-banner-btn">
                   <i className="bi bi-person-badge"></i>
                   <span>Mi perfil</span>
+                </Link>
+                <Link to="/cambiar-contrasena" className="home-banner-btn home-banner-btn-secondary">
+                  <i className="bi bi-key"></i>
+                  <span>Cambiar contraseña</span>
                 </Link>
               </div>
             </div>
@@ -314,11 +294,9 @@ function Home() {
               </div>
               <div className="home-stat-info">
                 <span className="home-stat-num">
-                  {reporteInstructor != null && reporteInstructor.promedio_general != null
-                    ? Number(reporteInstructor.promedio_general).toFixed(2)
-                    : "—"}
+                  {usuario?.planta_contrato || "—"}
                 </span>
-                <span className="home-stat-label">Promedio general (1–5)</span>
+                <span className="home-stat-label">Vinculación</span>
               </div>
             </div>
             <div className="home-stat-card">
@@ -326,12 +304,10 @@ function Home() {
                 <i className="bi bi-graph-up"></i>
               </div>
               <div className="home-stat-info">
-                <span className="home-stat-num">
-                  {reporteInstructor != null && reporteInstructor.porcentaje_general != null
-                    ? `${Number(reporteInstructor.porcentaje_general).toFixed(1)}%`
-                    : "—"}
+                <span className="home-stat-num" style={{ fontSize: "1rem" }}>
+                  Instructor
                 </span>
-                <span className="home-stat-label">Desempeño global</span>
+                <span className="home-stat-label">Rol en el sistema</span>
               </div>
             </div>
           </div>
@@ -406,34 +382,21 @@ function Home() {
               </div>
               <div className="home-card-body">
                 <div className="home-accesos">
-                  <Link to="/mi-promedio" className="home-acceso">
-                    <i className="bi bi-graph-up-arrow"></i>
-                    <span>Mi promedio por pregunta</span>
-                  </Link>
+                  
                   <Link to="/perfil-instructor" className="home-acceso">
                     <i className="bi bi-camera"></i>
                     <span>Actualizar foto de perfil</span>
                   </Link>
-                  <Link to="/evaluaciones" className="home-acceso">
-                    <i className="bi bi-clipboard-data"></i>
-                    <span>Resumen de evaluaciones</span>
+                  <Link to="/cambiar-contrasena" className="home-acceso">
+                    <i className="bi bi-key"></i>
+                    <span>Cambiar contraseña</span>
                   </Link>
-                </div>
-                {reporteInstructor?.preguntas?.length > 0 && (
-                  <p style={{ marginTop: 16, fontSize: "0.9rem", color: "#4b5563" }}>
-                    Tienes detalle de {reporteInstructor.preguntas.length} pregunta(s)
-                    evaluada(s). Entra a <strong>Mi promedio</strong> para ver alertas
-                    de mejora o felicitaciones.
+                  <p style={{ marginTop: 12, fontSize: "0.88rem", color: "#6b7280", width: "100%" }}>
+                    Los resultados de evaluación solo los consulta coordinación.
                   </p>
-                )}
-                {reporteInstructor &&
-                  (reporteInstructor.total_respuestas === 0 ||
-                    !reporteInstructor.preguntas?.length) && (
-                    <p style={{ marginTop: 16, fontSize: "0.9rem", color: "#6b7280" }}>
-                      Todavía no has recibido evaluaciones de aprendices. Cuando las
-                      haya, el promedio y las alertas se mostrarán aquí.
-                    </p>
-                  )}
+                </div>
+                
+                
               </div>
             </div>
           </div>

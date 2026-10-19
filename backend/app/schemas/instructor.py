@@ -11,12 +11,12 @@ class InstructorBase(SQLModel):
     correo: str
     telefono: str
     foto: Optional[str] = None
+    # PLANTA | CONTRATO
+    planta_contrato: Optional[str] = None
 
 
 class InstructorCreate(InstructorBase):
-    # IDs de resultados de aprendizaje asignados al instructor
     resultados_aprendizaje: List[int] = []
-    # Alias de compatibilidad (frontend antiguo puede enviar "competencias")
     competencias: Optional[List[int]] = None
 
 
@@ -32,5 +32,6 @@ class InstructorUpdate(SQLModel):
     correo: Optional[str] = None
     telefono: Optional[str] = None
     foto: Optional[str] = None
+    planta_contrato: Optional[str] = None
     resultados_aprendizaje: Optional[List[int]] = None
     competencias: Optional[List[int]] = None

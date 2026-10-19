@@ -56,3 +56,46 @@ export const detalleEvaluacion = async (evaluacionId) => {
   );
   return response.data;
 };
+
+/** Aprendices con instructores pendientes de evaluar */
+export const listarPendientesEvaluacion = async (params = {}) => {
+  const response = await api.get(`${API_URL}/pendientes-evaluacion`, { params });
+  return response.data;
+};
+
+/** Instructores sin foto de perfil */
+export const listarInstructoresSinFoto = async () => {
+  const response = await api.get(`${API_URL}/instructores-sin-foto`);
+  return response.data;
+};
+
+/** Envía recordatorio 24h a aprendices pendientes */
+export const enviarRecordatorioPendientes = async (params = {}) => {
+  const response = await api.post(`${API_URL}/enviar-recordatorio-pendientes`, null, {
+    params,
+  });
+  return response.data;
+};
+
+/** Envía advertencia a instructores sin foto */
+export const enviarAdvertenciaSinFoto = async () => {
+  const response = await api.post(`${API_URL}/enviar-advertencia-sin-foto`);
+  return response.data;
+};
+
+/** Descarga Excel de pendientes (blob) */
+export const descargarPendientesExcel = async (params = {}) => {
+  const response = await api.get(`${API_URL}/exportar-pendientes-excel`, {
+    params,
+    responseType: "blob",
+  });
+  return response.data;
+};
+
+/** Descarga Excel de instructores sin foto (blob) */
+export const descargarSinFotoExcel = async () => {
+  const response = await api.get(`${API_URL}/exportar-sin-foto-excel`, {
+    responseType: "blob",
+  });
+  return response.data;
+};

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlmodel import Session
 from typing import List
 
@@ -170,3 +170,53 @@ def cargar_preguntas_oficiales(
         "reemplazar": reemplazar,
         "total_oficiales": len(oficiales),
     }
+
+
+@router.post(
+    "/carga-excel",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+async def cargar_preguntas_excel(
+    archivo: UploadFile = File(...),
+    reemplazar: bool = Query(
+        False,
+        description="Si true, desactiva las preguntas actuales y carga solo las del Excel",
+    ),
+    session: Session = Depends(get_session),
+):
+    """
+    Carga preguntas desde el Excel del formato oficial SENA
+    (Evaluación de instructores en aula). Solo se toman las filas de preguntas.
+    """
+    nombre = (archivo.filename or "").lower()
+    if not (nombre.endswith(".xlsx") or nombre.endswith(".xls")):
+        raise HTTPException(
+            status_code=400,
+            detail="Sube un archivo Excel (.xlsx) del formato de evaluación de instructores.",
+        )
+    contenido = await archivo.read()
+    if not contenido:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+
+    from app.services.carga_preguntas_service import (
+        parsear_xlsx_preguntas,
+        cargar_preguntas_desde_filas,
+    )
+
+    try:
+        filas = parsear_xlsx_preguntas(contenido)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se pudo leer el Excel: {type(e).__name__}: {e}",
+        )
+
+    if not filas:
+        raise HTTPException(
+            status_code=400,
+            detail="No se detectaron preguntas en el archivo. Verifica el formato SENA.",
+        )
+
+    return cargar_preguntas_desde_filas(session, filas, reemplazar=reemplazar)

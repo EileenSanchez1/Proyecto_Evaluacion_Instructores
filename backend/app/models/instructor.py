@@ -11,6 +11,8 @@ class Instructor(SQLModel, table=True):
     correo: str = Field(max_length=120, unique=True, index=True, nullable=False)
     telefono: str = Field(max_length=20, nullable=False)
     foto: Optional[str] = Field(default=None, max_length=255)
+    # PLANTA | CONTRATO (columna del Excel oficial de instructores SENA)
+    planta_contrato: Optional[str] = Field(default=None, max_length=20)
     id_usuario: Optional[int] = Field(
         default=None,
         foreign_key="usuarios.id_usuario",

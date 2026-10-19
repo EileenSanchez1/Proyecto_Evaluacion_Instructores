@@ -47,12 +47,23 @@ class InstructorService:
         session.add(usuario)
         session.flush()
 
+        planta = (instructor.planta_contrato or "").strip().upper() or None
+        if planta and planta not in ("PLANTA", "CONTRATO"):
+            # Normalizar valores comunes del Excel
+            if "PLANTA" in planta:
+                planta = "PLANTA"
+            elif "CONTRAT" in planta:
+                planta = "CONTRATO"
+            else:
+                planta = planta[:20]
+
         db = Instructor(
             nombre=instructor.nombre.strip(),
             apellido=instructor.apellido.strip(),
             correo=correo,
             telefono=instructor.telefono.strip(),
             foto=instructor.foto,
+            planta_contrato=planta,
             id_usuario=usuario.id_usuario,
         )
         session.add(db)
@@ -117,6 +128,7 @@ class InstructorService:
             "correo": instructor.correo,
             "telefono": instructor.telefono,
             "foto": instructor.foto,
+            "planta_contrato": getattr(instructor, "planta_contrato", None),
             "resultados_aprendizaje": ras,
             "activo": InstructorService.es_activo(session, instructor),
         }
@@ -152,6 +164,13 @@ class InstructorService:
             instructor.telefono = instructor_update.telefono.strip()
         if instructor_update.foto is not None:
             instructor.foto = instructor_update.foto
+        if instructor_update.planta_contrato is not None:
+            pc = instructor_update.planta_contrato.strip().upper()
+            if "PLANTA" in pc:
+                pc = "PLANTA"
+            elif "CONTRAT" in pc:
+                pc = "CONTRATO"
+            instructor.planta_contrato = pc or None
 
         if instructor.id_usuario:
             usuario = session.get(Usuario, instructor.id_usuario)

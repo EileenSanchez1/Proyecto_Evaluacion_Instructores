@@ -40,3 +40,14 @@ export const cargarPreguntasOficiales = async (reemplazar = false) => {
   });
   return response.data;
 };
+
+/** Carga preguntas desde Excel del formato SENA (solo filas de preguntas) */
+export const cargarPreguntasDesdeExcel = async (archivo, reemplazar = false) => {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  const response = await api.post(`${API_URL}/carga-excel`, formData, {
+    params: { reemplazar },
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
