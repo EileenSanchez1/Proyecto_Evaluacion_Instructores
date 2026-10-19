@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listarInstructores, eliminarInstructor, obtenerInstructor, resetPrimerAccesoInstructor, reactivarInstructor, cargaMasivaInstructores } from "../services/instructorService";
+import { listarInstructores, eliminarInstructor, obtenerInstructor, reactivarInstructor, cargaMasivaInstructores } from "../services/instructorService";
 import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
@@ -141,23 +141,7 @@ function Instructores() {
     }
   };
 
-  const manejarResetPrimerAcceso = async (id, nombre) => {
-    if (
-      !window.confirm(
-        `¿Resetear primer acceso de ${nombre}?\nAl iniciar sesión pedirá código (consola del backend) y crear contraseña.`
-      )
-    ) {
-      return;
-    }
-    try {
-      const res = await resetPrimerAccesoInstructor(id);
-      alert(res.mensaje || "Primer acceso restablecido.");
-    } catch (err) {
-      const d = err.response?.data?.detail;
-      alert(typeof d === "string" ? d : "No se pudo resetear el primer acceso.");
-    }
-  };
-
+  
   const texto = busqueda.toLowerCase().trim();
   const instructoresFiltrados = instructores.filter((inst) => {
     if (!texto) return true;
@@ -345,13 +329,7 @@ function Instructores() {
                   <button className="btn-editar" title="Editar" onClick={() => navigate(`/instructores/editar/${inst.id_instructor}`)}>
                     <i className="bi bi-pencil"></i>
                   </button>
-                  <button
-                    className="btn-editar-icon"
-                    title="Resetear primer acceso"
-                    onClick={() => manejarResetPrimerAcceso(inst.id_instructor, `${inst.nombre} ${inst.apellido}`)}
-                  >
-                    <i className="bi bi-key"></i>
-                  </button>
+                  
                   {inst.activo === false ? (
                     <button
                       className="btn-editar-icon"

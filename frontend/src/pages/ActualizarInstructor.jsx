@@ -8,15 +8,33 @@ import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeSer
 import "../styles/Instructores.css";
 import "../styles/agregar-a-Instructores.css";
 
+function dividirNombreCompleto(completo) {
+  const partes = (completo || "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return { nombre: "", apellido: "" };
+  if (partes.length === 1) return { nombre: partes[0], apellido: "-" };
+  if (partes.length === 2) return { nombre: partes[0], apellido: partes[1] };
+  if (partes.length >= 4) {
+    return {
+      nombre: partes.slice(0, -2).join(" "),
+      apellido: partes.slice(-2).join(" "),
+    };
+  }
+  return {
+    nombre: partes.slice(0, -1).join(" "),
+    apellido: partes[partes.length - 1],
+  };
+}
+
 function ActualizarInstructor() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [formulario, setFormulario] = useState({
-    nombre: "",
-    apellido: "",
+    nombre_completo: "",
+    documento: "",
+    planta_contrato: "",
+    correo_personal: "",
     correo: "",
-    telefono: "", // almacena el número de documento (mismo campo del Excel)
   });
 
   const [resultadosDisponibles, setResultadosDisponibles] = useState([]);
@@ -29,11 +47,16 @@ function ActualizarInstructor() {
     const cargarDatos = async () => {
       try {
         const instructor = await obtenerInstructor(id);
+        const nombreCompleto = [instructor.nombre, instructor.apellido]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
         setFormulario({
-          nombre: instructor.nombre || "",
-          apellido: instructor.apellido || "",
+          nombre_completo: nombreCompleto,
+          documento: instructor.telefono || "",
+          planta_contrato: (instructor.planta_contrato || "").toUpperCase(),
+          correo_personal: "",
           correo: instructor.correo || "",
-          telefono: instructor.telefono || "",
         });
         if (instructor.resultados_aprendizaje) {
           setResultadosSeleccionados(
@@ -73,12 +96,20 @@ function ActualizarInstructor() {
     setError("");
 
     if (
-      !formulario.nombre.trim() ||
-      !formulario.apellido.trim() ||
-      !formulario.correo.trim() ||
-      !formulario.telefono.trim()
+      !formulario.nombre_completo.trim() ||
+      !formulario.documento.trim() ||
+      !formulario.planta_contrato.trim() ||
+      !formulario.correo.trim()
     ) {
-      setError("Todos los campos obligatorios deben estar completos.");
+      setError(
+        "Completa: Nombres y Apellidos, Número Documento, Planta/Contrato y Correo @SENA.EDU.CO."
+      );
+      return;
+    }
+
+    const correoNorm = formulario.correo.trim().toLowerCase();
+    if (!correoNorm.endsWith("@sena.edu.co")) {
+      setError("El correo institucional debe ser @sena.edu.co.");
       return;
     }
 
@@ -87,21 +118,19 @@ function ActualizarInstructor() {
       return;
     }
 
+    const { nombre, apellido } = dividirNombreCompleto(formulario.nombre_completo);
+
     try {
       setGuardando(true);
 
-      const formData = new FormData();
-      formData.append("nombre", formulario.nombre.trim());
-      formData.append("apellido", formulario.apellido.trim());
-      formData.append("correo", formulario.correo.trim());
-      formData.append("telefono", String(formulario.telefono).trim());
-      formData.append(
-        "resultados_aprendizaje",
-        JSON.stringify(resultadosSeleccionados)
-      );
-      // Sin foto: la foto solo la gestiona el instructor en su perfil.
-
-      await actualizarInstructor(id, formData);
+      await actualizarInstructor(id, {
+        nombre,
+        apellido,
+        correo: correoNorm,
+        telefono: String(formulario.documento).trim(),
+        planta_contrato: formulario.planta_contrato.trim().toUpperCase(),
+        resultados_aprendizaje: resultadosSeleccionados,
+      });
 
       navigate("/instructores");
     } catch (err) {
@@ -125,50 +154,78 @@ function ActualizarInstructor() {
         <div className="form-header">
           <i className="bi bi-pencil-square"></i>
           <h2>Actualizar Instructor</h2>
-          <p>Modifica los campos que deseas actualizar. Los datos deben coincidir con el Excel de carga.</p>
+          <p>
+            Modifica los campos
+          </p>
         </div>
 
         {error && <div className="form-mensaje-error">{error}</div>}
 
         <form onSubmit={manejarEnvio}>
-          <p className="text-muted" style={{ marginBottom: "1rem", fontSize: "0.9rem" }}>
-            <i className="bi bi-info-circle"></i> La foto del instructor solo se puede
-            actualizar desde el perfil del propio instructor tras iniciar sesión.
+          <p
+            className="text-muted"
+            style={{ marginBottom: "1rem", fontSize: "0.9rem" }}
+          >
+            <i className="bi bi-info-circle"></i> La foto del instructor solo se
+            puede actualizar desde el perfil del propio instructor tras iniciar
+            sesión.
           </p>
 
-          <div className="form-row">
-            <div>
-              <label className="form-label">
-                <i className="bi bi-person"></i> Nombre *
-              </label>
-              <input
-                type="text"
-                name="nombre"
-                className="form-control-form"
-                placeholder="Ej: Juan"
-                value={formulario.nombre}
-                onChange={manejarCambio}
-                required
-              />
-            </div>
-            <div>
-              <label className="form-label">
-                <i className="bi bi-person"></i> Apellido *
-              </label>
-              <input
-                type="text"
-                name="apellido"
-                className="form-control-form"
-                placeholder="Ej: Perez"
-                value={formulario.apellido}
-                onChange={manejarCambio}
-                required
-              />
-            </div>
-          </div>
-
           <label className="form-label">
-            <i className="bi bi-envelope"></i> Correo *
+            <i className="bi bi-person"></i> Nombres y Apellidos Completos *
+          </label>
+          <input
+            type="text"
+            name="nombre_completo"
+            className="form-control-form"
+            placeholder="Ej: Adriana Maritza Vega Gómez"
+            value={formulario.nombre_completo}
+            onChange={manejarCambio}
+            required
+          />
+
+          <label className="form-label" style={{ marginTop: "0.75rem" }}>
+            <i className="bi bi-person-vcard"></i> Número Documento *
+          </label>
+          <input
+            type="text"
+            name="documento"
+            className="form-control-form"
+            placeholder="Ej: 52014102"
+            value={formulario.documento}
+            onChange={manejarCambio}
+            required
+          />
+
+          <label className="form-label" style={{ marginTop: "0.75rem" }}>
+            <i className="bi bi-building"></i> Planta / Contrato *
+          </label>
+          <select
+            name="planta_contrato"
+            className="form-control-form"
+            value={formulario.planta_contrato}
+            onChange={manejarCambio}
+            required
+          >
+            <option value="">Seleccione...</option>
+            <option value="PLANTA">PLANTA</option>
+            <option value="CONTRATO">CONTRATO</option>
+          </select>
+
+          <label className="form-label" style={{ marginTop: "0.75rem" }}>
+            <i className="bi bi-envelope"></i> Correo Electrónico Personal
+          </label>
+          <input
+            type="email"
+            name="correo_personal"
+            className="form-control-form"
+            placeholder="ejemplo@gmail.com (opcional, solo referencia)"
+            value={formulario.correo_personal}
+            onChange={manejarCambio}
+          />
+
+          <label className="form-label" style={{ marginTop: "0.75rem" }}>
+            <i className="bi bi-envelope-at"></i> Correo Electrónico @SENA.EDU.CO *
           </label>
           <input
             type="email"
@@ -180,24 +237,9 @@ function ActualizarInstructor() {
             required
           />
 
-          <label className="form-label">
-            <i className="bi bi-person-vcard"></i> N° Documento *
-          </label>
-          <input
-            type="text"
-            name="telefono"
-            className="form-control-form"
-            placeholder="Ej: 52014102"
-            value={formulario.telefono}
-            onChange={manejarCambio}
-            required
-          />
-          <small className="text-muted">
-            Número de documento de identidad (el mismo del Excel de carga). No es teléfono.
-          </small>
-
           <label className="form-label" style={{ marginTop: "1rem" }}>
-            <i className="bi bi-book"></i> Resultados de Aprendizaje * (selecciona una o varias)
+            <i className="bi bi-book"></i> Resultados de Aprendizaje * (selecciona
+            una o varias)
           </label>
           <div className="checkbox-grupo">
             {resultadosDisponibles.length === 0 && (

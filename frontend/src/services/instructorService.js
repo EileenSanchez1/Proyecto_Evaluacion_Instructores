@@ -34,10 +34,8 @@ export const crearInstructor = async (datos) => {
 };
 
 /**
- * Actualiza datos por JSON. Si hay archivo de foto, lo sube en un segundo request.
- * datos puede ser:
- *  - FormData (compat): extrae campos
- *  - objeto { nombre, apellido, correo, telefono, competencias, foto? }
+ * Actualiza datos por JSON.
+ * datos: { nombre, apellido, correo, telefono, planta_contrato, resultados_aprendizaje, foto? }
  */
 export const actualizarInstructor = async (id, datos) => {
   let payload = {
@@ -45,7 +43,8 @@ export const actualizarInstructor = async (id, datos) => {
     apellido: "",
     correo: "",
     telefono: "",
-    competencias: [],
+    planta_contrato: null,
+    resultados_aprendizaje: [],
   };
   let fotoFile = null;
 
@@ -54,11 +53,12 @@ export const actualizarInstructor = async (id, datos) => {
     payload.apellido = datos.get("apellido") || "";
     payload.correo = datos.get("correo") || "";
     payload.telefono = datos.get("telefono") || "";
-    const comps = datos.get("competencias");
+    payload.planta_contrato = datos.get("planta_contrato") || null;
+    const ra = datos.get("resultados_aprendizaje") || datos.get("competencias");
     try {
-      payload.competencias = comps ? JSON.parse(comps) : [];
+      payload.resultados_aprendizaje = ra ? JSON.parse(ra) : [];
     } catch {
-      payload.competencias = [];
+      payload.resultados_aprendizaje = [];
     }
     fotoFile = datos.get("foto");
     if (fotoFile && typeof fotoFile === "string") fotoFile = null;
@@ -68,7 +68,9 @@ export const actualizarInstructor = async (id, datos) => {
       apellido: datos.apellido,
       correo: datos.correo,
       telefono: datos.telefono,
-      competencias: datos.competencias || [],
+      planta_contrato: datos.planta_contrato ?? null,
+      resultados_aprendizaje:
+        datos.resultados_aprendizaje || datos.competencias || [],
     };
     fotoFile = datos.fotoArchivo || datos.foto || null;
     if (fotoFile && !(fotoFile instanceof File) && !(fotoFile instanceof Blob)) {

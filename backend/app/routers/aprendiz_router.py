@@ -10,7 +10,7 @@ from app.schemas.aprendiz import (
     AprendizUpdate
 )
 from app.services.aprendiz_service import AprendizService
-from app.services.carga_aprendices_service import parsear_csv, cargar_desde_filas
+from app.services.carga_aprendices_service import parsear_archivo, cargar_desde_filas
 
 router = APIRouter(
     prefix="/aprendices",
@@ -42,37 +42,50 @@ async def carga_masiva_aprendices(
     archivo: UploadFile = File(...),
     id_periodo: Optional[int] = Form(None),
     enviar_correo: bool = Form(True),
+    id_ficha: Optional[int] = Form(None),
     session: Session = Depends(get_session),
 ):
     """
-    Sube un CSV/archivo plano con aprendices ya asignados a fichas.
+    Sube el «Reporte de Aprendices» SENA (.xlsx) o CSV.
 
-    Columnas: nombre, apellido, correo, numero_ficha [, id_periodo]
+    Columnas esperadas (Excel oficial):
+      Tipo de Documento | Número de Documento | Nombre | Apellidos |
+      Celular | Correo Electrónico | Estado
 
-    Por cada fila válida: crea usuario+aprendiz, genera contraseña temporal
-    y envía correo (estilo SGVA / cartero) si enviar_correo=true.
+    La ficha se toma de «Ficha de Caracterización: NNNNNN» en el archivo,
+    o del parámetro id_ficha si se envía (al subir desde una ficha concreta).
+
+    Por cada fila: crea usuario+aprendiz, genera contraseña temporal
+    y envía correo si enviar_correo=true.
     """
     nombre = (archivo.filename or "").lower()
     if not (
         nombre.endswith(".csv")
         or nombre.endswith(".txt")
         or nombre.endswith(".tsv")
+        or nombre.endswith(".xlsx")
+        or nombre.endswith(".xls")
         or "csv" in (archivo.content_type or "")
         or "text" in (archivo.content_type or "")
+        or "spreadsheet" in (archivo.content_type or "")
+        or "excel" in (archivo.content_type or "")
     ):
         raise HTTPException(
             status_code=400,
-            detail="Sube un archivo CSV o TXT (separado por coma o punto y coma).",
+            detail="Sube un Excel (.xlsx) del Reporte de Aprendices o un CSV/TXT.",
         )
 
     contenido = await archivo.read()
-    if not contenido.strip():
+    if not contenido or not contenido.strip():
         raise HTTPException(status_code=400, detail="El archivo está vacío.")
 
     try:
-        filas = parsear_csv(contenido)
+        filas = parsear_archivo(contenido, archivo.filename or "")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"No se pudo leer el CSV: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se pudo leer el archivo: {type(e).__name__}: {e}",
+        )
 
     if not filas:
         raise HTTPException(status_code=400, detail="No hay filas de datos en el archivo.")
@@ -82,6 +95,7 @@ async def carga_masiva_aprendices(
         filas,
         id_periodo_default=id_periodo,
         enviar_correo=enviar_correo,
+        id_ficha_forzada=id_ficha,
     )
     return resultado
 

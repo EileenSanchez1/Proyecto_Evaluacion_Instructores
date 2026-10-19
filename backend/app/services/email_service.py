@@ -157,6 +157,52 @@ def enviar_credenciales_aprendiz(
     return enviar_correo(destinatario, asunto, texto, html)
 
 
+
+def enviar_credenciales_instructor(
+    destinatario: str,
+    nombre: str,
+    usuario: str,
+    contrasena: str,
+) -> bool:
+    """
+    Envía usuario y contraseña temporal al instructor (igual que aprendices).
+    El instructor puede iniciar sesión y cambiar la contraseña después.
+    """
+    asunto = "Credenciales de acceso — Instructor SENA Evaluación"
+    texto = (
+        f"Hola {nombre},\n\n"
+        f"Has sido registrado como instructor en el Sistema de Evaluación de Instructores SENA.\n\n"
+        f"Tus datos de acceso son:\n"
+        f"  Usuario (correo): {usuario}\n"
+        f"  Contraseña temporal: {contrasena}\n\n"
+        f"Ingresa con la opción «Soy Instructor» y usa el correo y la contraseña temporal.\n"
+        f"Te recomendamos cambiar la contraseña después del primer ingreso y actualizar tu foto de perfil.\n\n"
+        f"— SENA · Evaluación de Instructores\n"
+    )
+    html = f"""
+    <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+      <h2 style="color:#39a900;margin:0 0 12px;">Bienvenido/a como instructor</h2>
+      <p>Hola <strong>{nombre}</strong>,</p>
+      <p>Has sido registrado como <strong>instructor</strong> en el
+      <strong>Sistema de Evaluación de Instructores SENA</strong>.</p>
+      <p style="font-size:15px;margin-top:16px;">Tus datos de acceso:</p>
+      <div style="background:#f3f4f6;padding:14px 20px;border-radius:10px;">
+        <p style="margin:6px 0;"><strong>Usuario:</strong> {usuario}</p>
+        <p style="margin:6px 0;"><strong>Contraseña temporal:</strong>
+          <span style="font-family:monospace;letter-spacing:1px;">{contrasena}</span>
+        </p>
+      </div>
+      <p style="color:#6b7280;font-size:13px;margin-top:14px;">
+        Ingresa con la opción <strong>«Soy Instructor»</strong> usando el correo y la contraseña temporal.
+        Te recomendamos cambiar la contraseña después del primer ingreso y actualizar tu foto de perfil.
+      </p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+      <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+    </div>
+    """
+    return enviar_correo(destinatario, asunto, texto, html)
+
+
 def enviar_codigo_instructor(destinatario: str, codigo: str) -> bool:
     """Mismo mecanismo que recuperación: código al correo del instructor."""
     asunto = "Código de verificación de instructor — SENA"
