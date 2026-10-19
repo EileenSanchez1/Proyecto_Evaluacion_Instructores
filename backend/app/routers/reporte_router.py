@@ -660,3 +660,168 @@ def exportar_sin_foto_excel(session: Session = Depends(get_session)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Consolidado evaluación (estilo reporte SENA) ─────────────────────────────
+
+@router.get(
+    "/exportar-consolidado-excel",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def exportar_consolidado_excel(
+    periodo_id: Optional[int] = Query(None),
+    ficha_id: Optional[int] = Query(None),
+    session: Session = Depends(get_session),
+):
+    """
+    Descarga Excel consolidado de evaluación de instructores
+    (hoja GENERAL + una hoja por instructor con Siempre/Algunas/Nunca).
+    """
+    from fastapi.responses import Response
+    from app.services.export_service import excel_consolidado_evaluacion
+
+    periodo = None
+    if periodo_id:
+        periodo = session.get(Periodo, periodo_id)
+    else:
+        periodo = session.exec(
+            select(Periodo).where(Periodo.estado == "Activo")
+        ).first()
+
+    statement = select(Evaluacion).where(Evaluacion.estado == "Evaluado")
+    if periodo:
+        statement = statement.where(Evaluacion.id_periodo == periodo.id_periodo)
+    if ficha_id:
+        statement = statement.join(Aprendiz).where(Aprendiz.id_ficha == ficha_id)
+    evaluaciones = session.exec(statement).all()
+    ids_eval = [e.id_evaluacion for e in evaluaciones]
+
+    if not ids_eval:
+        data = {
+            "titulo": "CONSOLIDADO GENERAL EVALUACIÓN INSTRUCTORES",
+            "periodo_nombre": getattr(periodo, "nombre", "") if periodo else "",
+            "fecha_aplicacion": "",
+            "instructores": [],
+        }
+        content = excel_consolidado_evaluacion(data)
+        return Response(
+            content=content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": 'attachment; filename="consolidado_evaluacion.xlsx"'
+            },
+        )
+
+    respuestas = session.exec(
+        select(Respuesta).where(Respuesta.id_evaluacion.in_(ids_eval))
+    ).all()
+    preguntas = {p.id_pregunta: p for p in session.exec(select(Pregunta)).all()}
+
+    por_inst = defaultdict(
+        lambda: {
+            "por_pregunta": defaultdict(lambda: {5: 0, 3: 0, 1: 0}),
+            "aprendices": set(),
+            "obs": [],
+            "total_s": 0,
+            "total_a": 0,
+            "total_n": 0,
+            "total_r": 0,
+        }
+    )
+
+    eval_to_aprendiz = {e.id_evaluacion: e.id_aprendiz for e in evaluaciones}
+
+    for r in respuestas:
+        d = por_inst[r.id_instructor]
+        val = r.respuesta
+        if val >= 4:
+            bucket = 5
+        elif val >= 2:
+            bucket = 3
+        else:
+            bucket = 1
+        d["por_pregunta"][r.id_pregunta][bucket] += 1
+        d["total_r"] += 1
+        if bucket == 5:
+            d["total_s"] += 1
+        elif bucket == 3:
+            d["total_a"] += 1
+        else:
+            d["total_n"] += 1
+        ap_id = eval_to_aprendiz.get(r.id_evaluacion)
+        if ap_id:
+            d["aprendices"].add(ap_id)
+        if r.observaciones and str(r.observaciones).strip():
+            d["obs"].append(str(r.observaciones).strip())
+
+    instructores_out = []
+    for inst_id, d in por_inst.items():
+        inst = session.get(Instructor, inst_id)
+        nombre = (
+            f"{inst.nombre} {inst.apellido}" if inst else f"Instructor #{inst_id}"
+        )
+        total_r = d["total_r"] or 1
+        suma = 5 * d["total_s"] + 3 * d["total_a"] + 1 * d["total_n"]
+        promedio = suma / total_r
+        porcentaje = round((promedio / 5) * 100)
+
+        lista_preg = []
+        for pid, counts in sorted(
+            d["por_pregunta"].items(),
+            key=lambda x: getattr(preguntas.get(x[0]), "orden", 0) or 0,
+        ):
+            preg = preguntas.get(pid)
+            lista_preg.append(
+                {
+                    "orden": getattr(preg, "orden", 0) if preg else 0,
+                    "enunciado": (
+                        getattr(preg, "descripcion", f"Pregunta {pid}")
+                        if preg
+                        else f"Pregunta {pid}"
+                    ),
+                    "siempre": counts[5],
+                    "algunas": counts[3],
+                    "nunca": counts[1],
+                }
+            )
+
+        instructores_out.append(
+            {
+                "id_instructor": inst_id,
+                "nombre": nombre,
+                "rol": getattr(inst, "planta_contrato", None) or "Técnico",
+                "aprendices_evaluaron": len(d["aprendices"]),
+                "porcentaje": porcentaje,
+                "preguntas": lista_preg,
+                "total_siempre": d["total_s"],
+                "total_algunas": d["total_a"],
+                "total_nunca": d["total_n"],
+                "total_respuestas": d["total_r"],
+                "observaciones": list(dict.fromkeys(d["obs"]))[:50],
+            }
+        )
+
+    instructores_out.sort(key=lambda x: x["porcentaje"], reverse=True)
+
+    fecha_apl = ""
+    if (
+        periodo
+        and getattr(periodo, "fecha_inicio", None)
+        and getattr(periodo, "fecha_fin", None)
+    ):
+        fecha_apl = f"{periodo.fecha_inicio} AL {periodo.fecha_fin}"
+
+    data = {
+        "titulo": "CONSOLIDADO GENERAL EVALUACIÓN INSTRUCTORES",
+        "periodo_nombre": getattr(periodo, "nombre", "") if periodo else "",
+        "fecha_aplicacion": fecha_apl,
+        "instructores": instructores_out,
+    }
+    content = excel_consolidado_evaluacion(data)
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="consolidado_evaluacion.xlsx"'
+        },
+    )
