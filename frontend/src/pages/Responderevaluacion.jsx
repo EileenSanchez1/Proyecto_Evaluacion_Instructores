@@ -199,11 +199,9 @@ function ResponderEvaluacion() {
             <div className="resultado-texto">
               <h4>Promedio general</h4>
               <p>
-                {promedio >= 4.5 && "Excelente desempeño"}
-                {promedio >= 3.5 && promedio < 4.5 && "Buen desempeño"}
-                {promedio >= 2.5 && promedio < 3.5 && "Desempeño regular"}
-                {promedio >= 1.5 && promedio < 2.5 && "Desempeño deficiente"}
-                {promedio < 1.5 && "Desempeño muy deficiente"}
+                {promedio >= 4.0 && "Desempeño excelente (predominio de «Siempre»)"}
+                {promedio >= 2.5 && promedio < 4.0 && "Desempeño regular (mezcla de respuestas)"}
+                {promedio < 2.5 && "Desempeño a mejorar (predominio de «Nunca» o «Algunas veces»)"}
               </p>
             </div>
           </div>
@@ -246,8 +244,12 @@ function ResponderEvaluacion() {
                 <label className="calificacion-label">
                   {yaEvaluado ? "Calificación obtenida" : "Selecciona una calificación"}
                 </label>
-                <div className="escala-calificacion">
-                  {[1, 2, 3, 4, 5].map((valor) => (
+                <div className="escala-calificacion escala-3-opciones">
+                  {[
+                    { valor: 5, etiqueta: "Siempre" },
+                    { valor: 3, etiqueta: "Algunas veces" },
+                    { valor: 1, etiqueta: "Nunca" },
+                  ].map(({ valor, etiqueta }) => (
                     <label key={valor} className="opcion-calificacion">
                       <input
                         type="radio"
@@ -258,14 +260,10 @@ function ResponderEvaluacion() {
                         disabled={yaEvaluado}
                       />
                       <span className={`circulo-calif ${respuestas[pregunta.id_pregunta]?.calificacion === valor ? "seleccionado" : ""} ${yaEvaluado ? "deshabilitado" : ""}`}>
-                        {valor}
+                        {valor === 5 ? "S" : valor === 3 ? "A" : "N"}
                       </span>
                       <span className="calif-texto">
-                        {valor === 1 && "Muy deficiente"}
-                        {valor === 2 && "Deficiente"}
-                        {valor === 3 && "Regular"}
-                        {valor === 4 && "Bueno"}
-                        {valor === 5 && "Excelente"}
+                        {etiqueta}
                       </span>
                     </label>
                   ))}

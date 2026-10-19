@@ -243,17 +243,20 @@ function Instructores() {
             <i className="bi bi-upload"></i> Carga masiva de instructores (sin foto)
           </h3>
           <p style={{ margin: "0 0 12px", color: "#6b7280", fontSize: 14 }}>
-            CSV con columnas: <code>nombre, apellido, correo, telefono</code>.
-            El correo debe ser @sena.edu.co. La foto la sube cada instructor al entrar a su perfil.
+            Sube el Excel de planta (<code>.xlsx</code>) con columnas:
+            <br />
+            <code>NOMBRES Y APELLIDOS COMPLETOS | NUMERO DOCUMENTO | PLANTA / CONTRATO | CORREO ELECTRÓNICO PERSONAL | CORREO ELECTRÓNICO @SENA.EDU.CO</code>
+            <br />
+            También se acepta CSV. La foto la sube cada instructor al entrar a su perfil. Se envía correo de bienvenida.
           </p>
           <form onSubmit={manejarCargaMasiva} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <input
               type="file"
-              accept=".csv,.txt"
+              accept=".xlsx,.xls,.csv,.txt"
               onChange={(e) => setArchivoCarga(e.target.files?.[0] || null)}
             />
             <button type="submit" className="btn-nuevo" disabled={enviandoCarga || !archivoCarga}>
-              {enviandoCarga ? "Cargando..." : "Subir CSV"}
+              {enviandoCarga ? "Cargando..." : "Subir archivo"}
             </button>
           </form>
           {resultadoCarga && (

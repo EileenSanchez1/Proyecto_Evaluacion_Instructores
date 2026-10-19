@@ -1,35 +1,42 @@
-import axios from "axios";
+import api from "../api/axiosConfig";
 
-// Poner sin la barra al final
-const API_URL = "http://localhost:8000/preguntas";
+const API_URL = "/preguntas";
 
 export const listarPreguntas = async () => {
-  const response = await axios.get(API_URL);
+  const response = await api.get(API_URL);
   return response.data;
 };
 
 // Solo las preguntas habilitadas para responder (estado = true)
 export const listarPreguntasActivas = async () => {
-  const response = await axios.get(`${API_URL}/activas`);
+  const response = await api.get(`${API_URL}/activas`);
   return response.data;
 };
 
 export const obtenerPregunta = async (id) => {
-  const response = await axios.get(`${API_URL}/${id}`);
+  const response = await api.get(`${API_URL}/${id}`);
   return response.data;
 };
 
 export const crearPregunta = async (datos) => {
-  const response = await axios.post(`${API_URL}/`, datos);
+  const response = await api.post(`${API_URL}/`, datos);
   return response.data;
 };
 
 export const actualizarPregunta = async (id, datos) => {
-  const response = await axios.put(`${API_URL}/${id}`, datos);
+  const response = await api.put(`${API_URL}/${id}`, datos);
   return response.data;
 };
 
 export const eliminarPregunta = async (id) => {
-  const response = await axios.delete(`${API_URL}/${id}`);
+  const response = await api.delete(`${API_URL}/${id}`);
+  return response.data;
+};
+
+/** Carga las 19 preguntas del formato oficial SENA (evaluación en aula) */
+export const cargarPreguntasOficiales = async (reemplazar = false) => {
+  const response = await api.post(`${API_URL}/cargar-oficiales`, null, {
+    params: { reemplazar },
+  });
   return response.data;
 };

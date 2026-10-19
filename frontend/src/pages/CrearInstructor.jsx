@@ -14,9 +14,6 @@ function CrearInstructor() {
     telefono: "",
   });
 
-  const [fotoArchivo, setFotoArchivo] = useState(null);
-  const [fotoPreview, setFotoPreview] = useState(null);
-
   const [resultadosDisponibles, setResultadosDisponibles] = useState([]);
   const [resultadosSeleccionados, setResultadosSeleccionados] = useState([]);
 
@@ -32,24 +29,6 @@ function CrearInstructor() {
   const manejarCambio = (e) => {
     const { name, value } = e.target;
     setFormulario({ ...formulario, [name]: value });
-  };
-
-  const manejarFoto = (e) => {
-    const archivo = e.target.files[0];
-    if (archivo) {
-      const tiposValidos = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-      if (!tiposValidos.includes(archivo.type)) {
-        setError("Formato no valido. Use JPG, PNG, GIF o WEBP.");
-        return;
-      }
-      if (archivo.size > 5 * 1024 * 1024) {
-        setError("La imagen no debe superar los 5MB.");
-        return;
-      }
-      setFotoArchivo(archivo);
-      setFotoPreview(URL.createObjectURL(archivo));
-      setError("");
-    }
   };
 
   const alternarResultado = (idCompetencia) => {
@@ -94,10 +73,7 @@ function CrearInstructor() {
       formData.append("correo", correoNorm);
       formData.append("telefono", String(formulario.telefono).trim());
       formData.append("resultados_aprendizaje", JSON.stringify(resultadosSeleccionados));
-
-      if (fotoArchivo) {
-        formData.append("foto", fotoArchivo);
-      }
+      // La foto la sube el instructor en su primer acceso; no se pide al crear.
 
       await crearInstructor(formData);
 
@@ -129,27 +105,9 @@ function CrearInstructor() {
         {error && <div className="form-mensaje-error">{error}</div>}
 
         <form onSubmit={manejarEnvio}>
-          <div className="preview-container">
-            {fotoPreview ? (
-              <img src={fotoPreview} alt="Vista previa" />
-            ) : (
-              <span className="placeholder">
-                <i className="bi bi-camera"></i>
-              </span>
-            )}
-          </div>
-
-          <label className="form-label">
-            <i className="bi bi-image"></i> Foto del instructor (opcional)
-          </label>
-          <input
-            type="file"
-            name="foto"
-            className="form-control-form"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            onChange={manejarFoto}
-          />
-          <small className="text-muted">JPG, PNG, GIF o WEBP. Max 5MB.</small>
+          <p className="text-muted" style={{ marginBottom: "1rem", fontSize: "0.9rem" }}>
+            <i className="bi bi-info-circle"></i> Al crear el instructor se enviará un correo a su cuenta institucional con una contraseña provisional. Él podrá actualizar su foto y cambiar la contraseña al ingresar por primera vez.
+          </p>
 
           <div className="form-row">
             <div>

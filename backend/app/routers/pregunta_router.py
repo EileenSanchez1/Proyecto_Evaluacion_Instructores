@@ -3,6 +3,7 @@ from sqlmodel import Session
 from typing import List
 
 from app.config.database import get_session
+from app.config.auth_dependencies import require_roles
 from app.schemas.pregunta import (
     PreguntaCreate,
     PreguntaRead,
@@ -105,4 +106,67 @@ def eliminar_pregunta(
 
     return {
         "mensaje": "Pregunta eliminada correctamente"
+    }
+
+@router.post(
+    "/cargar-oficiales",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def cargar_preguntas_oficiales(
+    reemplazar: bool = Query(False, description="Si true, desactiva las preguntas actuales y carga las oficiales"),
+    session: Session = Depends(get_session),
+):
+    """
+    Carga las 19 preguntas del formato oficial SENA
+    (Evaluación de instructores en aula).
+    Por defecto solo agrega las que no existen (por descripción).
+    Con reemplazar=true desactiva las actuales y crea las oficiales.
+    """
+    import json
+    from pathlib import Path
+    from app.models.pregunta import Pregunta
+    from sqlmodel import select
+
+    data_path = Path(__file__).resolve().parents[1] / "data" / "preguntas_oficiales_sena.json"
+    if not data_path.exists():
+        raise HTTPException(status_code=500, detail="Archivo de preguntas oficiales no encontrado.")
+
+    with open(data_path, encoding="utf-8") as f:
+        oficiales = json.load(f)
+
+    if reemplazar:
+        existentes = session.exec(select(Pregunta)).all()
+        for p in existentes:
+            p.estado = False
+            session.add(p)
+        session.commit()
+
+    creadas = 0
+    omitidas = 0
+    for item in oficiales:
+        desc = (item.get("descripcion") or "").strip()
+        orden = int(item.get("orden") or 0)
+        if not desc:
+            continue
+        ya = session.exec(
+            select(Pregunta).where(Pregunta.descripcion == desc)
+        ).first()
+        if ya:
+            if reemplazar:
+                ya.estado = True
+                ya.orden = orden
+                session.add(ya)
+            omitidas += 1
+            continue
+        p = Pregunta(descripcion=desc, orden=orden, estado=True)
+        session.add(p)
+        creadas += 1
+
+    session.commit()
+    return {
+        "mensaje": f"Preguntas oficiales SENA: {creadas} creadas, {omitidas} ya existían.",
+        "creadas": creadas,
+        "omitidas": omitidas,
+        "reemplazar": reemplazar,
+        "total_oficiales": len(oficiales),
     }

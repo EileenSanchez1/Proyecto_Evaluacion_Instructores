@@ -8,7 +8,6 @@ import CambiarContrasena from './pages/CambiarContrasena';
 import Contacto from './pages/Contacto';
 import Novedades from './pages/Novedades';
 import PerfilInstructor from './pages/PerfilInstructor';
-import MiPromedio from './pages/MiPromedio';
 import Instructores from './pages/Instructores';
 import CrearInstructor from './pages/CrearInstructor';
 import ActualizarInstructor from './pages/ActualizarInstructor';
@@ -45,7 +44,6 @@ function App() {
             {/* INSTRUCTOR */}
             <Route element={<AdminRoute roles={['Instructor']} />}>
               <Route path='/perfil-instructor' element={<PerfilInstructor />} />
-              <Route path='/mi-promedio' element={<MiPromedio />} />
             </Route>
 
             {/* INSTRUCTORES */}

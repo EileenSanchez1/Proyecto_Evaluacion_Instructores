@@ -4,6 +4,7 @@ import {
   crearPregunta,
   actualizarPregunta,
   eliminarPregunta,
+  cargarPreguntasOficiales,
 } from "../services/Preguntaservice";
 import "../styles/Preguntas.css";
 import "../styles/Instructores.css";
@@ -19,6 +20,7 @@ function Preguntas() {
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
+  const [cargandoOficiales, setCargandoOficiales] = useState(false);
 
   const cargarPreguntas = async () => {
     try {
@@ -39,6 +41,27 @@ function Preguntas() {
   useEffect(() => {
     cargarPreguntas();
   }, []);
+
+  const manejarCargarOficiales = async (reemplazar = false) => {
+    const msg = reemplazar
+      ? "Se desactivarán las preguntas actuales y se cargarán las 19 oficiales del formato SENA. ¿Continuar?"
+      : "Se agregarán las 19 preguntas del formato oficial SENA (las que ya existan se omiten). ¿Continuar?";
+    if (!window.confirm(msg)) return;
+    try {
+      setCargandoOficiales(true);
+      setError("");
+      const res = await cargarPreguntasOficiales(reemplazar);
+      alert(res.mensaje || "Preguntas cargadas.");
+      await cargarPreguntas();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.response?.data?.detail || "No se pudieron cargar las preguntas oficiales."
+      );
+    } finally {
+      setCargandoOficiales(false);
+    }
+  };
 
   const abrirFormNueva = () => {
     setEditandoId(null);
@@ -161,9 +184,28 @@ function Preguntas() {
             <i className="bi bi-list-task"></i> Preguntas del sistema
           </h5>
           {!mostrarForm && (
-            <button className="btn btn-success btn-sm" onClick={abrirFormNueva}>
-              <i className="bi bi-plus-circle"></i> Agregar nueva pregunta
-            </button>
+            <div className="d-flex gap-2 flex-wrap">
+              <button
+                className="btn btn-outline-light btn-sm"
+                onClick={() => manejarCargarOficiales(false)}
+                disabled={cargandoOficiales}
+                title="Agrega las 19 preguntas del formato oficial SENA en aula"
+              >
+                <i className="bi bi-file-earmark-text"></i>{" "}
+                {cargandoOficiales ? "Cargando..." : "Cargar preguntas oficiales SENA"}
+              </button>
+              <button
+                className="btn btn-outline-warning btn-sm"
+                onClick={() => manejarCargarOficiales(true)}
+                disabled={cargandoOficiales}
+                title="Desactiva las actuales y deja solo las oficiales"
+              >
+                <i className="bi bi-arrow-repeat"></i> Reemplazar por oficiales
+              </button>
+              <button className="btn btn-success btn-sm" onClick={abrirFormNueva}>
+                <i className="bi bi-plus-circle"></i> Agregar nueva pregunta
+              </button>
+            </div>
           )}
         </div>
 

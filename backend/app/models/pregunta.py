@@ -5,7 +5,7 @@ class Pregunta(SQLModel, table=True):
     __tablename__ = "preguntas"
 
     id_pregunta: Optional[int] = Field(default=None, primary_key=True)
-    descripcion: str = Field(max_length=300, nullable=False)
+    descripcion: str = Field(max_length=500, nullable=False)
     orden: int = Field(nullable=False, index=True)
     estado: bool = Field(default=True, nullable=False)
 

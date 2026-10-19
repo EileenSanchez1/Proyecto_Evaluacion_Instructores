@@ -11,7 +11,8 @@ from app.config.database import get_session
 from app.config.auth_dependencies import require_roles
 from app.schemas.instructor import InstructorCreate, InstructorRead, InstructorUpdate
 from app.services.instructor_service import InstructorService
-from app.services.carga_instructores_service import parsear_csv, cargar_desde_filas
+from app.services.carga_instructores_service import parsear_archivo, cargar_desde_filas
+from app.services.email_service import enviar_invitacion_instructor
 from app.models.usuario import Usuario
 
 router = APIRouter(prefix="/instructores", tags=["Instructores"])
@@ -78,6 +79,15 @@ async def crear_instructor(
 
     try:
         inst = InstructorService.crear(session, datos)
+        # Enviar correo de bienvenida / primer acceso (sin foto; la sube el instructor)
+        try:
+            enviar_invitacion_instructor(
+                destinatario=correo,
+                nombre=f"{inst.nombre} {inst.apellido}",
+                plazo_horas=48,
+            )
+        except Exception as e:
+            print(f"[EMAIL] No se pudo enviar invitación a {correo}: {e}")
         return InstructorService.to_read(session, inst)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -92,20 +102,32 @@ async def carga_masiva_instructores(
     archivo: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
-    """Carga masiva CSV sin foto. Columnas: nombre, apellido, correo, telefono (opcional)."""
-    if not archivo.filename or not (
-        archivo.filename.lower().endswith(".csv")
-        or archivo.filename.lower().endswith(".txt")
+    """
+    Carga masiva de instructores (sin foto).
+    Acepta .xlsx (formato planta SENA) o .csv/.txt.
+
+    Excel esperado:
+      NOMBRES Y APELLIDOS COMPLETOS | NUMERO DOCUMENTO | PLANTA / CONTRATO |
+      CORREO ELECTRÓNICO PERSONAL | CORREO ELECTRÓNICO @SENA.EDU.CO
+    """
+    if not archivo.filename:
+        raise HTTPException(status_code=400, detail="Debes subir un archivo.")
+    nombre = archivo.filename.lower()
+    if not (
+        nombre.endswith(".csv")
+        or nombre.endswith(".txt")
+        or nombre.endswith(".xlsx")
+        or nombre.endswith(".xls")
     ):
         raise HTTPException(
             status_code=400,
-            detail="Sube un archivo CSV (.csv o .txt).",
+            detail="Sube un archivo Excel (.xlsx) o CSV (.csv / .txt).",
         )
     contenido = await archivo.read()
     try:
-        filas = parsear_csv(contenido)
+        filas = parsear_archivo(contenido, archivo.filename)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"No se pudo leer el CSV: {e}")
+        raise HTTPException(status_code=400, detail=f"No se pudo leer el archivo: {e}")
     if not filas:
         raise HTTPException(status_code=400, detail="El archivo no tiene filas de datos.")
     return cargar_desde_filas(session, filas)
