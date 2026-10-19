@@ -66,32 +66,14 @@ function Sidebar() {
         </NavLink>
 
         {instructor && (
-          <>
-            <NavLink
-              to="/perfil-instructor"
-              className={({ isActive }) =>
-                `nav-item ${isActive ? "active" : ""}`
-              }
-            >
-              <i className="bi bi-person-badge"></i> Mi Perfil
-            </NavLink>
-            <NavLink
-              to="/mi-promedio"
-              className={({ isActive }) =>
-                `nav-item ${isActive ? "active" : ""}`
-              }
-            >
-              <i className="bi bi-graph-up-arrow"></i> Mi Promedio
-            </NavLink>
-            <NavLink
-              to="/evaluaciones"
-              className={({ isActive }) =>
-                `nav-item ${isActive ? "active" : ""}`
-              }
-            >
-              <i className="bi bi-clipboard-check"></i> Evaluaciones
-            </NavLink>
-          </>
+          <NavLink
+            to="/perfil-instructor"
+            className={({ isActive }) =>
+              `nav-item ${isActive ? "active" : ""}`
+            }
+          >
+            <i className="bi bi-person-badge"></i> Mi Perfil
+          </NavLink>
         )}
 
         {!instructor && (

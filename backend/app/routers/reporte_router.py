@@ -406,3 +406,213 @@ def mi_promedio_instructor(
     )
     data["periodo_id"] = periodo_id
     return data
+
+
+# ── Pendientes de evaluación y sin foto ──────────────────────────────────────
+
+@router.get(
+    "/pendientes-evaluacion",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def pendientes_evaluacion(
+    periodo_id: Optional[int] = Query(None),
+    ficha_id: Optional[int] = Query(None),
+    session: Session = Depends(get_session),
+):
+    """
+    Lista aprendices que aún no han evaluado a todos sus instructores
+    del periodo (y opcionalmente de una ficha).
+    """
+    from app.models.ficha_instructor import FichaInstructor
+    from app.models.periodo import Periodo as PeriodoModel
+
+    # Periodo activo si no se indica
+    if periodo_id is None:
+        periodo = session.exec(
+            select(PeriodoModel).where(PeriodoModel.estado == True)
+        ).first()
+        if not periodo:
+            return {"periodo_id": None, "pendientes": [], "mensaje": "No hay periodo activo."}
+        periodo_id = periodo.id_periodo
+
+    # Asignaciones instructor-ficha del periodo
+    stmt_asig = select(FichaInstructor).where(FichaInstructor.id_periodo == periodo_id)
+    if ficha_id:
+        stmt_asig = stmt_asig.where(FichaInstructor.id_ficha == ficha_id)
+    asignaciones = session.exec(stmt_asig).all()
+
+    # Mapa ficha -> lista de instructores
+    from collections import defaultdict
+    fichas_inst = defaultdict(list)
+    for a in asignaciones:
+        fichas_inst[a.id_ficha].append(a.id_instructor)
+
+    # Aprendices de esas fichas
+    stmt_ap = select(Aprendiz)
+    if ficha_id:
+        stmt_ap = stmt_ap.where(Aprendiz.id_ficha == ficha_id)
+    else:
+        ids_fichas = list(fichas_inst.keys())
+        if not ids_fichas:
+            return {"periodo_id": periodo_id, "pendientes": [], "total": 0}
+        stmt_ap = stmt_ap.where(Aprendiz.id_ficha.in_(ids_fichas))
+    aprendices = session.exec(stmt_ap).all()
+
+    # Evaluaciones ya hechas en el periodo
+    evals = session.exec(
+        select(Evaluacion).where(
+            Evaluacion.id_periodo == periodo_id,
+            Evaluacion.estado == "Evaluado",
+        )
+    ).all()
+    hechos = {(e.id_aprendiz, e.id_instructor) for e in evals}
+
+    pendientes = []
+    for ap in aprendices:
+        instructores_ficha = fichas_inst.get(ap.id_ficha, [])
+        faltan = []
+        for id_inst in instructores_ficha:
+            if (ap.id_aprendiz, id_inst) not in hechos:
+                inst = session.get(Instructor, id_inst)
+                faltan.append({
+                    "id_instructor": id_inst,
+                    "nombre": f"{inst.nombre} {inst.apellido}" if inst else f"#{id_inst}",
+                    "correo": inst.correo if inst else None,
+                })
+        if faltan:
+            ficha = session.get(Ficha, ap.id_ficha)
+            pendientes.append({
+                "id_aprendiz": ap.id_aprendiz,
+                "nombre": f"{ap.nombre} {ap.apellido}",
+                "correo": ap.correo,
+                "id_ficha": ap.id_ficha,
+                "numero_ficha": getattr(ficha, "numero_ficha", None) if ficha else None,
+                "instructores_pendientes": faltan,
+                "total_pendientes": len(faltan),
+            })
+
+    return {
+        "periodo_id": periodo_id,
+        "total": len(pendientes),
+        "pendientes": pendientes,
+    }
+
+
+@router.get(
+    "/instructores-sin-foto",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def instructores_sin_foto(session: Session = Depends(get_session)):
+    """Lista instructores activos que aún no han subido foto."""
+    from app.models.usuario import Usuario
+
+    todos = session.exec(select(Instructor)).all()
+    sin_foto = []
+    for inst in todos:
+        if inst.foto:
+            continue
+        usuario = session.get(Usuario, inst.id_usuario) if inst.id_usuario else None
+        if usuario and not usuario.activo:
+            continue
+        sin_foto.append({
+            "id_instructor": inst.id_instructor,
+            "nombre": f"{inst.nombre} {inst.apellido}",
+            "correo": inst.correo,
+            "telefono": inst.telefono,
+            "tiene_usuario": bool(inst.id_usuario),
+        })
+    return {"total": len(sin_foto), "instructores": sin_foto}
+
+
+@router.post(
+    "/enviar-recordatorio-pendientes",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def enviar_recordatorio_pendientes(
+    periodo_id: Optional[int] = Query(None),
+    ficha_id: Optional[int] = Query(None),
+    session: Session = Depends(get_session),
+):
+    """Envía correo a aprendices con evaluaciones pendientes (plazo 24h)."""
+    from app.services.email_service import enviar_correo
+
+    data = pendientes_evaluacion(periodo_id=periodo_id, ficha_id=ficha_id, session=session)
+    enviados = 0
+    fallidos = 0
+    for p in data.get("pendientes", []):
+        correo = p.get("correo")
+        if not correo:
+            fallidos += 1
+            continue
+        nombres_inst = ", ".join(i["nombre"] for i in p.get("instructores_pendientes", []))
+        asunto = "Recordatorio: tienes evaluaciones pendientes — SENA"
+        texto = (
+            f"Hola {p['nombre']},\n\n"
+            f"Aún tienes instructores por evaluar en el periodo actual:\n"
+            f"{nombres_inst}\n\n"
+            f"Tienes un plazo de 24 horas para completar las evaluaciones. "
+            f"Si no lo haces, se podrá generar un plan de mejora.\n\n"
+            f"— SENA · Evaluación de Instructores\n"
+        )
+        html = f"""
+        <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+          <h2 style="color:#39a900;">Evaluaciones pendientes</h2>
+          <p>Hola <strong>{p['nombre']}</strong>,</p>
+          <p>Aún debes evaluar a: <strong>{nombres_inst}</strong>.</p>
+          <p style="background:#fef3c7;padding:12px;border-radius:8px;color:#92400e;">
+            Plazo: <strong>24 horas</strong>. Si no completas las evaluaciones se podrá generar un plan de mejora.
+          </p>
+          <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+        </div>
+        """
+        ok = enviar_correo(correo, asunto, texto, html)
+        if ok:
+            enviados += 1
+        else:
+            fallidos += 1
+    return {"enviados": enviados, "fallidos": fallidos, "total_pendientes": data.get("total", 0)}
+
+
+@router.post(
+    "/enviar-advertencia-sin-foto",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def enviar_advertencia_sin_foto(session: Session = Depends(get_session)):
+    """Envía correo de advertencia a instructores sin foto."""
+    from app.services.email_service import enviar_correo
+
+    data = instructores_sin_foto(session=session)
+    enviados = 0
+    fallidos = 0
+    for inst in data.get("instructores", []):
+        correo = inst.get("correo")
+        if not correo:
+            fallidos += 1
+            continue
+        asunto = "Advertencia: debes subir tu foto de perfil — SENA"
+        texto = (
+            f"Hola {inst['nombre']},\n\n"
+            f"Aún no has subido tu foto de perfil en el Sistema de Evaluación de Instructores.\n\n"
+            f"Debes subirla en un plazo razonable. Si no lo haces se podrá generar un plan de mejora "
+            f"o llamado de atención con el coordinador.\n\n"
+            f"Ingresa a la plataforma → Mi Perfil → actualiza tu foto.\n\n"
+            f"— SENA · Evaluación de Instructores\n"
+        )
+        html = f"""
+        <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+          <h2 style="color:#b45309;">Foto de perfil pendiente</h2>
+          <p>Hola <strong>{inst['nombre']}</strong>,</p>
+          <p>Aún no has subido tu <strong>foto de perfil</strong>.</p>
+          <p style="background:#fef3c7;padding:12px;border-radius:8px;color:#92400e;">
+            Si no la subes se podrá generar un plan de mejora o llamado de atención con el coordinador.
+          </p>
+          <p>Ingresa a <strong>Mi Perfil</strong> y actualiza tu foto.</p>
+          <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+        </div>
+        """
+        ok = enviar_correo(correo, asunto, texto, html)
+        if ok:
+            enviados += 1
+        else:
+            fallidos += 1
+    return {"enviados": enviados, "fallidos": fallidos, "total_sin_foto": data.get("total", 0)}

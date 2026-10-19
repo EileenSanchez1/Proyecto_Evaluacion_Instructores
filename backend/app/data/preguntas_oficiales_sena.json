@@ -1,0 +1,21 @@
+[
+  {"orden": 1, "descripcion": "El instructor es puntual al iniciar y terminar la sesión de clase de formación"},
+  {"orden": 2, "descripcion": "El instructor cumple con el tiempo programado para el desarrollo de la competencia definida en el programa"},
+  {"orden": 3, "descripcion": "Los conocimientos desarrollados en la sesión de clase son pertinentes frente a lo establecido en la ruta de aprendizaje"},
+  {"orden": 4, "descripcion": "Desarrolla usted actualmente un proyecto de formación donde todo el equipo de instructores orientan sus procesos formativos a obtener los objetivos definidos en el proyecto a desarrollar"},
+  {"orden": 5, "descripcion": "El instructor utiliza la metodología de formación por proyectos en el desarrollo de su ruta de aprendizaje"},
+  {"orden": 6, "descripcion": "El instructor utiliza didácticas activas en el desarrollo de su aprendizaje durante la ejecución del proceso formativo"},
+  {"orden": 7, "descripcion": "El instructor propende por el trabajo en equipo para la obtención de los resultados de aprendizaje previstos en el proyecto"},
+  {"orden": 8, "descripcion": "El instructor aplica la formación por competencias laborales utilizando las fuentes de conocimiento (TIC, instructor, trabajo colaborativo, entorno)"},
+  {"orden": 9, "descripcion": "El instructor desarrolla las actividades de aprendizaje mostrando dominio técnico según los requerimientos del proyecto formativo"},
+  {"orden": 10, "descripcion": "El instructor desarrolla los contenidos de manera contextualizada a través de proyectos o microproyectos relacionados con su perfil ocupacional"},
+  {"orden": 11, "descripcion": "El instructor se muestra receptivo a las críticas y sugerencias planteadas por los aprendices"},
+  {"orden": 12, "descripcion": "El instructor es objetivo en las evaluaciones y cumple con las fechas de evaluación acordadas"},
+  {"orden": 13, "descripcion": "El instructor realiza evaluaciones en forma coherente con los resultados de aprendizaje y los productos definidos en el proyecto formativo"},
+  {"orden": 14, "descripcion": "¿Cursaría usted otro proceso formativo con este mismo instructor?"},
+  {"orden": 15, "descripcion": "El instructor demuestra respeto y equidad por las personas y promueve la formación de valores"},
+  {"orden": 16, "descripcion": "El instructor asume un comportamiento ético y sentido de pertenencia acorde con su dignidad"},
+  {"orden": 17, "descripcion": "El instructor muestra respeto por las posiciones teóricas, conceptuales o metodológicas diferentes"},
+  {"orden": 18, "descripcion": "El instructor facilita la comunicación y el diálogo en la solución de problemas"},
+  {"orden": 19, "descripcion": "El instructor promueve el desarrollo de habilidades comunicativas tanto orales como escritas"}
+]

@@ -220,3 +220,47 @@ def enviar_novedad_resuelta(
     </div>
     """
     return enviar_correo(destinatario, asunto, texto, html)
+
+
+def enviar_invitacion_instructor(
+    destinatario: str,
+    nombre: str,
+    plazo_horas: int = 48,
+) -> bool:
+    """Avisa al instructor que ya fue registrado y debe completar primer acceso + foto."""
+    asunto = "Bienvenido — Completa tu acceso como instructor SENA"
+    texto = (
+        f"Hola {nombre},\n\n"
+        f"Has sido registrado como instructor en el Sistema de Evaluación de Instructores del SENA.\n\n"
+        f"Tu correo de acceso es: {destinatario}\n\n"
+        f"Para ingresar por primera vez:\n"
+        f"1. Ve a la opción «Soy instructor» en la plataforma.\n"
+        f"2. Solicita el código de verificación que llegará a este correo.\n"
+        f"3. Crea tu contraseña segura.\n"
+        f"4. Actualiza tu foto de perfil.\n\n"
+        f"Tienes un plazo de {plazo_horas} horas para completar el acceso y subir tu foto. "
+        f"Si no lo haces, se podrá generar un plan de mejora o llamado de atención con el coordinador.\n\n"
+        f"— SENA · Evaluación de Instructores\n"
+    )
+    html = f"""
+    <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+      <h2 style="color:#39a900;margin:0 0 12px;">Bienvenido al sistema</h2>
+      <p>Hola <strong>{nombre}</strong>,</p>
+      <p>Has sido registrado como <strong>instructor</strong> en el Sistema de Evaluación de Instructores del SENA.</p>
+      <p><strong>Correo de acceso:</strong> {destinatario}</p>
+      <p>Para ingresar por primera vez:</p>
+      <ol>
+        <li>Ve a la opción <strong>«Soy instructor»</strong> en la plataforma.</li>
+        <li>Solicita el código de verificación que llegará a este correo.</li>
+        <li>Crea tu contraseña segura.</li>
+        <li>Actualiza tu foto de perfil.</li>
+      </ol>
+      <p style="background:#fef3c7;padding:12px;border-radius:8px;color:#92400e;">
+        <strong>Plazo:</strong> tienes <strong>{plazo_horas} horas</strong> para completar el acceso y subir tu foto.
+        Si no lo haces, se podrá generar un plan de mejora o llamado de atención con el coordinador.
+      </p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+      <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+    </div>
+    """
+    return enviar_correo(destinatario, asunto, texto, html)
