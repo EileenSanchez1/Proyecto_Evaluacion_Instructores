@@ -616,3 +616,47 @@ def enviar_advertencia_sin_foto(session: Session = Depends(get_session)):
         else:
             fallidos += 1
     return {"enviados": enviados, "fallidos": fallidos, "total_sin_foto": data.get("total", 0)}
+
+
+# ── Exportación Excel ─────────────────────────────────────────────────────────
+
+@router.get(
+    "/exportar-pendientes-excel",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def exportar_pendientes_excel(
+    periodo_id: Optional[int] = Query(None),
+    ficha_id: Optional[int] = Query(None),
+    session: Session = Depends(get_session),
+):
+    """Descarga Excel de aprendices que faltan por evaluar (por ficha / periodo)."""
+    from fastapi.responses import Response
+    from app.services.export_service import excel_pendientes_evaluacion
+
+    data = pendientes_evaluacion(periodo_id=periodo_id, ficha_id=ficha_id, session=session)
+    content = excel_pendientes_evaluacion(data)
+    filename = "pendientes_evaluacion.xlsx"
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/exportar-sin-foto-excel",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def exportar_sin_foto_excel(session: Session = Depends(get_session)):
+    """Descarga Excel de instructores que no han subido foto de perfil."""
+    from fastapi.responses import Response
+    from app.services.export_service import excel_instructores_sin_foto
+
+    data = instructores_sin_foto(session=session)
+    content = excel_instructores_sin_foto(data)
+    filename = "instructores_sin_foto.xlsx"
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

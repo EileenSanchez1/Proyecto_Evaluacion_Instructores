@@ -31,11 +31,13 @@ async def crear_instructor(
     apellido: str = Form(...),
     correo: str = Form(...),
     telefono: str = Form(...),
+    planta_contrato: str = Form(""),
     competencias: str = Form("[]"),
     resultados_aprendizaje: str = Form("[]"),
-    foto: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
 ):
+    """Crea instructor sin foto. La foto la sube el instructor en su primer acceso.
+    Se envía correo con acceso provisional."""
     correo = correo.strip().lower()
     if not correo.endswith("@sena.edu.co"):
         raise HTTPException(
@@ -54,26 +56,20 @@ async def crear_instructor(
 
     lista_ra = _parse_ids(resultados_aprendizaje) or _parse_ids(competencias)
 
-    foto_url = None
-    if foto and foto.filename:
-        ext = os.path.splitext(foto.filename)[1].lower()
-        if ext not in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
-            raise HTTPException(
-                status_code=400,
-                detail="Solo se permiten imágenes JPG, PNG, GIF o WEBP.",
-            )
-        filename = f"instructor_{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(foto.file, buffer)
-        foto_url = f"/uploads/{filename}"
+    pc = (planta_contrato or "").strip().upper()
+    if pc:
+        if "PLANTA" in pc:
+            pc = "PLANTA"
+        elif "CONTRAT" in pc:
+            pc = "CONTRATO"
 
     datos = InstructorCreate(
         nombre=nombre.strip(),
         apellido=apellido.strip(),
         correo=correo,
         telefono=telefono.strip(),
-        foto=foto_url,
+        foto=None,
+        planta_contrato=pc or None,
         resultados_aprendizaje=lista_ra,
     )
 

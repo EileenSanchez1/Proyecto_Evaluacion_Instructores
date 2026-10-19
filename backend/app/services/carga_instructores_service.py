@@ -153,10 +153,10 @@ def parsear_archivo(contenido: bytes, filename: str) -> list[dict[str, str]]:
     return parsear_csv(contenido)
 
 
-def _extraer_campos(fila: dict[str, str]) -> tuple[str, str, str, str]:
-    """Devuelve (nombre, apellido, correo, telefono)."""
+def _extraer_campos(fila: dict[str, str]) -> tuple[str, str, str, str, str | None]:
     correo = (
         fila.get("correo")
+        or fila.get("correo_electronico")
         or fila.get("correo_sena")
         or ""
     ).strip().lower()
@@ -170,7 +170,17 @@ def _extraer_campos(fila: dict[str, str]) -> tuple[str, str, str, str]:
 
     telefono = (fila.get("telefono") or fila.get("documento") or "").strip() or "0000000000"
 
-    return nombre, apellido, correo, telefono
+    pc_raw = (fila.get("planta_contrato") or "").strip().upper()
+    planta_contrato = None
+    if pc_raw:
+        if "PLANTA" in pc_raw:
+            planta_contrato = "PLANTA"
+        elif "CONTRAT" in pc_raw:
+            planta_contrato = "CONTRATO"
+        else:
+            planta_contrato = pc_raw[:20]
+
+    return nombre, apellido, correo, telefono, planta_contrato
 
 
 def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[str, Any]:
@@ -179,7 +189,7 @@ def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[st
     errores = []
 
     for i, fila in enumerate(filas, start=2):
-        nombre, apellido, correo, telefono = _extraer_campos(fila)
+        nombre, apellido, correo, telefono, planta_contrato = _extraer_campos(fila)
 
         if not nombre or not correo:
             errores.append({
@@ -207,6 +217,7 @@ def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[st
                 correo=correo,
                 telefono=telefono,
                 foto=None,
+                planta_contrato=planta_contrato,
                 resultados_aprendizaje=[],
             )
             inst = InstructorService.crear(session, data)

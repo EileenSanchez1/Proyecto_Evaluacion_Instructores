@@ -3,7 +3,15 @@ import api from "../api/axiosConfig";
 import { listarPeriodos } from "../services/PeriodoService";
 import { listarFichas } from "../services/FichaServices";
 import { listarInstructores } from "../services/instructorService";
-import { reportePreguntasInstructor } from "../services/Reporteservice";
+import {
+  reportePreguntasInstructor,
+  listarPendientesEvaluacion,
+  listarInstructoresSinFoto,
+  enviarRecordatorioPendientes,
+  enviarAdvertenciaSinFoto,
+  descargarPendientesExcel,
+  descargarSinFotoExcel,
+} from "../services/Reporteservice";
 import "../styles/Home.css";
 
 function Reportes() {
@@ -25,6 +33,98 @@ function Reportes() {
   const [instructorSeleccionado, setInstructorSeleccionado] = useState(null);
   const [detallePreguntas, setDetallePreguntas] = useState([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
+
+  // Pendientes y sin foto
+  const [pendientes, setPendientes] = useState(null);
+  const [sinFoto, setSinFoto] = useState(null);
+  const [cargandoPend, setCargandoPend] = useState(false);
+  const [msgAccion, setMsgAccion] = useState("");
+
+
+  const cargarPendientes = async () => {
+    try {
+      setCargandoPend(true);
+      setMsgAccion("");
+      const params = {};
+      if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
+      if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
+      const data = await listarPendientesEvaluacion(params);
+      setPendientes(data);
+    } catch (e) {
+      console.error(e);
+      setMsgAccion("No se pudieron cargar los pendientes.");
+    } finally {
+      setCargandoPend(false);
+    }
+  };
+
+  const cargarSinFoto = async () => {
+    try {
+      setCargandoPend(true);
+      setMsgAccion("");
+      const data = await listarInstructoresSinFoto();
+      setSinFoto(data);
+    } catch (e) {
+      console.error(e);
+      setMsgAccion("No se pudieron cargar instructores sin foto.");
+    } finally {
+      setCargandoPend(false);
+    }
+  };
+
+  const onDescargarPendientes = async () => {
+    try {
+      const params = {};
+      if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
+      if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
+      const blob = await descargarPendientesExcel(params);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pendientes_evaluacion.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setMsgAccion("No se pudo descargar el Excel de pendientes.");
+    }
+  };
+
+  const onDescargarSinFoto = async () => {
+    try {
+      const blob = await descargarSinFotoExcel();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "instructores_sin_foto.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setMsgAccion("No se pudo descargar el Excel de sin foto.");
+    }
+  };
+
+  const onEnviarRecordatorio = async () => {
+    if (!window.confirm("¿Enviar correo de recordatorio (plazo 24h) a todos los aprendices con evaluaciones pendientes?")) return;
+    try {
+      const params = {};
+      if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
+      if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
+      const res = await enviarRecordatorioPendientes(params);
+      setMsgAccion(`Recordatorios enviados: ${res.enviados}. Fallidos: ${res.fallidos}.`);
+    } catch (e) {
+      setMsgAccion("Error al enviar recordatorios.");
+    }
+  };
+
+  const onEnviarAdvertenciaFoto = async () => {
+    if (!window.confirm("¿Enviar advertencia a instructores sin foto de perfil?")) return;
+    try {
+      const res = await enviarAdvertenciaSinFoto();
+      setMsgAccion(`Advertencias enviadas: ${res.enviados}. Fallidos: ${res.fallidos}.`);
+    } catch (e) {
+      setMsgAccion("Error al enviar advertencias de foto.");
+    }
+  };
 
   useEffect(() => {
     listarPeriodos().then(setPeriodos).catch(console.error);
@@ -440,6 +540,113 @@ function Reportes() {
           )}
         </>
       )}
+
+      {/* ── Pendientes de evaluación y sin foto ── */}
+      <div className="home-card" style={{ marginTop: "28px" }}>
+        <div className="home-card-header">
+          <h3><i className="bi bi-clipboard-check"></i> Pendientes y control de fotos</h3>
+        </div>
+        <div className="home-card-body">
+          <p style={{ color: "#6b7280", marginTop: 0 }}>
+            Consulta aprendices que aún no evalúan, descarga reportes en Excel y envía recordatorios (24 h) o advertencias de foto.
+            Usa los filtros de periodo / ficha de arriba cuando aplique.
+          </p>
+          {msgAccion && (
+            <div style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 8, background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0" }}>
+              {msgAccion}
+            </div>
+          )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+            <button type="button" onClick={cargarPendientes} disabled={cargandoPend}
+              style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#39a900", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+              Ver pendientes
+            </button>
+            <button type="button" onClick={onDescargarPendientes}
+              style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #39a900", background: "#fff", color: "#39a900", fontWeight: 600, cursor: "pointer" }}>
+              <i className="bi bi-file-earmark-excel"></i> Excel pendientes
+            </button>
+            <button type="button" onClick={onEnviarRecordatorio}
+              style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #d97706", background: "#fff7ed", color: "#92400e", fontWeight: 600, cursor: "pointer" }}>
+              Enviar recordatorio 24h
+            </button>
+            <button type="button" onClick={cargarSinFoto} disabled={cargandoPend}
+              style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#1f2937", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+              Ver sin foto
+            </button>
+            <button type="button" onClick={onDescargarSinFoto}
+              style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #1f2937", background: "#fff", color: "#1f2937", fontWeight: 600, cursor: "pointer" }}>
+              <i className="bi bi-file-earmark-excel"></i> Excel sin foto
+            </button>
+            <button type="button" onClick={onEnviarAdvertenciaFoto}
+              style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #b91c1c", background: "#fef2f2", color: "#991b1b", fontWeight: 600, cursor: "pointer" }}>
+              Advertencia sin foto
+            </button>
+          </div>
+
+          {pendientes && (
+            <div style={{ marginBottom: 20 }}>
+              <h4 style={{ margin: "0 0 8px" }}>Pendientes: {pendientes.total ?? (pendientes.pendientes || []).length}</h4>
+              <div style={{ maxHeight: 280, overflow: "auto", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb", textAlign: "left" }}>
+                      <th style={{ padding: 8 }}>Aprendiz</th>
+                      <th style={{ padding: 8 }}>Correo</th>
+                      <th style={{ padding: 8 }}>Instructores pendientes</th>
+                      <th style={{ padding: 8 }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(pendientes.pendientes || []).map((p, idx) => (
+                      <tr key={idx} style={{ borderTop: "1px solid #f3f4f6" }}>
+                        <td style={{ padding: 8 }}>{p.nombre}</td>
+                        <td style={{ padding: 8 }}>{p.correo}</td>
+                        <td style={{ padding: 8 }}>
+                          {(p.instructores_pendientes || []).map((i) => i.nombre).join(", ")}
+                        </td>
+                        <td style={{ padding: 8 }}>{p.total_pendientes}</td>
+                      </tr>
+                    ))}
+                    {(pendientes.pendientes || []).length === 0 && (
+                      <tr><td colSpan={4} style={{ padding: 12, color: "#6b7280" }}>No hay pendientes con el filtro actual.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {sinFoto && (
+            <div>
+              <h4 style={{ margin: "0 0 8px" }}>Sin foto de perfil: {sinFoto.total ?? (sinFoto.instructores || []).length}</h4>
+              <div style={{ maxHeight: 240, overflow: "auto", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb", textAlign: "left" }}>
+                      <th style={{ padding: 8 }}>Nombre</th>
+                      <th style={{ padding: 8 }}>Correo</th>
+                      <th style={{ padding: 8 }}>Teléfono</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(sinFoto.instructores || []).map((i) => (
+                      <tr key={i.id_instructor} style={{ borderTop: "1px solid #f3f4f6" }}>
+                        <td style={{ padding: 8 }}>{i.nombre}</td>
+                        <td style={{ padding: 8 }}>{i.correo}</td>
+                        <td style={{ padding: 8 }}>{i.telefono || "—"}</td>
+                      </tr>
+                    ))}
+                    {(sinFoto.instructores || []).length === 0 && (
+                      <tr><td colSpan={3} style={{ padding: 12, color: "#6b7280" }}>Todos tienen foto.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }

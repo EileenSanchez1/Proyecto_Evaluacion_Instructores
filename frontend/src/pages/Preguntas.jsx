@@ -5,6 +5,7 @@ import {
   actualizarPregunta,
   eliminarPregunta,
   cargarPreguntasOficiales,
+  cargarPreguntasDesdeExcel,
 } from "../services/Preguntaservice";
 import "../styles/Preguntas.css";
 import "../styles/Instructores.css";
@@ -21,6 +22,7 @@ function Preguntas() {
   const [formulario, setFormulario] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [cargandoOficiales, setCargandoOficiales] = useState(false);
+  const [cargandoExcel, setCargandoExcel] = useState(false);
 
   const cargarPreguntas = async () => {
     try {
@@ -60,6 +62,31 @@ function Preguntas() {
       );
     } finally {
       setCargandoOficiales(false);
+    }
+  };
+
+
+  const manejarCargarExcel = async (e, reemplazar = false) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const msg = reemplazar
+      ? "Se desactivarán las preguntas actuales y se cargarán solo las del Excel. ¿Continuar?"
+      : "Se agregarán las preguntas del Excel (las que ya existan por texto se omiten). ¿Continuar?";
+    if (!window.confirm(msg)) return;
+    try {
+      setCargandoExcel(true);
+      setError("");
+      const res = await cargarPreguntasDesdeExcel(file, reemplazar);
+      alert(res.mensaje || "Preguntas cargadas desde Excel.");
+      await cargarPreguntas();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.response?.data?.detail || "No se pudieron cargar las preguntas desde el Excel."
+      );
+    } finally {
+      setCargandoExcel(false);
     }
   };
 
@@ -166,6 +193,37 @@ function Preguntas() {
 
   return (
     <div className="container-fluid py-4">
+
+      <div className="form-inline-card" style={{ marginBottom: "1.25rem", padding: "14px 16px", border: "1px solid #e5e7eb", borderRadius: 10, background: "#f9fafb" }}>
+        <h4 style={{ margin: "0 0 8px", fontSize: "0.95rem" }}>
+          <i className="bi bi-file-earmark-excel"></i> Carga de preguntas desde Excel (formato SENA)
+        </h4>
+        <p style={{ margin: "0 0 10px", fontSize: "0.85rem", color: "#6b7280" }}>
+          Sube el Excel de <strong>Evaluación de instructores en aula</strong>. El sistema toma únicamente las filas de preguntas (códigos 1.1, 2.1, …).
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+          <label style={{ padding: "8px 14px", borderRadius: 8, background: "#39a900", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+            {cargandoExcel ? "Cargando…" : "Subir Excel (agregar)"}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              style={{ display: "none" }}
+              disabled={cargandoExcel}
+              onChange={(e) => manejarCargarExcel(e, false)}
+            />
+          </label>
+          <label style={{ padding: "8px 14px", borderRadius: 8, background: "#fff", color: "#92400e", border: "1px solid #f59e0b", fontWeight: 600, cursor: "pointer" }}>
+            {cargandoExcel ? "Cargando…" : "Subir Excel (reemplazar)"}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              style={{ display: "none" }}
+              disabled={cargandoExcel}
+              onChange={(e) => manejarCargarExcel(e, true)}
+            />
+          </label>
+        </div>
+      </div>
       <div className="encabezado mb-4">
         <div>
           <h1 className="titulo">

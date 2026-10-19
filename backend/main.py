@@ -52,6 +52,19 @@ def ensure_extra_columns():
                 ))
             except Exception:
                 pass
+            # Instructor: vinculación PLANTA / CONTRATO (Excel oficial SENA)
+            try:
+                conn.execute(text(
+                    "ALTER TABLE instructores ADD COLUMN IF NOT EXISTS planta_contrato VARCHAR(20)"
+                ))
+            except Exception:
+                # SQLite no soporta IF NOT EXISTS en ALTER: intentar sin él
+                try:
+                    conn.execute(text(
+                        "ALTER TABLE instructores ADD COLUMN planta_contrato VARCHAR(20)"
+                    ))
+                except Exception:
+                    pass
     except Exception as e:
         print(f"[schema] Aviso ensure_extra_columns: {e}")
 
