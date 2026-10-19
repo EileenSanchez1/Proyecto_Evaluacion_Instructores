@@ -264,3 +264,36 @@ def enviar_invitacion_instructor(
     </div>
     """
     return enviar_correo(destinatario, asunto, texto, html)
+
+
+def enviar_nuevo_periodo_aprendiz(
+    destinatario: str,
+    nombre: str,
+    nombre_periodo: str,
+) -> bool:
+    """Avisa al aprendiz que ya puede evaluar instructores del nuevo trimestre."""
+    asunto = f"Nuevo periodo de evaluación habilitado — {nombre_periodo}"
+    texto = (
+        f"Hola {nombre},\n\n"
+        f"Se ha habilitado el periodo de evaluación: {nombre_periodo}.\n\n"
+        f"Ya puedes ingresar al Sistema de Evaluación de Instructores del SENA "
+        f"para evaluar a tus instructores de este trimestre.\n\n"
+        f"Ingresa con el mismo correo con el que te registraste y la contraseña "
+        f"que actualizaste en tu primer acceso.\n\n"
+        f"— SENA · Evaluación de Instructores\n"
+    )
+    html = f"""
+    <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
+      <h2 style="color:#39a900;margin:0 0 12px;">Nuevo periodo de evaluación</h2>
+      <p>Hola <strong>{nombre}</strong>,</p>
+      <p>Se ha habilitado el periodo: <strong>{nombre_periodo}</strong>.</p>
+      <p>Ya puedes ingresar al sistema para evaluar a tus instructores de este trimestre.</p>
+      <p style="background:#ecfdf5;padding:12px;border-radius:8px;color:#065f46;">
+        Usa el <strong>mismo correo</strong> con el que te registraste y la
+        <strong>contraseña que actualizaste</strong> en tu primer acceso.
+      </p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+      <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
+    </div>
+    """
+    return enviar_correo(destinatario, asunto, texto, html)
