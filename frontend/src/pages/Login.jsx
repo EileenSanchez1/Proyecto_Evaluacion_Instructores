@@ -349,17 +349,6 @@ function Login() {
               <button type="submit" disabled={cargando}>
                 {cargando ? "Ingresando..." : "Iniciar sesión"}
               </button>
-              <p style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#6b7280" }}>
-                Si aún no tienes contraseña (registro antiguo),{" "}
-                <button
-                  type="button"
-                  onClick={handleInstructorCorreo}
-                  style={{ background: "none", border: "none", color: "#0d7377", cursor: "pointer", textDecoration: "underline", padding: 0 }}
-                >
-                  solicita el código para crearla
-                </button>
-                .
-              </p>
             </form>
           )}
 

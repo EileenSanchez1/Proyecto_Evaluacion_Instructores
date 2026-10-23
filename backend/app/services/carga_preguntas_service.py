@@ -125,6 +125,75 @@ def parsear_xlsx_preguntas(contenido: bytes) -> list[dict[str, Any]]:
     return filas
 
 
+def parsear_csv_preguntas(contenido: bytes) -> list[dict[str, Any]]:
+    """
+    Parsea CSV/TSV simple con columnas orden,descripcion o codigo,texto.
+    Acepta separador coma o punto y coma o tab.
+    """
+    import csv
+
+    texto = contenido.decode("utf-8-sig", errors="replace")
+    # Detectar separador
+    primera = texto.splitlines()[0] if texto.strip() else ""
+    if "\t" in primera:
+        delim = "\t"
+    elif ";" in primera:
+        delim = ";"
+    else:
+        delim = ","
+
+    reader = csv.reader(io.StringIO(texto), delimiter=delim)
+    filas: list[dict[str, Any]] = []
+    orden_auto = 1
+    codigo_re = re.compile(r"^(\d+)(?:\.(\d+))?$")
+    header_seen = False
+
+    for row in reader:
+        if not row:
+            continue
+        celdas = [c.strip() for c in row]
+        if not any(celdas):
+            continue
+        unidos = " ".join(celdas).lower()
+        if any(
+            x in unidos
+            for x in ("orden", "descripcion", "pregunta", "codigo", "afirmacion", "texto")
+        ) and not header_seen:
+            header_seen = True
+            continue
+        header_seen = True
+
+        codigo = ""
+        texto_p = ""
+        for i, c in enumerate(celdas):
+            if not c:
+                continue
+            if not codigo and codigo_re.match(c.replace(" ", "")):
+                codigo = c
+                continue
+            if len(c) >= 10:
+                texto_p = c
+                break
+        if not texto_p and len(celdas) >= 2:
+            texto_p = celdas[1] if len(celdas[1]) >= 5 else (celdas[-1] if celdas else "")
+        if not texto_p or len(texto_p) < 10:
+            continue
+        m = codigo_re.match((codigo or "").replace(" ", ""))
+        if m:
+            mayor = int(m.group(1))
+            menor = int(m.group(2) or 0)
+            orden = mayor * 10 + menor if menor else mayor
+        else:
+            orden = orden_auto
+        filas.append({"orden": orden, "descripcion": texto_p, "codigo": codigo})
+        orden_auto += 1
+
+    filas.sort(key=lambda x: x["orden"])
+    for i, f in enumerate(filas, 1):
+        f["orden"] = i
+    return filas
+
+
 def cargar_preguntas_desde_filas(
     session: Session,
     filas: list[dict[str, Any]],

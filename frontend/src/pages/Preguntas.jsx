@@ -173,27 +173,27 @@ function Preguntas() {
 
       <div className="form-inline-card" style={{ marginBottom: "1.25rem", padding: "14px 16px", border: "1px solid #e5e7eb", borderRadius: 10, background: "#f9fafb" }}>
         <h4 style={{ margin: "0 0 8px", fontSize: "0.95rem" }}>
-          <i className="bi bi-file-earmark-excel"></i> Carga de preguntas desde Excel (formato SENA)
+          <i className="bi bi-file-earmark-excel"></i> Carga de preguntas desde Excel o CSV (formato SENA)
         </h4>
         <p style={{ margin: "0 0 10px", fontSize: "0.85rem", color: "#6b7280" }}>
-          Sube el Excel de <strong>Evaluación de instructores en aula</strong>. El sistema toma únicamente las filas de preguntas (códigos 1.1, 2.1, …).
+          Sube el Excel o CSV de <strong>Evaluación de instructores en aula</strong>. El sistema toma únicamente las filas de preguntas (códigos 1.1, 2.1, …).
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
           <label style={{ padding: "8px 14px", borderRadius: 8, background: "#39a900", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
-            {cargandoExcel ? "Cargando…" : "Subir Excel (agregar)"}
+            {cargandoExcel ? "Cargando…" : "Subir Excel/CSV (agregar)"}
             <input
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.csv,.txt,.tsv"
               style={{ display: "none" }}
               disabled={cargandoExcel}
               onChange={(e) => manejarCargarExcel(e, false)}
             />
           </label>
           <label style={{ padding: "8px 14px", borderRadius: 8, background: "#fff", color: "#92400e", border: "1px solid #f59e0b", fontWeight: 600, cursor: "pointer" }}>
-            {cargandoExcel ? "Cargando…" : "Subir Excel (reemplazar)"}
+            {cargandoExcel ? "Cargando…" : "Subir Excel/CSV (reemplazar)"}
             <input
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.csv,.txt,.tsv"
               style={{ display: "none" }}
               disabled={cargandoExcel}
               onChange={(e) => manejarCargarExcel(e, true)}

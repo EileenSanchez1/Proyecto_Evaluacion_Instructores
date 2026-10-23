@@ -139,6 +139,10 @@ body {
   flex-direction: column;
   min-width: 0;
   margin-left: var(--sidebar-w);
+  overflow-x: hidden; /* evita que el contenido se meta debajo del sidebar al compartir pantalla / redimensionar */
+  width: calc(100% - var(--sidebar-w));
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .navbar {
@@ -227,6 +231,10 @@ body {
 .main-content {
   flex: 1;
   min-height: calc(100vh - var(--topbar-h));
+  min-width: 0; /* evita que el contenido se desborde bajo la sidebar al redimensionar / pantalla compartida */
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Responsive: en pantallas chicas la sidebar se oculta detrás de un toggle */

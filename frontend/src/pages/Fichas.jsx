@@ -615,20 +615,6 @@ function Fichas() {
   const manejarGuardarEdicionAsignacion = async (e) => {
     e.preventDefault();
     if (!editandoAsignacion?.id_relacion) return;
-    if (!editandoAsignacion.id_periodo) {
-      setError("Debes seleccionar un periodo.");
-      return;
-    }
-    const periodoSel = periodos.find(
-      (p) => String(p.id_periodo) === String(editandoAsignacion.id_periodo)
-    );
-    if (
-      periodoSel &&
-      String(periodoSel.estado || "").toLowerCase() !== "activo"
-    ) {
-      setError("El periodo seleccionado no está activo.");
-      return;
-    }
     try {
       setGuardandoEdicion(true);
       setError("");
@@ -637,8 +623,8 @@ function Fichas() {
         setError("Id de asignación inválido. Cierra el detalle y ábrelo de nuevo.");
         return;
       }
+      // Solo se permite editar el Resultado de Aprendizaje (RA); el periodo se conserva.
       await actualizarFichaInstructor(idRel, {
-        id_periodo: Number(editandoAsignacion.id_periodo),
         id_resultado: editandoAsignacion.id_resultado
           ? Number(editandoAsignacion.id_resultado)
           : null,
@@ -1258,40 +1244,7 @@ function Fichas() {
                                   alignItems: "flex-end",
                                 }}
                               >
-                                <div style={{ flex: 1, minWidth: 140 }}>
-                                  <label className="form-label" style={{ fontSize: 13 }}>
-                                    Periodo
-                                  </label>
-                                  <select
-                                    className="form-select form-select-sm"
-                                    value={editandoAsignacion.id_periodo}
-                                    onChange={(e) =>
-                                      setEditandoAsignacion((prev) => ({
-                                        ...prev,
-                                        id_periodo: e.target.value,
-                                      }))
-                                    }
-                                    required
-                                  >
-                                    <option value="">Selecciona periodo</option>
-                                    {periodos.map((p) => {
-                                      const activo =
-                                        String(p.estado || "").toLowerCase() ===
-                                        "activo";
-                                      return (
-                                        <option
-                                          key={p.id_periodo}
-                                          value={p.id_periodo}
-                                          disabled={!activo}
-                                        >
-                                          {p.nombre}{" "}
-                                          {activo ? "(Activo)" : "(No activo)"}
-                                        </option>
-                                      );
-                                    })}
-                                  </select>
-                                </div>
-                                <div style={{ flex: 1, minWidth: 180 }}>
+                                <div style={{ flex: 1, minWidth: 220 }}>
                                   <label className="form-label" style={{ fontSize: 13 }}>
                                     Resultado de aprendizaje
                                   </label>

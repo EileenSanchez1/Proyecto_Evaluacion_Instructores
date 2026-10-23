@@ -549,49 +549,41 @@ function Evaluaciones() {
                 const yaEvaluado = estado === "Evaluado";
 
                 return (
-                  <div className="evaluacion-card" key={inst.id_instructor}>
-                    <div className="card-header">
-                      <div className="card-foto-wrap">
-                        {inst.foto ? (
-                          <img
-                            className="card-foto"
-                            src={`http://localhost:8000${inst.foto}`}
-                            alt={inst.nombre}
-                          />
-                        ) : (
-                          <div className="card-foto-placeholder">
-                            <i className="bi bi-person-fill"></i>
-                          </div>
-                        )}
-                      </div>
-                      <div className="card-info">
+                  <div className="evaluacion-card instructor-card" key={inst.id_instructor}>
+                    <div className="perfil">
+                      {inst.foto ? (
+                        <img
+                          className="foto"
+                          src={`http://localhost:8000${inst.foto}`}
+                          alt={inst.nombre}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.parentElement.innerHTML =
+                              '<div class="foto-placeholder"><i class="bi bi-person-fill"></i></div>';
+                          }}
+                        />
+                      ) : (
+                        <div className="foto-placeholder">
+                          <i className="bi bi-person-fill"></i>
+                        </div>
+                      )}
+                      <div>
                         <h4>
                           {inst.nombre} {inst.apellido}
                         </h4>
-                        <p className="card-email">
-                          <i className="bi bi-envelope"></i> {inst.correo}
-                        </p>
-                        {inst.telefono && (
-                          <p className="card-tel">
-                            <i className="bi bi-telephone"></i> {inst.telefono}
-                          </p>
-                        )}
                       </div>
                     </div>
-
-                    <div className="card-competencias">
-                      {inst.nombre_resultado_asignado ? (
-                        <span className="badge-competencia">
-                          {inst.nombre_resultado_asignado}
-                        </span>
-                      ) : (
-                        <span className="badge-competencia" style={{ opacity: 0.7 }}>
-                          Sin RA asignado
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="card-footer">
+                    <hr />
+                    <p>
+                      <i className="bi bi-envelope"></i> {inst.correo}
+                    </p>
+                    <p style={{ marginTop: 6 }}>
+                      <i className="bi bi-bookmark-check"></i>{" "}
+                      {inst.nombre_resultado_asignado
+                        ? inst.nombre_resultado_asignado
+                        : "Sin resultado de aprendizaje asignado"}
+                    </p>
+                    <div className="card-footer" style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
                       <span
                         className={`badge-estado ${
                           yaEvaluado ? "evaluado" : "pendiente"

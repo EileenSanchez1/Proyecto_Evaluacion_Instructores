@@ -189,10 +189,12 @@ async def cargar_preguntas_excel(
     (Evaluación de instructores en aula). Solo se toman las filas de preguntas.
     """
     nombre = (archivo.filename or "").lower()
-    if not (nombre.endswith(".xlsx") or nombre.endswith(".xls")):
+    es_excel = nombre.endswith(".xlsx") or nombre.endswith(".xls")
+    es_csv = nombre.endswith(".csv") or nombre.endswith(".txt") or nombre.endswith(".tsv")
+    if not (es_excel or es_csv):
         raise HTTPException(
             status_code=400,
-            detail="Sube un archivo Excel (.xlsx) del formato de evaluación de instructores.",
+            detail="Sube un archivo Excel (.xlsx) o CSV (.csv) del formato de evaluación de instructores.",
         )
     contenido = await archivo.read()
     if not contenido:
@@ -200,17 +202,21 @@ async def cargar_preguntas_excel(
 
     from app.services.carga_preguntas_service import (
         parsear_xlsx_preguntas,
+        parsear_csv_preguntas,
         cargar_preguntas_desde_filas,
     )
 
     try:
-        filas = parsear_xlsx_preguntas(contenido)
+        if es_csv:
+            filas = parsear_csv_preguntas(contenido)
+        else:
+            filas = parsear_xlsx_preguntas(contenido)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=400,
-            detail=f"No se pudo leer el Excel: {type(e).__name__}: {e}",
+            detail=f"No se pudo leer el archivo: {type(e).__name__}: {e}",
         )
 
     if not filas:
