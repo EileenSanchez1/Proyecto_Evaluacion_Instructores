@@ -44,3 +44,12 @@ def get_session():
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
+    # Compat: columna de control de envío de credenciales
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS credenciales_enviadas BOOLEAN DEFAULT FALSE"
+            ))
+    except Exception as e:
+        print(f"[DB] credenciales_enviadas: {e}")

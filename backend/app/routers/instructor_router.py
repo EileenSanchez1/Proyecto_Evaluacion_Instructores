@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import Query,  APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlmodel import Session
 from typing import List, Optional
 import os
@@ -231,3 +231,28 @@ def subir_foto_instructor(
     foto_url = f"/uploads/{filename}"
     actualizado = InstructorService.actualizar_foto(session, instructor_id, foto_url)
     return actualizado
+
+
+@router.post(
+    "/reenviar-correos",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
+def reenviar_correos_instructores(
+    solo_pendientes: bool = Query(True),
+    id_instructor: Optional[int] = Query(None),
+    session: Session = Depends(get_session),
+):
+    """
+    Envía credenciales a instructores pendientes (o a uno específico).
+    No envía a inactivos. Con solo_pendientes=true omite quienes ya recibieron correo.
+    """
+    try:
+        return InstructorService.reenviar_credenciales(
+            session,
+            solo_activos=True,
+            solo_pendientes=solo_pendientes if id_instructor is None else False,
+            id_instructor=id_instructor,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

@@ -49,10 +49,11 @@ function ResponderEvaluacion() {
           let suma = 0;
 
           respuestasGuardadas.forEach((r) => {
-            respuestasMap[r.id_pregunta] = {
-              calificacion: r.respuesta,
+            const val = Number(r.respuesta ?? r.calificacion ?? 0);
+            respuestasMap[Number(r.id_pregunta)] = {
+              calificacion: val,
             };
-            suma += r.respuesta;
+            suma += val;
           });
 
           setRespuestas(respuestasMap);
@@ -193,15 +194,20 @@ function ResponderEvaluacion() {
         <div className="resultado-resumen">
           <div className="resultado-promedio">
             <div className="resultado-circulo">
-              <span className="resultado-numero">{promedio}</span>
-              <span className="resultado-de">de 5</span>
+              <span className="resultado-numero">
+                {Math.round(((Number(promedio) - 1) / 4) * 100) || 0}%
+              </span>
+              <span className="resultado-de">desempeño</span>
             </div>
             <div className="resultado-texto">
-              <h4>Promedio general</h4>
+              <h4>Resultado general</h4>
               <p>
                 {promedio >= 4.0 && "Desempeño excelente (predominio de «Siempre»)"}
                 {promedio >= 2.5 && promedio < 4.0 && "Desempeño regular (mezcla de respuestas)"}
                 {promedio < 2.5 && "Desempeño a mejorar (predominio de «Nunca» o «Algunas veces»)"}
+              </p>
+              <p style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: 4 }}>
+                Escala: Siempre · Algunas veces · Nunca
               </p>
             </div>
           </div>
@@ -249,24 +255,33 @@ function ResponderEvaluacion() {
                     { valor: 5, etiqueta: "Siempre" },
                     { valor: 3, etiqueta: "Algunas veces" },
                     { valor: 1, etiqueta: "Nunca" },
-                  ].map(({ valor, etiqueta }) => (
-                    <label key={valor} className="opcion-calificacion">
-                      <input
-                        type="radio"
-                        name={`calificacion-${pregunta.id_pregunta}`}
-                        value={valor}
-                        checked={respuestas[pregunta.id_pregunta]?.calificacion === valor}
-                        onChange={() => manejarCalificacion(pregunta.id_pregunta, valor)}
-                        disabled={yaEvaluado}
-                      />
-                      <span className={`circulo-calif ${respuestas[pregunta.id_pregunta]?.calificacion === valor ? "seleccionado" : ""} ${yaEvaluado ? "deshabilitado" : ""}`}>
-                        {valor === 5 ? "S" : valor === 3 ? "A" : "N"}
-                      </span>
-                      <span className="calif-texto">
-                        {etiqueta}
-                      </span>
-                    </label>
-                  ))}
+                  ].map(({ valor, etiqueta }) => {
+                    const marcada =
+                      Number(respuestas[pregunta.id_pregunta]?.calificacion) ===
+                      Number(valor);
+                    return (
+                      <label key={valor} className="opcion-calificacion">
+                        <input
+                          type="radio"
+                          name={`calificacion-${pregunta.id_pregunta}`}
+                          value={valor}
+                          checked={marcada}
+                          onChange={() =>
+                            manejarCalificacion(pregunta.id_pregunta, valor)
+                          }
+                          disabled={yaEvaluado}
+                        />
+                        <span
+                          className={`circulo-calif ${marcada ? "seleccionado" : ""} ${
+                            yaEvaluado ? "deshabilitado" : ""
+                          }`}
+                        >
+                          {valor === 5 ? "S" : valor === 3 ? "A" : "N"}
+                        </span>
+                        <span className="calif-texto">{etiqueta}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

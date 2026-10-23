@@ -21,7 +21,7 @@ class AprendizCreate(SQLModel):
     contrasena: Optional[str] = None  # opcional: se genera si no viene
     id_ficha: int
     id_periodo: Optional[int] = None
-    enviar_correo: bool = True  # estilo SGVA / cartero
+    enviar_correo: bool = False  # por defecto no envía; el admin usa el botón
 
 
 class AprendizRead(SQLModel):

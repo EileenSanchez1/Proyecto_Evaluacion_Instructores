@@ -50,6 +50,12 @@ class Usuario(SQLModel, table=True):
         nullable=False
     )
 
+    # True cuando ya se envió correo con usuario/contraseña temporal
+    credenciales_enviadas: bool = Field(
+        default=False,
+        nullable=False
+    )
+
     fecha_creacion: datetime = Field(
         default_factory=datetime.now,
         nullable=False

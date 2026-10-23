@@ -18,6 +18,7 @@ from app.routers.respuesta_router import router as respuesta_router
 from app.routers.periodo_router import router as periodo_router
 from app.routers.notificacion_router import router as notificacion_router
 from app.routers.novedad_router import router as novedad_router
+from app.routers.admin_usuario_router import router as admin_usuario_router
 
 
 def ensure_extra_columns():
@@ -146,6 +147,7 @@ app.include_router(respuesta_router)
 app.include_router(periodo_router)
 app.include_router(notificacion_router)
 app.include_router(novedad_router)
+app.include_router(admin_usuario_router)
 
 # =========================
 # Static files

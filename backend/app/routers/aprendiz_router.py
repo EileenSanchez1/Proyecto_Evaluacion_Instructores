@@ -41,7 +41,7 @@ def crear_aprendiz(
 async def carga_masiva_aprendices(
     archivo: UploadFile = File(...),
     id_periodo: Optional[int] = Form(None),
-    enviar_correo: bool = Form(True),
+    enviar_correo: bool = Form(False),  # carga solo; correos se envían con el botón
     id_ficha: Optional[int] = Form(None),
     session: Session = Depends(get_session),
 ):
@@ -124,6 +124,8 @@ def listar_por_ficha(id_ficha: int, session: Session = Depends(get_session)):
 )
 def reenviar_correos_ficha(
     id_ficha: int,
+    solo_pendientes: bool = Query(True, description="Solo quienes aún no recibieron correo"),
+    id_aprendiz: Optional[int] = Query(None, description="Enviar solo a este aprendiz"),
     session: Session = Depends(get_session),
 ):
     """
@@ -131,7 +133,13 @@ def reenviar_correos_ficha(
     activos de la ficha (útil después de editar correos).
     """
     try:
-        return AprendizService.reenviar_credenciales_ficha(session, id_ficha)
+        return AprendizService.reenviar_credenciales_ficha(
+            session,
+            id_ficha,
+            solo_activos=True,
+            solo_pendientes=solo_pendientes if id_aprendiz is None else False,
+            id_aprendiz=id_aprendiz,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

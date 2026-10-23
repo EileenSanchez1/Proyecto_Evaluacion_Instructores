@@ -38,17 +38,35 @@ export const reactivarAprendiz = async (id) => {
 };
 
 /**
- * Carga masiva desde CSV (coordinación).
- * FormData: archivo, id_periodo (opcional), enviar_correo (true/false)
+ * Carga masiva. Por defecto NO envía correos (enviar_correo=false en backend).
+ * FormData: archivo, id_periodo (opcional), id_ficha (opcional)
  */
 export const cargaMasivaAprendices = async (formData) => {
+  if (!formData.has("enviar_correo")) {
+    formData.append("enviar_correo", "false");
+  }
   const response = await api.post(`${API_URL}/carga-masiva`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
 
-export const reenviarCorreosFicha = async (idFicha) => {
-  const response = await api.post(`${API_URL}/por-ficha/${idFicha}/reenviar-correos`);
+/** Enviar correos de la ficha (solo activos y pendientes por defecto) */
+export const reenviarCorreosFicha = async (idFicha, params = {}) => {
+  const response = await api.post(
+    `${API_URL}/por-ficha/${idFicha}/reenviar-correos`,
+    null,
+    { params }
+  );
+  return response.data;
+};
+
+/** Enviar correo solo a un aprendiz */
+export const reenviarCorreoAprendiz = async (idFicha, idAprendiz) => {
+  const response = await api.post(
+    `${API_URL}/por-ficha/${idFicha}/reenviar-correos`,
+    null,
+    { params: { id_aprendiz: idAprendiz } }
+  );
   return response.data;
 };
