@@ -114,3 +114,16 @@ export const cargaMasivaInstructores = async (formData) => {
   });
   return response.data;
 };
+
+/** Envía credenciales a instructores pendientes (o a uno) */
+export const reenviarCorreosInstructores = async (params = {}) => {
+  const response = await api.post(`${API_URL}reenviar-correos`, null, { params });
+  return response.data;
+};
+
+export const reenviarCorreoInstructor = async (idInstructor) => {
+  const response = await api.post(`${API_URL}reenviar-correos`, null, {
+    params: { id_instructor: idInstructor },
+  });
+  return response.data;
+};

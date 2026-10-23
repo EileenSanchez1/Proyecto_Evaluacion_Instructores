@@ -374,10 +374,10 @@ function Evaluaciones() {
               <div className="home-stat-info">
                 <span className="home-stat-num">
                   {reporteInst != null && reporteInst.promedio_general != null
-                    ? Number(reporteInst.promedio_general).toFixed(2)
+                    ? `${Math.round(((Number(reporteInst.promedio_general) - 1) / 4) * 100)}%`
                     : "—"}
                 </span>
-                <span className="home-stat-label">Promedio general (1–5)</span>
+                <span className="home-stat-label">Desempeño general (%)</span>
               </div>
             </div>
             <div className="home-stat-card">

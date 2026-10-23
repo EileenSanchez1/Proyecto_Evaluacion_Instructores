@@ -20,6 +20,7 @@ import ResultadosAprendizaje from './pages/ResultadosAprendizaje';
 import Reportes from './pages/Reportes';
 import Historial from './pages/Historial';
 import Periodos from './pages/Periodos';
+import Administradores from './pages/Administradores';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
@@ -61,10 +62,11 @@ function App() {
             <Route path='/evaluaciones/responder/:id' element={<ResponderEvaluacion />} />
             <Route path='/evaluaciones/:id' element={<ResponderEvaluacion />} />
 
-            {/* PREGUNTAS - Solo Admin */}
+            {/* PREGUNTAS / ADMIN USUARIOS - Solo Administrador */}
             <Route element={<AdminRoute />}>
               <Route path='/preguntas' element={<Preguntas />} />
               <Route path='/novedades' element={<Novedades />} />
+              <Route path='/administradores' element={<Administradores />} />
             </Route>
 
             {/* Admin/Coordinador */}

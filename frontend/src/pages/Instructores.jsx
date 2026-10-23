@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listarInstructores, eliminarInstructor, obtenerInstructor, reactivarInstructor, cargaMasivaInstructores } from "../services/instructorService";
+import { listarInstructores, eliminarInstructor, obtenerInstructor, reactivarInstructor, cargaMasivaInstructores, reenviarCorreosInstructores, reenviarCorreoInstructor } from "../services/instructorService";
 import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
@@ -19,6 +19,45 @@ function Instructores() {
   const [enviandoCarga, setEnviandoCarga] = useState(false);
   const [resultadoCarga, setResultadoCarga] = useState(null);
   const [mapaRA, setMapaRA] = useState({}); // id_resultado -> nombre
+  const [enviandoCorreosInst, setEnviandoCorreosInst] = useState(false);
+  const [enviandoCorreoUnoInst, setEnviandoCorreoUnoInst] = useState(null);
+
+  const enviarCorreosPendientes = async () => {
+    if (
+      !window.confirm(
+        "¿Enviar usuario y contraseña solo a los instructores ACTIVOS que aún no han recibido correo?\n\nQuienes ya recibieron credenciales se omiten."
+      )
+    )
+      return;
+    try {
+      setEnviandoCorreosInst(true);
+      const res = await reenviarCorreosInstructores({ solo_pendientes: true });
+      alert(res.mensaje || `Enviados: ${res.enviados}`);
+    } catch (e) {
+      alert(e.response?.data?.detail || "No se pudieron enviar los correos.");
+    } finally {
+      setEnviandoCorreosInst(false);
+    }
+  };
+
+  const enviarCorreoUnInstructor = async (inst) => {
+    if (!inst?.id_instructor) return;
+    if (
+      !window.confirm(
+        `¿Enviar correo de acceso solo a ${inst.nombre} ${inst.apellido} (${inst.correo})?`
+      )
+    )
+      return;
+    try {
+      setEnviandoCorreoUnoInst(inst.id_instructor);
+      const res = await reenviarCorreoInstructor(inst.id_instructor);
+      alert(res.mensaje || "Correo enviado.");
+    } catch (e) {
+      alert(e.response?.data?.detail || "No se pudo enviar el correo.");
+    } finally {
+      setEnviandoCorreoUnoInst(null);
+    }
+  };
 
   const manejarCargaMasiva = async (e) => {
     e.preventDefault();
@@ -143,7 +182,8 @@ function Instructores() {
 
   
   const texto = busqueda.toLowerCase().trim();
-  const instructoresFiltrados = instructores.filter((inst) => {
+  const instructoresFiltrados = [...instructores]
+    .filter((inst) => {
     if (!texto) return true;
     const nombresCompetencias = (inst.competencias || [])
       .map((c) => c.nombre)
@@ -231,7 +271,7 @@ function Instructores() {
             <br />
             <code>NOMBRES Y APELLIDOS COMPLETOS | NUMERO DOCUMENTO | PLANTA / CONTRATO | CORREO ELECTRÓNICO PERSONAL | CORREO ELECTRÓNICO @SENA.EDU.CO</code>
             <br />
-            También se acepta CSV. La foto la sube cada instructor al entrar a su perfil. Se envía correo de bienvenida.
+            También se acepta CSV. La foto la sube cada instructor en su perfil. La carga NO envía correos: usa el botón «Enviar correos» después.
           </p>
           <form onSubmit={manejarCargaMasiva} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <input
@@ -257,6 +297,22 @@ function Instructores() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {esAdmin && (
+        <div style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className="btn-nuevo"
+            style={{ background: "#15803d" }}
+            disabled={enviandoCorreosInst}
+            onClick={enviarCorreosPendientes}
+            title="Solo activos pendientes de recibir credenciales"
+          >
+            <i className="bi bi-envelope-arrow-up"></i>{" "}
+            {enviandoCorreosInst ? "Enviando..." : "Enviar correos (pendientes)"}
+          </button>
         </div>
       )}
 
@@ -287,7 +343,14 @@ function Instructores() {
 
       {!cargando && instructoresFiltrados.length > 0 && (
         <div className="grid-instructores">
-          {instructoresFiltrados.map((inst) => (
+          {[...instructoresFiltrados]
+            .sort((a, b) =>
+              `${a.nombre || ""} ${a.apellido || ""}`.localeCompare(
+                `${b.nombre || ""} ${b.apellido || ""}`,
+                "es"
+              )
+            )
+            .map((inst) => (
             <div className="instructor-card" key={inst.id_instructor}>
               <div className="perfil">
                 {inst.foto ? (
@@ -314,6 +377,21 @@ function Instructores() {
               </div>
               <hr />
               <p><i className="bi bi-envelope"></i> {inst.correo}</p>
+              {esAdmin && inst.activo !== false && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-success"
+                  style={{ marginBottom: 8 }}
+                  disabled={enviandoCorreoUnoInst === inst.id_instructor}
+                  onClick={() => enviarCorreoUnInstructor(inst)}
+                  title="Enviar correo solo a este instructor"
+                >
+                  <i className="bi bi-envelope-check"></i>{" "}
+                  {enviandoCorreoUnoInst === inst.id_instructor
+                    ? "Enviando..."
+                    : "Enviar correo"}
+                </button>
+              )}
               {esAdmin ? (
                 <p title="N° Documento"><i className="bi bi-person-vcard"></i> {inst.telefono}</p>
               ) : (

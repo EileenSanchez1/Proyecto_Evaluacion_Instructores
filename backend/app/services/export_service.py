@@ -231,97 +231,342 @@ def excel_consolidado_evaluacion(data: dict) -> bytes:
     return buf.getvalue()
 
 
+
 def pdf_reporte_instructor(data: dict) -> bytes:
     """
-    Genera un PDF simple por instructor: foto (si hay path), nombre, correo,
-    promedio general y promedio por pregunta (similar al consolidado Excel).
-    data keys esperadas: nombre, apellido, correo, foto_path (opcional),
-    promedio_general, preguntas (list of {orden, descripcion, nota, porcentaje, escala})
+    PDF individual estilo reporte coordinación SENA:
+    - Encabezado, instructor
+    - Tabla por pregunta con conteos Siempre / Algunas veces / Nunca y %
+    - Consolidado (totales + promedio %)
+    - Observaciones
+    Escala: Siempre=100%, Algunas veces=50%, Nunca=0%.
     """
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.units import cm
     from reportlab.lib import colors
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+        Image,
+        HRFlowable,
+        KeepTogether,
     )
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.enums import TA_CENTER, TA_LEFT
     import os
 
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=letter,
+        leftMargin=1.4 * cm,
+        rightMargin=1.4 * cm,
+        topMargin=1.2 * cm,
+        bottomMargin=1.2 * cm,
+    )
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle("TitleSENA", parent=styles["Heading1"], fontSize=16, textColor=colors.HexColor("#1a4a2e"), alignment=TA_CENTER, spaceAfter=6)
-    sub_style = ParagraphStyle("SubSENA", parent=styles["Normal"], fontSize=10, textColor=colors.HexColor("#374151"), alignment=TA_CENTER, spaceAfter=12)
-    h2 = ParagraphStyle("H2SENA", parent=styles["Heading2"], fontSize=12, textColor=colors.HexColor("#1a4a2e"), spaceBefore=10, spaceAfter=6)
-    body = ParagraphStyle("BodySENA", parent=styles["Normal"], fontSize=9, leading=12)
+    title_style = ParagraphStyle(
+        "TitleSENA",
+        parent=styles["Heading1"],
+        fontSize=15,
+        textColor=colors.HexColor("#1a4a2e"),
+        alignment=TA_CENTER,
+        spaceAfter=4,
+    )
+    sub_style = ParagraphStyle(
+        "SubSENA",
+        parent=styles["Normal"],
+        fontSize=9,
+        textColor=colors.HexColor("#4b5563"),
+        alignment=TA_CENTER,
+        spaceAfter=8,
+    )
+    h2 = ParagraphStyle(
+        "H2SENA",
+        parent=styles["Heading2"],
+        fontSize=11,
+        textColor=colors.HexColor("#1a4a2e"),
+        spaceBefore=8,
+        spaceAfter=4,
+    )
+    body = ParagraphStyle(
+        "BodySENA", parent=styles["Normal"], fontSize=8, leading=11
+    )
+    small = ParagraphStyle(
+        "SmallSENA", parent=styles["Normal"], fontSize=7.5, leading=10, textColor=colors.HexColor("#374151")
+    )
+    # Texto blanco para encabezados de tabla (sobre fondo verde oscuro)
+    header_cell = ParagraphStyle(
+        "HeaderCellSENA",
+        parent=styles["Normal"],
+        fontSize=8,
+        leading=10,
+        textColor=colors.white,
+        fontName="Helvetica-Bold",
+        alignment=TA_CENTER,
+    )
+    foot = ParagraphStyle(
+        "Foot",
+        parent=styles["Normal"],
+        fontSize=7,
+        textColor=colors.gray,
+        alignment=TA_CENTER,
+    )
 
     story = []
     story.append(Paragraph("SENA — Evaluación de Instructores", title_style))
-    story.append(Paragraph("Reporte individual de resultados", sub_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#2d7a4f"), spaceAfter=12))
+    story.append(Paragraph("Reporte individual de resultados (coordinación)", sub_style))
+    periodo = data.get("periodo") or data.get("nombre_periodo")
+    if periodo:
+        story.append(Paragraph(f"Periodo: <b>{periodo}</b>", sub_style))
+    story.append(
+        HRFlowable(
+            width="100%", thickness=1.2, color=colors.HexColor("#2d7a4f"), spaceAfter=10
+        )
+    )
 
     nombre = f"{data.get('nombre') or ''} {data.get('apellido') or ''}".strip() or "Instructor"
     correo = data.get("correo") or "—"
+    rol = data.get("rol") or "—"
     foto = data.get("foto_path")
 
-    header_data = []
+    header_cells = []
     if foto and os.path.isfile(foto):
         try:
-            img = Image(foto, width=2.2*cm, height=2.2*cm)
-            header_data.append([img, Paragraph(f"<b>{nombre}</b><br/>{correo}", body)])
+            img = Image(foto, width=2 * cm, height=2 * cm)
+            header_cells = [
+                img,
+                Paragraph(
+                    f"<b>{nombre}</b><br/>{correo}<br/><font size='8'>Rol: {rol}</font>",
+                    body,
+                ),
+            ]
         except Exception:
-            header_data.append([Paragraph(f"<b>{nombre}</b><br/>{correo}", body)])
+            header_cells = [
+                Paragraph(
+                    f"<b>{nombre}</b><br/>{correo}<br/><font size='8'>Rol: {rol}</font>",
+                    body,
+                )
+            ]
     else:
-        header_data.append([Paragraph(f"<b>{nombre}</b><br/>{correo}", body)])
+        header_cells = [
+            Paragraph(
+                f"<b>{nombre}</b><br/>{correo}<br/><font size='8'>Rol: {rol}</font>",
+                body,
+            )
+        ]
 
-    t = Table(header_data, colWidths=[3*cm, 14*cm] if len(header_data[0]) == 2 else [17*cm])
-    t.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-    ]))
+    if len(header_cells) == 2:
+        t = Table([header_cells], colWidths=[2.4 * cm, 14.5 * cm])
+    else:
+        t = Table([header_cells], colWidths=[16.9 * cm])
+    t.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+            ]
+        )
+    )
     story.append(t)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
-    prom = data.get("promedio_general")
-    if prom is not None:
-        story.append(Paragraph(f"<b>Promedio general:</b> {prom:.2f} / 5.0  ({(prom/5)*100:.1f} %)", h2))
-    else:
-        story.append(Paragraph("<b>Promedio general:</b> Sin datos", h2))
+    # % general oficial
+    pct_g = data.get("porcentaje_general")
+    if pct_g is None:
+        prom = data.get("promedio_general")
+        try:
+            prom_f = float(prom) if prom is not None else None
+        except (TypeError, ValueError):
+            prom_f = None
+        if prom_f is not None and prom_f > 0:
+            pct_g = (
+                round(prom_f)
+                if prom_f > 5
+                else round(((prom_f - 1) / 4) * 100)
+            )
+        else:
+            pct_g = 0
+    try:
+        pct_g = float(pct_g)
+    except (TypeError, ValueError):
+        pct_g = 0
 
+    story.append(
+        Paragraph(
+            f"<b>Desempeño general: {pct_g:.0f}%</b> "
+            f"(Siempre = 100% · Algunas veces = 50% · Nunca = 0%)",
+            h2,
+        )
+    )
+
+    # ---- Tabla por pregunta con conteos ----
     story.append(Paragraph("Detalle por pregunta", h2))
     preguntas = data.get("preguntas") or []
     if not preguntas:
-        story.append(Paragraph("No hay respuestas registradas para este instructor.", body))
+        story.append(
+            Paragraph("No hay respuestas registradas para este instructor.", body)
+        )
     else:
-        rows = [["#", "Pregunta", "Nota", "%", "Escala"]]
+        header = [
+            Paragraph("#", header_cell),
+            Paragraph("Pregunta", header_cell),
+            Paragraph("Siempre", header_cell),
+            Paragraph("Algunas", header_cell),
+            Paragraph("Nunca", header_cell),
+            Paragraph("%", header_cell),
+        ]
+        rows = [header]
         for p in preguntas:
-            desc = (p.get("descripcion") or "")[:80]
-            rows.append([
-                str(p.get("orden") or ""),
-                Paragraph(desc, body),
-                f"{p.get('nota', 0):.2f}",
-                f"{p.get('porcentaje', 0):.0f}%",
-                p.get("escala") or "—",
-            ])
-        tabla = Table(rows, colWidths=[1*cm, 10*cm, 1.8*cm, 1.5*cm, 2.5*cm])
-        tabla.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a4a2e")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d1d5db")),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f4f6")]),
-            ("LEFTPADDING", (0, 0), (-1, -1), 3),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ]))
+            desc = (
+                p.get("pregunta")
+                or p.get("texto_pregunta")
+                or p.get("descripcion")
+                or p.get("enunciado")
+                or "—"
+            )
+            s = int(p.get("siempre") or 0)
+            a = int(p.get("algunas") or 0)
+            n = int(p.get("nunca") or 0)
+            tot = s + a + n
+            if p.get("porcentaje") is not None and tot == 0:
+                try:
+                    pct_p = float(p.get("porcentaje") or 0)
+                except (TypeError, ValueError):
+                    pct_p = 0
+            elif tot > 0:
+                pct_p = round((s * 100 + a * 50) / tot, 1)
+            else:
+                # fallback desde nota 5/3/1
+                try:
+                    nota = float(p.get("nota") if p.get("nota") is not None else p.get("promedio") or 0)
+                except (TypeError, ValueError):
+                    nota = 0
+                pct_p = round(((nota - 1) / 4) * 100, 1) if nota > 0 else 0
+            rows.append(
+                [
+                    str(p.get("orden") or ""),
+                    Paragraph(str(desc), small),
+                    str(s),
+                    str(a),
+                    str(n),
+                    f"{pct_p:.0f}%",
+                ]
+            )
+
+        tabla = Table(
+            rows,
+            colWidths=[1 * cm, 9.2 * cm, 1.7 * cm, 1.7 * cm, 1.5 * cm, 1.4 * cm],
+            repeatRows=1,
+        )
+        tabla.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a4a2e")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#d1d5db")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#f3f4f6")],
+                    ),
+                    ("ALIGN", (2, 0), (-1, -1), "CENTER"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]
+            )
+        )
         story.append(tabla)
 
-    story.append(Spacer(1, 16))
-    story.append(Paragraph("Documento generado automáticamente por el sistema de Evaluación de Instructores SENA.", ParagraphStyle("Foot", parent=styles["Normal"], fontSize=7, textColor=colors.gray, alignment=TA_CENTER)))
+    # ---- Consolidado ----
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("Consolidado de evaluación", h2))
+    total_s = int(data.get("total_siempre") or 0)
+    total_a = int(data.get("total_algunas") or 0)
+    total_n = int(data.get("total_nunca") or 0)
+    total_r = int(data.get("total_respuestas") or (total_s + total_a + total_n))
+    n_preg = int(data.get("total_preguntas") or len(preguntas))
+    n_apr = int(data.get("aprendices_evaluaron") or 0)
+    if total_r and not (total_s or total_a or total_n):
+        # intentar sumar desde preguntas
+        for p in preguntas:
+            total_s += int(p.get("siempre") or 0)
+            total_a += int(p.get("algunas") or 0)
+            total_n += int(p.get("nunca") or 0)
+        total_r = total_s + total_a + total_n or total_r
+
+    cons_rows = [
+        [
+            Paragraph("Aprendices", header_cell),
+            Paragraph("Preguntas", header_cell),
+            Paragraph("Respuestas", header_cell),
+            Paragraph("Siempre", header_cell),
+            Paragraph("Algunas", header_cell),
+            Paragraph("Nunca", header_cell),
+            Paragraph("Promedio", header_cell),
+        ],
+        [
+            str(n_apr),
+            str(n_preg),
+            str(total_r),
+            str(total_s),
+            str(total_a),
+            str(total_n),
+            f"{pct_g:.0f}%",
+        ],
+    ]
+    cons = Table(
+        cons_rows,
+        colWidths=[2.2 * cm, 2.2 * cm, 2.4 * cm, 2.2 * cm, 2.2 * cm, 2 * cm, 2.2 * cm],
+    )
+    cons.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a4a2e")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#d1d5db")),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#ecfdf5")),
+                ("FONTNAME", (6, 1), (6, 1), "Helvetica-Bold"),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
+    story.append(cons)
+
+    # ---- Observaciones ----
+    obs = data.get("observaciones") or []
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("Observaciones de aprendices", h2))
+    if not obs:
+        story.append(Paragraph("Ninguna observación registrada.", body))
+    else:
+        for o in obs[:40]:
+            txt = str(o).strip()
+            if not txt:
+                continue
+            story.append(Paragraph(f"• {txt}", small))
+            story.append(Spacer(1, 2))
+
+    story.append(Spacer(1, 14))
+    story.append(
+        Paragraph(
+            "Documento generado automáticamente por el sistema de Evaluación de Instructores SENA.",
+            foot,
+        )
+    )
 
     doc.build(story)
     return buf.getvalue()

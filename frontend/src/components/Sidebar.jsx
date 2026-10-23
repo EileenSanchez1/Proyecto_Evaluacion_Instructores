@@ -166,6 +166,17 @@ function Sidebar() {
           </>
         )}
 
+        {admin && (
+          <NavLink
+            to="/administradores"
+            className={({ isActive }) =>
+              `nav-item ${isActive ? "active" : ""}`
+            }
+          >
+            <i className="bi bi-shield-lock"></i> Administradores
+          </NavLink>
+        )}
+
         {/* Contacto solo Aprendiz */}
         {esAprendiz && (
           <NavLink

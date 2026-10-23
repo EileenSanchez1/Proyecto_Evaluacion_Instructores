@@ -149,7 +149,7 @@ function MiPromedio() {
   );
 const preguntas = reporte?.preguntas || [];
   const promedio = reporte?.promedio_general ?? 0;
-  const porcentajeG = reporte?.porcentaje_general ?? 0;
+  const porcentajeG = reporte?.porcentaje_general ?? (promedio > 0 ? Math.round(((Number(promedio) - 1) / 4) * 100) : 0);
   const totalResp = reporte?.total_respuestas ?? 0;
   const fichasAsignadas = reporte?.fichas_asignadas || [];
 
@@ -188,10 +188,12 @@ const preguntas = reporte?.preguntas || [];
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: "2rem", fontWeight: 800, color: "#39a900" }}>
-              {totalResp > 0 ? Number(promedio).toFixed(2) : "—"}
+              {totalResp > 0 ? `${porcentajeG}%` : "—"}
             </div>
             <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-              {totalResp > 0 ? `${porcentajeG}% de desempeño` : "Sin evaluaciones aún"}
+              {totalResp > 0
+                ? "Desempeño general (Siempre / Algunas veces / Nunca)"
+                : "Sin evaluaciones aún"}
             </div>
           </div>
         </div>
@@ -249,7 +251,7 @@ const preguntas = reporte?.preguntas || [];
           ) : (
             preguntas.map((item) => {
               const nota = Number(item.nota ?? item.promedio ?? 0);
-              const porc = Number(item.porcentaje ?? (nota / 5) * 100);
+              const porc = Number(item.porcentaje ?? (nota > 0 ? ((nota - 1) / 4) * 100 : 0));
               const config = obtenerConfiguracionEstado(porc, nota);
 
               return (
@@ -291,7 +293,7 @@ const preguntas = reporte?.preguntas || [];
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {porc.toFixed(1)}% ({nota.toFixed(1)})
+                      {porc.toFixed(0)}%
                     </span>
                   </div>
 

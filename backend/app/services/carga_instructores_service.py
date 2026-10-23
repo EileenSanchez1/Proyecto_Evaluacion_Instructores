@@ -220,8 +220,8 @@ def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[st
                 planta_contrato=planta_contrato,
                 resultados_aprendizaje=[],
             )
-            inst = InstructorService.crear(session, data)
-            # InstructorService.crear ya genera contraseña y envía correo con credenciales
+            inst = InstructorService.crear(session, data, enviar_correo=False)
+            # Correos se envían después con el botón «Enviar correos»
 
             creados.append({
                 "fila": i,
@@ -263,6 +263,6 @@ def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[st
             f"{len(omitidos)} omitidos (ya existían), "
             f"{len(errores)} con error. "
             "Sin foto: cada instructor la sube al iniciar sesión en su perfil. "
-            "Se envió correo con contraseña temporal a los nuevos (igual que aprendices)."
+            "No se enviaron correos: usa el botón Enviar correos en la lista de instructores."
         ),
     }

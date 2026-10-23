@@ -33,7 +33,7 @@ def _generar_password_temporal(longitud: int = 10) -> str:
 
 class InstructorService:
     @staticmethod
-    def crear(session: Session, instructor: InstructorCreate) -> Instructor:
+    def crear(session: Session, instructor: InstructorCreate, enviar_correo: bool = True) -> Instructor:
         correo = instructor.correo.strip().lower()
 
         if not correo.endswith("@sena.edu.co"):
@@ -101,16 +101,21 @@ class InstructorService:
         session.commit()
         session.refresh(db)
 
-        # Enviar credenciales por correo (igual que aprendices)
-        try:
-            enviar_credenciales_instructor(
-                destinatario=correo,
-                nombre=f"{db.nombre} {db.apellido}",
-                usuario=correo,
-                contrasena=password_plana,
-            )
-        except Exception as e:
-            print(f"[EMAIL] No se pudo enviar credenciales a {correo}: {e}")
+        # Enviar credenciales por correo (opcional; en carga masiva va en False)
+        if enviar_correo:
+            try:
+                ok = enviar_credenciales_instructor(
+                    destinatario=correo,
+                    nombre=f"{db.nombre} {db.apellido}",
+                    usuario=correo,
+                    contrasena=password_plana,
+                )
+                if ok:
+                    usuario.credenciales_enviadas = True
+                    session.add(usuario)
+                    session.commit()
+            except Exception as e:
+                print(f"[EMAIL] No se pudo enviar credenciales a {correo}: {e}")
 
         return db
 
@@ -325,3 +330,85 @@ class InstructorService:
         session.commit()
         session.refresh(instructor)
         return instructor
+
+    @staticmethod
+    def reenviar_credenciales(
+        session: Session,
+        solo_activos: bool = True,
+        solo_pendientes: bool = True,
+        id_instructor: int | None = None,
+    ) -> dict:
+        """
+        Envía (o reenvía) credenciales a instructores.
+        - solo_activos: omite usuarios inactivos
+        - solo_pendientes: solo quienes no tienen credenciales_enviadas
+        - id_instructor: si se indica, solo ese (siempre envía, aunque ya tenga flag)
+        """
+        from app.models.instructor import Instructor
+
+        if id_instructor is not None:
+            items = [session.get(Instructor, int(id_instructor))]
+            items = [i for i in items if i is not None]
+            if not items:
+                raise ValueError("Instructor no encontrado.")
+        else:
+            items = list(session.exec(select(Instructor)).all())
+
+        enviados, omitidos, errores = [], [], []
+        for inst in items:
+            usuario = None
+            activo = True
+            ya = False
+            if inst.id_usuario:
+                usuario = session.get(Usuario, inst.id_usuario)
+                if usuario is not None:
+                    activo = bool(usuario.activo)
+                    ya = bool(getattr(usuario, "credenciales_enviadas", False))
+            if solo_activos and not activo:
+                omitidos.append({"correo": inst.correo, "motivo": "Inactivo"})
+                continue
+            if id_instructor is None and solo_pendientes and ya:
+                omitidos.append({"correo": inst.correo, "motivo": "Ya recibió credenciales"})
+                continue
+
+            password_plana = _generar_password_temporal()
+            pwd = LoginService.hash_password(password_plana)
+            if usuario:
+                usuario.contrasena = pwd
+                if inst.correo and usuario.correo != inst.correo:
+                    usuario.correo = inst.correo
+                session.add(usuario)
+            session.commit()
+
+            try:
+                ok = enviar_credenciales_instructor(
+                    destinatario=inst.correo,
+                    nombre=f"{inst.nombre} {inst.apellido}",
+                    usuario=inst.correo,
+                    contrasena=password_plana,
+                )
+            except Exception as e:
+                ok = False
+                print(f"[EMAIL] instructor {inst.correo}: {e}")
+            if ok:
+                enviados.append(inst.correo)
+                if usuario:
+                    usuario.credenciales_enviadas = True
+                    session.add(usuario)
+                    session.commit()
+            else:
+                errores.append({"correo": inst.correo, "error": "SMTP falló"})
+
+        return {
+            "enviados": len(enviados),
+            "omitidos": len(omitidos),
+            "errores": len(errores),
+            "detalle_enviados": enviados,
+            "detalle_omitidos": omitidos,
+            "detalle_errores": errores,
+            "mensaje": (
+                f"Correos enviados: {len(enviados)}. "
+                f"Omitidos: {len(omitidos)}. Fallidos: {len(errores)}."
+            ),
+        }
+

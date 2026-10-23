@@ -13,6 +13,8 @@ import {
   desactivarAprendiz,
   reactivarAprendiz,
   reenviarCorreosFicha,
+  reenviarCorreoAprendiz,
+  crearAprendiz,
 } from "../services/Aprendizservice";
 import {
   listarInstructoresPorFicha,
@@ -70,6 +72,16 @@ function Fichas() {
   const [formAprendiz, setFormAprendiz] = useState({ nombre: "", apellido: "", correo: "" });
   const [guardandoAprendiz, setGuardandoAprendiz] = useState(false);
   const [enviandoCorreosFicha, setEnviandoCorreosFicha] = useState(false);
+  const [busquedaInstructorAsignar, setBusquedaInstructorAsignar] = useState("");
+  const [mostrarCrearAprendiz, setMostrarCrearAprendiz] = useState(false);
+  const [formNuevoAprendiz, setFormNuevoAprendiz] = useState({
+    nombre: "",
+    apellido: "",
+    correo: "",
+    enviar_correo: true,
+  });
+  const [guardandoNuevoAprendiz, setGuardandoNuevoAprendiz] = useState(false);
+  const [enviandoCorreoUno, setEnviandoCorreoUno] = useState(null);
 
 
 
@@ -303,25 +315,94 @@ function Fichas() {
   };
 
 
-  const reenviarCorreos = async () => {
+    const reenviarCorreos = async () => {
     if (!fichaSeleccionada) return;
     if (
       !window.confirm(
-        "Se generará una nueva contraseña temporal y se enviará correo a TODOS los aprendices ACTIVOS de esta ficha. ¿Continuar?"
+        "¿Enviar usuario y contraseña solo a los aprendices ACTIVOS de esta ficha que aún no han recibido correo?\n\nLos inactivos y quienes ya recibieron credenciales se omiten."
       )
     )
       return;
     try {
       setEnviandoCorreosFicha(true);
-      const res = await reenviarCorreosFicha(fichaSeleccionada.id_ficha);
-      alert(res?.mensaje || "Proceso de envío terminado.");
-    } catch (err) {
-      const detalle = err.response?.data?.detail;
-      alert(typeof detalle === "string" ? detalle : "No se pudieron enviar los correos.");
+      const res = await reenviarCorreosFicha(fichaSeleccionada.id_ficha, {
+        solo_pendientes: true,
+      });
+      alert(res.mensaje || `Enviados: ${res.enviados}`);
+    } catch (e) {
+      alert(e.response?.data?.detail || "No se pudieron enviar los correos.");
     } finally {
       setEnviandoCorreosFicha(false);
     }
   };
+
+  const enviarCorreoUnAprendiz = async (a) => {
+    if (!fichaSeleccionada || !a?.id_aprendiz) return;
+    if (
+      !window.confirm(
+        `¿Enviar usuario y contraseña solo a ${a.nombre} ${a.apellido} (${a.correo})?`
+      )
+    )
+      return;
+    try {
+      setEnviandoCorreoUno(a.id_aprendiz);
+      const res = await reenviarCorreoAprendiz(
+        fichaSeleccionada.id_ficha,
+        a.id_aprendiz
+      );
+      alert(res.mensaje || "Correo enviado.");
+    } catch (e) {
+      alert(e.response?.data?.detail || "No se pudo enviar el correo.");
+    } finally {
+      setEnviandoCorreoUno(null);
+    }
+  };
+
+  const guardarNuevoAprendiz = async (e) => {
+    e.preventDefault();
+    if (!fichaSeleccionada) return;
+    const { nombre, apellido, correo, enviar_correo } = formNuevoAprendiz;
+    if (!nombre.trim() || !apellido.trim() || !correo.trim()) {
+      alert("Nombre, apellido y correo son obligatorios.");
+      return;
+    }
+    try {
+      setGuardandoNuevoAprendiz(true);
+      // Periodo activo o el de la carga
+      const periodoActivo =
+        periodos.find(
+          (p) => String(p.estado || "").toLowerCase() === "activo"
+        ) || periodos[0];
+      await crearAprendiz({
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+        correo: correo.trim().toLowerCase(),
+        id_ficha: fichaSeleccionada.id_ficha,
+        id_periodo: periodoActivo?.id_periodo,
+        enviar_correo: !!enviar_correo,
+      });
+      setFormNuevoAprendiz({
+        nombre: "",
+        apellido: "",
+        correo: "",
+        enviar_correo: true,
+      });
+      setMostrarCrearAprendiz(false);
+      const lista = await listarAprendicesPorFicha(fichaSeleccionada.id_ficha);
+      setAprendicesFicha(lista);
+      alert(
+        enviar_correo
+          ? "Aprendiz creado y correo enviado."
+          : "Aprendiz creado. Puedes enviarle el correo después con el botón del sobre."
+      );
+    } catch (err) {
+      const d = err.response?.data?.detail;
+      alert(typeof d === "string" ? d : "No se pudo crear el aprendiz.");
+    } finally {
+      setGuardandoNuevoAprendiz(false);
+    }
+  };
+
 
   const toggleActivoAprendiz = async (a) => {
     const accion = a.activo ? "desactivar" : "reactivar";
@@ -844,17 +925,103 @@ function Fichas() {
                     <i className="bi bi-people-fill"></i>
                     <span><strong>Lista de aprendices</strong> (editar / desactivar)</span>
                   </p>
-                  <button
-                    type="button"
-                    className="btn btn-success btn-sm btn-reenviar-correos"
-                    disabled={enviandoCorreosFicha || aprendicesFicha.length === 0}
-                    onClick={reenviarCorreos}
-                    title="Envía usuario y contraseña temporal a todos los activos de esta ficha"
-                  >
-                    <i className="bi bi-envelope-arrow-up"></i>{" "}
-                    {enviandoCorreosFicha ? "Enviando..." : "Enviar correos a la ficha"}
-                  </button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline-success btn-sm"
+                      onClick={() => setMostrarCrearAprendiz((v) => !v)}
+                      title="Registrar un aprendiz nuevo en esta ficha"
+                    >
+                      <i className="bi bi-person-plus"></i>{" "}
+                      {mostrarCrearAprendiz ? "Cancelar" : "Nuevo aprendiz"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-success btn-sm btn-reenviar-correos"
+                      disabled={enviandoCorreosFicha || aprendicesFicha.length === 0}
+                      onClick={reenviarCorreos}
+                      title="Solo activos que aún no han recibido correo"
+                    >
+                      <i className="bi bi-envelope-arrow-up"></i>{" "}
+                      {enviandoCorreosFicha ? "Enviando..." : "Enviar correos a la ficha"}
+                    </button>
+                  </div>
                 </div>
+                {mostrarCrearAprendiz && (
+                  <form
+                    onSubmit={guardarNuevoAprendiz}
+                    style={{
+                      marginBottom: 12,
+                      padding: 12,
+                      background: "#f0fdf4",
+                      borderRadius: 8,
+                      border: "1px solid #bbf7d0",
+                    }}
+                  >
+                    <p style={{ marginBottom: 8, fontWeight: 600, fontSize: "0.9rem" }}>
+                      Agregar aprendiz a esta ficha
+                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <input
+                        className="form-control form-control-sm"
+                        placeholder="Nombre *"
+                        value={formNuevoAprendiz.nombre}
+                        onChange={(e) =>
+                          setFormNuevoAprendiz((f) => ({ ...f, nombre: e.target.value }))
+                        }
+                        required
+                      />
+                      <input
+                        className="form-control form-control-sm"
+                        placeholder="Apellido *"
+                        value={formNuevoAprendiz.apellido}
+                        onChange={(e) =>
+                          setFormNuevoAprendiz((f) => ({ ...f, apellido: e.target.value }))
+                        }
+                        required
+                      />
+                      <input
+                        className="form-control form-control-sm"
+                        type="email"
+                        placeholder="Correo *"
+                        style={{ gridColumn: "1 / -1" }}
+                        value={formNuevoAprendiz.correo}
+                        onChange={(e) =>
+                          setFormNuevoAprendiz((f) => ({ ...f, correo: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        marginTop: 8,
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formNuevoAprendiz.enviar_correo}
+                        onChange={(e) =>
+                          setFormNuevoAprendiz((f) => ({
+                            ...f,
+                            enviar_correo: e.target.checked,
+                          }))
+                        }
+                      />
+                      Enviar correo de acceso al crear
+                    </label>
+                    <button
+                      type="submit"
+                      className="btn btn-success btn-sm mt-2"
+                      disabled={guardandoNuevoAprendiz}
+                    >
+                      {guardandoNuevoAprendiz ? "Guardando..." : "Crear aprendiz"}
+                    </button>
+                  </form>
+                )}
                 {cargandoDetalle && <p className="text-muted">Cargando aprendices...</p>}
                 {!cargandoDetalle && aprendicesFicha.length === 0 && (
                   <p className="text-muted">Esta ficha no tiene aprendices. Usa la carga masiva CSV.</p>
@@ -889,6 +1056,19 @@ function Fichas() {
                               >
                                 <i className="bi bi-pencil"></i>
                               </button>{" "}
+                              {a.activo && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-success"
+                                    title="Enviar correo solo a este aprendiz"
+                                    disabled={enviandoCorreoUno === a.id_aprendiz}
+                                    onClick={() => enviarCorreoUnAprendiz(a)}
+                                  >
+                                    <i className="bi bi-envelope"></i>
+                                  </button>{" "}
+                                </>
+                              )}
                               <button
                                 type="button"
                                 className={`btn btn-sm ${a.activo ? "btn-outline-danger" : "btn-outline-success"}`}
@@ -1026,6 +1206,14 @@ function Fichas() {
                         <small className="text-muted d-block" style={{ marginBottom: 6 }}>
                           Marca el instructor y elige su RA (puedes buscar por código o nombre). Un RA solo puede asignarse a un instructor.
                         </small>
+                        <input
+                          type="search"
+                          className="form-control form-control-sm"
+                          placeholder="Buscar instructor por nombre o correo..."
+                          value={busquedaInstructorAsignar}
+                          onChange={(e) => setBusquedaInstructorAsignar(e.target.value)}
+                          style={{ marginBottom: 8, maxWidth: 360 }}
+                        />
                         <div
                           style={{
                             maxHeight: 320,
@@ -1039,7 +1227,20 @@ function Fichas() {
                           {instructores.length === 0 && (
                             <span className="text-muted">No hay instructores registrados</span>
                           )}
-                          {instructores.map((inst) => {
+                          {[...instructores]
+                            .filter((inst) => {
+                              const q = busquedaInstructorAsignar.trim().toLowerCase();
+                              if (!q) return true;
+                              const nom = `${inst.nombre || ""} ${inst.apellido || ""}`.toLowerCase();
+                              const cor = (inst.correo || "").toLowerCase();
+                              return nom.includes(q) || cor.includes(q);
+                            })
+                            .sort((a, b) => {
+                              const na = `${a.nombre || ""} ${a.apellido || ""}`.toLowerCase();
+                              const nb = `${b.nombre || ""} ${b.apellido || ""}`.toLowerCase();
+                              return na.localeCompare(nb, "es");
+                            })
+                            .map((inst) => {
                             const seleccionado = idsInstructoresSeleccionados.includes(
                               inst.id_instructor
                             );

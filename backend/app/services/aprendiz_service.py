@@ -93,7 +93,7 @@ class AprendizService:
 
         # Envío de credenciales por correo (cartero / SGVA)
         if getattr(aprendiz, "enviar_correo", True):
-            enviar_credenciales_aprendiz(
+            ok = enviar_credenciales_aprendiz(
                 destinatario=correo,
                 nombre=f"{db.nombre} {db.apellido}",
                 usuario=correo,
@@ -101,6 +101,10 @@ class AprendizService:
                 numero_ficha=getattr(ficha, "numero_ficha", None),
                 programa=getattr(ficha, "programa", None),
             )
+            if ok:
+                usuario.credenciales_enviadas = True
+                session.add(usuario)
+                session.commit()
 
         return db
 
@@ -221,10 +225,14 @@ class AprendizService:
         session: Session,
         id_ficha: int,
         solo_activos: bool = True,
+        solo_pendientes: bool = True,
+        id_aprendiz: int | None = None,
     ) -> dict:
         """
-        Genera nueva contraseña temporal y envía correo a cada aprendiz de la ficha.
-        Útil tras editar correos o para recordatorio de acceso.
+        Genera nueva contraseña temporal y envía correo.
+        - solo_activos: no envía a inactivos
+        - solo_pendientes: solo a quienes aún no tienen credenciales_enviadas
+        - id_aprendiz: si se indica, solo ese aprendiz (ignora solo_pendientes)
         """
         from app.models.ficha import Ficha
 
@@ -233,6 +241,11 @@ class AprendizService:
             raise ValueError("La ficha no existe.")
 
         aprendices = AprendizRepository.listar_por_ficha(session, id_ficha)
+        if id_aprendiz is not None:
+            aprendices = [a for a in aprendices if a.id_aprendiz == int(id_aprendiz)]
+            if not aprendices:
+                raise ValueError("Aprendiz no encontrado en esta ficha.")
+
         enviados = []
         omitidos = []
         errores = []
@@ -240,12 +253,18 @@ class AprendizService:
         for ap in aprendices:
             activo = True
             usuario = None
+            ya_enviado = False
             if ap.id_usuario:
                 usuario = session.get(Usuario, ap.id_usuario)
                 if usuario is not None:
                     activo = bool(usuario.activo)
+                    ya_enviado = bool(getattr(usuario, "credenciales_enviadas", False))
             if solo_activos and not activo:
                 omitidos.append({"correo": ap.correo, "motivo": "Inactivo"})
+                continue
+            # Envío individual siempre; en lote solo pendientes
+            if id_aprendiz is None and solo_pendientes and ya_enviado:
+                omitidos.append({"correo": ap.correo, "motivo": "Ya recibió credenciales"})
                 continue
 
             password_plana = _generar_password_temporal()
@@ -269,6 +288,10 @@ class AprendizService:
             )
             if ok:
                 enviados.append(ap.correo)
+                if usuario:
+                    usuario.credenciales_enviadas = True
+                    session.add(usuario)
+                    session.commit()
             else:
                 errores.append({"correo": ap.correo, "error": "No se pudo enviar el correo (SMTP)"})
 
@@ -281,7 +304,7 @@ class AprendizService:
             "detalle_errores": errores,
             "mensaje": (
                 f"Correos enviados: {len(enviados)}. "
-                f"Omitidos (inactivos): {len(omitidos)}. "
+                f"Omitidos: {len(omitidos)}. "
                 f"Fallidos: {len(errores)}."
             ),
         }

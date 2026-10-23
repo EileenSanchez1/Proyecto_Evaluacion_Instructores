@@ -148,15 +148,29 @@ def detalle_evaluacion(
     )
     rows = session.exec(stmt).all()
 
+    def _etiqueta_escala(valor: int) -> str:
+        # Escala oficial: 5=Siempre, 3=Algunas veces, 1=Nunca
+        v = int(valor or 0)
+        if v >= 5:
+            return "Siempre"
+        if v >= 3:
+            return "Algunas veces"
+        if v >= 1:
+            return "Nunca"
+        return "Sin respuesta"
+
     respuestas = []
     for resp, preg in rows:
+        valor = int(resp.respuesta or 0)
         item = {
             "id_respuesta": resp.id_respuesta,
             "id_pregunta": preg.id_pregunta,
             "orden": getattr(preg, "orden", 0),
             "pregunta": preg.descripcion,
-            "calificacion": resp.respuesta,
-            # Ya no se usan observaciones por pregunta
+            "calificacion": valor,
+            "etiqueta": _etiqueta_escala(valor),
+            # Escala oficial: Siempre=100%, Algunas=50%, Nunca=0%
+            "porcentaje": (100 if valor >= 5 else (50 if valor >= 3 else (0 if valor >= 1 else 0))),
             "observaciones": None,
         }
         respuestas.append(item)
@@ -280,12 +294,23 @@ def reporte_por_preguntas(
             "preguntas": [],
         }
 
-    # 3) Agrupar por pregunta (cargar pregunta si existe; si no, placeholder)
+    # 3) Agrupar por pregunta con conteos Siempre/Algunas/Nunca
+    # Escala oficial coordinación: Siempre=100%, Algunas=50%, Nunca=0%
     preguntas_data = defaultdict(
-        lambda: {"suma": 0, "total": 0, "fichas": set(), "descripcion": "", "orden": 0}
+        lambda: {
+            "suma": 0,
+            "total": 0,
+            "siempre": 0,
+            "algunas": 0,
+            "nunca": 0,
+            "fichas": set(),
+            "descripcion": "",
+            "orden": 0,
+        }
     )
-    suma_g = 0
-    total_g = 0
+    total_s = total_a = total_n = 0
+    aprendices = set()
+    observaciones = []
     for r in respuestas:
         key = r.id_pregunta
         pregunta = session.get(Pregunta, key)
@@ -295,31 +320,49 @@ def reporte_por_preguntas(
             else f"Pregunta #{key}"
         )
         orden = getattr(pregunta, "orden", 0) or 0 if pregunta else 0
-        preguntas_data[key]["suma"] += r.respuesta
+        val = int(r.respuesta or 0)
+        preguntas_data[key]["suma"] += val
         preguntas_data[key]["total"] += 1
         preguntas_data[key]["descripcion"] = descripcion
         preguntas_data[key]["orden"] = orden
-        suma_g += r.respuesta
-        total_g += 1
+        if val >= 5:
+            preguntas_data[key]["siempre"] += 1
+            total_s += 1
+        elif val >= 3:
+            preguntas_data[key]["algunas"] += 1
+            total_a += 1
+        elif val >= 1:
+            preguntas_data[key]["nunca"] += 1
+            total_n += 1
         ev = mapa_eval.get(r.id_evaluacion)
         if ev:
+            if getattr(ev, "id_aprendiz", None):
+                aprendices.add(ev.id_aprendiz)
+            obs = getattr(ev, "observacion_general", None)
+            if obs and str(obs).strip():
+                observaciones.append(str(obs).strip())
             ap = session.get(Aprendiz, ev.id_aprendiz)
             if ap:
                 ficha = session.get(Ficha, ap.id_ficha)
                 if ficha:
                     preguntas_data[key]["fichas"].add(str(ficha.numero_ficha))
 
+    total_g = total_s + total_a + total_n
     preguntas_list = []
     for pid, data in sorted(preguntas_data.items(), key=lambda x: x[1]["orden"]):
-        promedio = data["suma"] / data["total"] if data["total"] else 0
-        porcentaje = (promedio / 5) * 100
-        if promedio >= 4.0:
+        tot = data["total"] or 1
+        # % por pregunta = (S*100 + A*50 + N*0) / total
+        porcentaje = round(
+            (data["siempre"] * 100 + data["algunas"] * 50) / tot, 1
+        )
+        promedio = data["suma"] / tot
+        if porcentaje >= 80:
             estado, mensaje, color = (
                 "excelente",
                 "¡Excelente desempeño! Cumples este criterio.",
                 "verde",
             )
-        elif promedio >= 3.0:
+        elif porcentaje >= 50:
             estado, mensaje, color = (
                 "mejorar",
                 f"Debes mejorar en: {data['descripcion']}",
@@ -337,9 +380,13 @@ def reporte_por_preguntas(
                 "orden": data["orden"],
                 "pregunta": data["descripcion"],
                 "texto_pregunta": data["descripcion"],
+                "descripcion": data["descripcion"],
                 "nota": round(promedio, 2),
                 "promedio": round(promedio, 2),
-                "porcentaje": round(porcentaje, 1),
+                "porcentaje": porcentaje,
+                "siempre": data["siempre"],
+                "algunas": data["algunas"],
+                "nunca": data["nunca"],
                 "total_respuestas": data["total"],
                 "fichas": sorted(list(data["fichas"])),
                 "estado": estado,
@@ -348,12 +395,22 @@ def reporte_por_preguntas(
             }
         )
 
-    prom_g = (suma_g / total_g) if total_g else 0
+    # Promedio instructor oficial: (S*100 + A*50 + N*0) / total_respuestas
+    pct_g = round((total_s * 100 + total_a * 50) / total_g, 1) if total_g else 0
+    prom_g = ((total_s * 5 + total_a * 3 + total_n * 1) / total_g) if total_g else 0
+    # observaciones únicas (máx 40)
+    obs_unicas = list(dict.fromkeys(observaciones))[:40]
     return {
         "instructor_id": instructor_id,
         "promedio_general": round(prom_g, 2),
-        "porcentaje_general": round((prom_g / 5) * 100, 1) if total_g else 0,
+        "porcentaje_general": pct_g,
         "total_respuestas": total_g,
+        "total_siempre": total_s,
+        "total_algunas": total_a,
+        "total_nunca": total_n,
+        "aprendices_evaluaron": len(aprendices),
+        "total_preguntas": len(preguntas_list),
+        "observaciones": obs_unicas,
         "preguntas": preguntas_list,
     }
 
@@ -429,7 +486,7 @@ def pendientes_evaluacion(
     # Periodo activo si no se indica
     if periodo_id is None:
         periodo = session.exec(
-            select(PeriodoModel).where(PeriodoModel.estado == True)
+            select(PeriodoModel).where(PeriodoModel.estado == "Activo")
         ).first()
         if not periodo:
             return {"periodo_id": None, "pendientes": [], "mensaje": "No hay periodo activo."}
@@ -631,10 +688,26 @@ def exportar_pendientes_excel(
 ):
     """Descarga Excel de aprendices que faltan por evaluar (por ficha / periodo)."""
     from fastapi.responses import Response
-    from app.services.export_service import excel_pendientes_evaluacion
 
-    data = pendientes_evaluacion(periodo_id=periodo_id, ficha_id=ficha_id, session=session)
-    content = excel_pendientes_evaluacion(data)
+    try:
+        from app.services.export_service import excel_pendientes_evaluacion
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="Falta openpyxl. En el backend ejecuta: pip install openpyxl",
+        )
+
+    try:
+        data = pendientes_evaluacion(
+            periodo_id=periodo_id, ficha_id=ficha_id, session=session
+        )
+        content = excel_pendientes_evaluacion(data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando Excel de pendientes: {type(e).__name__}: {e}",
+        )
+
     filename = "pendientes_evaluacion.xlsx"
     return Response(
         content=content,
@@ -650,10 +723,24 @@ def exportar_pendientes_excel(
 def exportar_sin_foto_excel(session: Session = Depends(get_session)):
     """Descarga Excel de instructores que no han subido foto de perfil."""
     from fastapi.responses import Response
-    from app.services.export_service import excel_instructores_sin_foto
 
-    data = instructores_sin_foto(session=session)
-    content = excel_instructores_sin_foto(data)
+    try:
+        from app.services.export_service import excel_instructores_sin_foto
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="Falta openpyxl. En el backend ejecuta: pip install openpyxl",
+        )
+
+    try:
+        data = instructores_sin_foto(session=session)
+        content = excel_instructores_sin_foto(data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando Excel sin foto: {type(e).__name__}: {e}",
+        )
+
     filename = "instructores_sin_foto.xlsx"
     return Response(
         content=content,
@@ -672,41 +759,89 @@ def exportar_instructor_pdf(
     session: Session = Depends(get_session),
 ):
     """
-    PDF por instructor: foto, nombre, correo, promedio general y promedio por pregunta.
+    PDF por instructor: foto, nombre, correo, desempeño % y detalle por pregunta.
     """
     from fastapi.responses import Response
-    from app.services.export_service import pdf_reporte_instructor
     from app.models.instructor import Instructor
     import os
+
+    try:
+        from app.services.export_service import pdf_reporte_instructor
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo cargar el generador de PDF. Instala reportlab: pip install reportlab. ({e})",
+        )
 
     inst = session.get(Instructor, instructor_id)
     if not inst:
         raise HTTPException(status_code=404, detail="Instructor no encontrado")
 
-    # Reutilizar lógica del reporte por preguntas
-    reporte = reporte_por_preguntas(instructor_id=instructor_id, periodo_id=periodo_id, session=session)
+    try:
+        reporte = reporte_por_preguntas(
+            instructor_id=instructor_id,
+            periodo_id=periodo_id,
+            ficha_id=None,
+            session=session,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo obtener el reporte del instructor: {type(e).__name__}: {e}",
+        )
 
     foto_path = None
     if getattr(inst, "foto", None):
-        # foto suele ser /uploads/... relativo al backend
         base = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        candidato = os.path.join(base, inst.foto.lstrip("/"))
+        candidato = os.path.join(base, str(inst.foto).lstrip("/"))
         if os.path.isfile(candidato):
             foto_path = candidato
         else:
-            candidato2 = os.path.join(base, "uploads", os.path.basename(inst.foto))
+            candidato2 = os.path.join(base, "app", "uploads", os.path.basename(str(inst.foto)))
             if os.path.isfile(candidato2):
                 foto_path = candidato2
+            else:
+                candidato3 = os.path.join(base, "uploads", os.path.basename(str(inst.foto)))
+                if os.path.isfile(candidato3):
+                    foto_path = candidato3
 
+    rol = getattr(inst, "planta_contrato", None) or "Instructor"
     data = {
         "nombre": inst.nombre,
         "apellido": inst.apellido,
         "correo": inst.correo,
+        "rol": rol,
         "foto_path": foto_path,
         "promedio_general": reporte.get("promedio_general"),
+        "porcentaje_general": reporte.get("porcentaje_general"),
         "preguntas": reporte.get("preguntas") or [],
+        "total_siempre": reporte.get("total_siempre"),
+        "total_algunas": reporte.get("total_algunas"),
+        "total_nunca": reporte.get("total_nunca"),
+        "total_respuestas": reporte.get("total_respuestas"),
+        "total_preguntas": reporte.get("total_preguntas"),
+        "aprendices_evaluaron": reporte.get("aprendices_evaluaron"),
+        "observaciones": reporte.get("observaciones") or [],
+        "periodo": None,
     }
-    content = pdf_reporte_instructor(data)
+    if periodo_id:
+        from app.models.periodo import Periodo
+        per = session.get(Periodo, periodo_id)
+        if per:
+            data["periodo"] = getattr(per, "nombre", None)
+    try:
+        content = pdf_reporte_instructor(data)
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="Falta la librería reportlab. En el backend ejecuta: pip install reportlab",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {type(e).__name__}: {e}",
+        )
+
     safe_name = f"reporte_instructor_{instructor_id}.pdf"
     return Response(
         content=content,
@@ -814,9 +949,10 @@ def exportar_consolidado_excel(
             f"{inst.nombre} {inst.apellido}" if inst else f"Instructor #{inst_id}"
         )
         total_r = d["total_r"] or 1
+        # Escala oficial: Siempre=100, Algunas=50, Nunca=0
+        porcentaje = round((100 * d["total_s"] + 50 * d["total_a"] + 0 * d["total_n"]) / total_r)
         suma = 5 * d["total_s"] + 3 * d["total_a"] + 1 * d["total_n"]
         promedio = suma / total_r
-        porcentaje = round((promedio / 5) * 100)
 
         lista_preg = []
         for pid, counts in sorted(

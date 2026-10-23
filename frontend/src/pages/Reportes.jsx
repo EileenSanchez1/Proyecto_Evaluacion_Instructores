@@ -73,20 +73,54 @@ function Reportes() {
     }
   };
 
+  const leerErrorBlob = async (err) => {
+    try {
+      if (err.response?.data instanceof Blob) {
+        const texto = await err.response.data.text();
+        try {
+          const j = JSON.parse(texto);
+          if (typeof j.detail === "string") return j.detail;
+          if (Array.isArray(j.detail))
+            return j.detail.map((d) => d.msg || JSON.stringify(d)).join("; ");
+        } catch {
+          if (texto) return texto.slice(0, 300);
+        }
+      }
+      if (typeof err.response?.data?.detail === "string") return err.response.data.detail;
+      if (err.code === "ERR_NETWORK" || err.message === "Network Error") {
+        return (
+          "Network Error: no se pudo contactar el backend (¿está corriendo en " +
+          "http://127.0.0.1:8000?). Si el servidor responde, instala dependencias: " +
+          "pip install openpyxl reportlab"
+        );
+      }
+      return err.message || "Error de descarga.";
+    } catch {
+      return err.message || "Error de descarga.";
+    }
+  };
+
   const descargarBlobExcel = async (obtenerBlob, nombreArchivo) => {
     try {
       const blob = await obtenerBlob();
       // Si el backend devolvió un error JSON en lugar del Excel
-      if (blob.type && blob.type.includes("application/json")) {
+      if (
+        blob.type &&
+        (blob.type.includes("application/json") || blob.type.includes("text/plain"))
+      ) {
         const texto = await blob.text();
         let detalle = "Error al generar el Excel.";
         try {
           const j = JSON.parse(texto);
           detalle = j.detail || detalle;
         } catch {
-          /* ignore */
+          if (texto) detalle = texto.slice(0, 300);
         }
         setMsgAccion(typeof detalle === "string" ? detalle : "Error al generar el Excel.");
+        return;
+      }
+      if (!blob || blob.size === 0) {
+        setMsgAccion("El archivo llegó vacío. Revisa el backend y los filtros.");
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -99,10 +133,7 @@ function Reportes() {
       URL.revokeObjectURL(url);
       setMsgAccion("Descarga iniciada.");
     } catch (e) {
-      const msg =
-        e.response?.data instanceof Blob
-          ? "Error del servidor al generar el archivo."
-          : e.response?.data?.detail || e.message || "No se pudo descargar el Excel.";
+      const msg = await leerErrorBlob(e);
       setMsgAccion(typeof msg === "string" ? msg : "No se pudo descargar el Excel.");
     }
   };
@@ -125,19 +156,31 @@ function Reportes() {
   };
 
   const onDescargarPdfInstructor = async (inst) => {
-    if (!inst?.id_instructor) return;
+    if (!inst?.id_instructor) {
+      setMsgAccion("No se identificó el instructor para generar el PDF.");
+      return;
+    }
     try {
       const params = {};
       if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
       const blob = await descargarInstructorPdf(inst.id_instructor, params);
-      if (blob.type && blob.type.includes("application/json")) {
+      if (
+        blob.type &&
+        (blob.type.includes("application/json") || blob.type.includes("text/plain"))
+      ) {
         const texto = await blob.text();
         let detalle = "Error al generar el PDF.";
         try {
           const j = JSON.parse(texto);
           detalle = j.detail || detalle;
-        } catch { /* ignore */ }
+        } catch {
+          if (texto) detalle = texto.slice(0, 300);
+        }
         setMsgAccion(typeof detalle === "string" ? detalle : "Error al generar el PDF.");
+        return;
+      }
+      if (!blob || blob.size === 0) {
+        setMsgAccion("El PDF llegó vacío. Revisa el backend (pip install reportlab).");
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -150,7 +193,8 @@ function Reportes() {
       URL.revokeObjectURL(url);
       setMsgAccion("PDF descargado.");
     } catch (e) {
-      setMsgAccion(e.response?.data?.detail || "No se pudo descargar el PDF del instructor.");
+      const msg = await leerErrorBlob(e);
+      setMsgAccion(msg || "No se pudo descargar el PDF del instructor.");
     }
   };
 
@@ -241,33 +285,45 @@ function Reportes() {
     }
   };
 
-  // ── Helpers de color según promedio (escala 1–5) ──
+  // ── Helpers de color según desempeño (Siempre / Algunas veces / Nunca → %) ──
+  // Escala oficial: Siempre=100, Algunas=50, Nunca=0 → umbrales por %
+  const aPorcentaje = (valor) => {
+    const n = Number(valor);
+    if (!n || Number.isNaN(n)) return 0;
+    if (n > 5) return Math.min(100, n);
+    return ((n - 1) / 4) * 100;
+  };
+
   const getColorClass = (valor) => {
-    const escala = valor > 5 ? valor / 20 : valor;
-    if (escala >= 4.0) return "verde";
-    if (escala >= 3.0) return "amarillo";
+    const pct = aPorcentaje(valor);
+    if (pct >= 80) return "verde";
+    if (pct >= 50) return "amarillo";
     return "rojo";
   };
 
   const getBadgeStyle = (valor) => {
-    const escala = valor > 5 ? valor / 20 : valor;
-    if (escala >= 4.0)
+    const pct = aPorcentaje(valor);
+    if (pct >= 80)
       return { background: "#d1fae5", color: "#065f46", border: "1px solid #a7f3d0" };
-    if (escala >= 3.0)
+    if (pct >= 50)
       return { background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" };
     return { background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" };
   };
 
   const getBarGradient = (valor) => {
-    const escala = valor > 5 ? valor / 20 : valor;
-    if (escala >= 4.0) return "linear-gradient(90deg, #39a900, #2d7a4f)";
-    if (escala >= 3.0) return "linear-gradient(90deg, #f59e0b, #d97706)";
+    const pct = aPorcentaje(valor);
+    if (pct >= 80) return "linear-gradient(90deg, #39a900, #2d7a4f)";
+    if (pct >= 50) return "linear-gradient(90deg, #f59e0b, #d97706)";
     return "linear-gradient(90deg, #ef4444, #b91c1c)";
   };
 
+  /** Muestra porcentaje de desempeño (no nota 1–5) */
   const formatPromedio = (valor) => {
-    const escala = valor > 5 ? valor / 20 : valor;
-    return escala.toFixed(1);
+    if (valor == null || valor === "") return "—";
+    const n = Number(valor);
+    if (Number.isNaN(n)) return "—";
+    const pct = n > 5 ? Math.min(100, Math.round(n)) : Math.round(((n - 1) / 4) * 100);
+    return `${pct}%`;
   };
 
   return (
@@ -398,7 +454,7 @@ function Reportes() {
               </div>
               <div className="home-stat-info">
                 <span className="home-stat-num">{formatPromedio(reporte.promedio_general)}</span>
-                <span className="home-stat-label">Promedio General</span>
+                <span className="home-stat-label">Desempeño general</span>
               </div>
             </div>
 
@@ -443,7 +499,7 @@ function Reportes() {
                           Instructor
                         </th>
                         <th style={{ textAlign: "center", padding: "12px 14px", color: "#6b7280", fontWeight: 600, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                          Promedio
+                          Desempeño
                         </th>
                         <th style={{ textAlign: "center", padding: "12px 14px", color: "#6b7280", fontWeight: 600, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                           Respuestas
@@ -462,7 +518,7 @@ function Reportes() {
                         const badgeStyle = getBadgeStyle(inst.promedio);
                         const barGradient = getBarGradient(inst.promedio);
                         const promedioFormateado = formatPromedio(inst.promedio);
-                        const porcentajeBarra = Math.min((inst.promedio > 5 ? inst.promedio : inst.promedio * 20), 100);
+                        const porcentajeBarra = Math.min((inst.promedio > 5 ? inst.promedio : ((inst.promedio - 1) / 4) * 100), 100);
 
                         return (
                           <tr

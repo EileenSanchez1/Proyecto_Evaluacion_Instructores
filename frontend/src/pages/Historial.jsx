@@ -3,6 +3,11 @@ import api from "../api/axiosConfig";
 import { detalleEvaluacion } from "../services/Reporteservice";
 import { listarPeriodos } from "../services/PeriodoService";
 import { listarFichas } from "../services/FichaServices";
+import {
+  etiquetaDesdeValor,
+  porcentajeDesdeValor,
+  colorDesdePorcentaje,
+} from "../utils/escalaEvaluacion";
 import "../styles/Evaluaciones.css";
 
 function formatearFecha(fecha) {
@@ -260,33 +265,75 @@ function Historial() {
                   </button>
                 </div>
 
-                <h4 style={{ marginTop: 8 }}>Calificaciones por pregunta</h4>
+                <h4 style={{ marginTop: 8 }}>Respuestas por pregunta</h4>
+                <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: "0 0 10px" }}>
+                  Escala: <strong>Siempre</strong> · <strong>Algunas veces</strong> · <strong>Nunca</strong> (se muestra el porcentaje de desempeño).
+                </p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {(detalle.respuestas || []).map((r) => (
-                    <li
-                      key={r.id_pregunta}
-                      style={{
-                        padding: "12px 0",
-                        borderBottom: "1px solid #f3f4f6",
-                      }}
-                    >
-                      <div
+                  {(detalle.respuestas || []).map((r) => {
+                    const valor = r.calificacion ?? r.respuesta ?? r.valor;
+                    const etiqueta = etiquetaDesdeValor(valor);
+                    const pct = porcentajeDesdeValor(valor);
+                    const color = colorDesdePorcentaje(pct);
+                    return (
+                      <li
+                        key={r.id_pregunta}
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          flexWrap: "wrap",
+                          padding: "12px 0",
+                          borderBottom: "1px solid #f3f4f6",
                         }}
                       >
-                        <span>
-                          <strong>{r.orden}.</strong> {r.pregunta}
-                        </span>
-                        <span style={{ fontWeight: 700, color: "#39a900" }}>
-                          {r.calificacion} / 5
-                        </span>
-                      </div>
-                    </li>
-                  ))}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span style={{ flex: 1, minWidth: 200 }}>
+                            <strong>{r.orden}.</strong> {r.pregunta}
+                          </span>
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              padding: "4px 12px",
+                              borderRadius: 20,
+                              background: color.fondo,
+                              color: color.texto,
+                              border: `1px solid ${color.borde}`,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {etiqueta} · {pct}%
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 8,
+                            height: 8,
+                            background: "#e5e7eb",
+                            borderRadius: 4,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${pct}%`,
+                              background:
+                                pct >= 80
+                                  ? "linear-gradient(90deg,#39a900,#2d7a4f)"
+                                  : pct >= 50
+                                  ? "linear-gradient(90deg,#f59e0b,#d97706)"
+                                  : "linear-gradient(90deg,#ef4444,#b91c1c)",
+                            }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
 
                 {detalle.observacion_general && (
