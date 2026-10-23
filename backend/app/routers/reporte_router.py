@@ -662,6 +662,59 @@ def exportar_sin_foto_excel(session: Session = Depends(get_session)):
     )
 
 
+@router.get(
+    "/instructor/{instructor_id}/pdf",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Instructor"))],
+)
+def exportar_instructor_pdf(
+    instructor_id: int,
+    periodo_id: Optional[int] = Query(None),
+    session: Session = Depends(get_session),
+):
+    """
+    PDF por instructor: foto, nombre, correo, promedio general y promedio por pregunta.
+    """
+    from fastapi.responses import Response
+    from app.services.export_service import pdf_reporte_instructor
+    from app.models.instructor import Instructor
+    import os
+
+    inst = session.get(Instructor, instructor_id)
+    if not inst:
+        raise HTTPException(status_code=404, detail="Instructor no encontrado")
+
+    # Reutilizar lógica del reporte por preguntas
+    reporte = reporte_por_preguntas(instructor_id=instructor_id, periodo_id=periodo_id, session=session)
+
+    foto_path = None
+    if getattr(inst, "foto", None):
+        # foto suele ser /uploads/... relativo al backend
+        base = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        candidato = os.path.join(base, inst.foto.lstrip("/"))
+        if os.path.isfile(candidato):
+            foto_path = candidato
+        else:
+            candidato2 = os.path.join(base, "uploads", os.path.basename(inst.foto))
+            if os.path.isfile(candidato2):
+                foto_path = candidato2
+
+    data = {
+        "nombre": inst.nombre,
+        "apellido": inst.apellido,
+        "correo": inst.correo,
+        "foto_path": foto_path,
+        "promedio_general": reporte.get("promedio_general"),
+        "preguntas": reporte.get("preguntas") or [],
+    }
+    content = pdf_reporte_instructor(data)
+    safe_name = f"reporte_instructor_{instructor_id}.pdf"
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
+
+
 # ── Consolidado evaluación (estilo reporte SENA) ─────────────────────────────
 
 @router.get(

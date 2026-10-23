@@ -99,3 +99,12 @@ export const descargarSinFotoExcel = async () => {
   });
   return response.data;
 };
+
+/** PDF por instructor: foto, nombre, promedio por pregunta */
+export const descargarInstructorPdf = async (instructorId, params = {}) => {
+  const response = await api.get(`${API_URL}/instructor/${instructorId}/pdf`, {
+    params,
+    responseType: "blob",
+  });
+  return response.data;
+};

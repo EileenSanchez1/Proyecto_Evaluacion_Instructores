@@ -11,6 +11,7 @@ import {
   enviarAdvertenciaSinFoto,
   descargarPendientesExcel,
   descargarSinFotoExcel,
+  descargarInstructorPdf,
 } from "../services/Reporteservice";
 import "../styles/Home.css";
 
@@ -72,34 +73,84 @@ function Reportes() {
     }
   };
 
-  const onDescargarPendientes = async () => {
+  const descargarBlobExcel = async (obtenerBlob, nombreArchivo) => {
     try {
-      const params = {};
-      if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
-      if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
-      const blob = await descargarPendientesExcel(params);
+      const blob = await obtenerBlob();
+      // Si el backend devolvió un error JSON en lugar del Excel
+      if (blob.type && blob.type.includes("application/json")) {
+        const texto = await blob.text();
+        let detalle = "Error al generar el Excel.";
+        try {
+          const j = JSON.parse(texto);
+          detalle = j.detail || detalle;
+        } catch {
+          /* ignore */
+        }
+        setMsgAccion(typeof detalle === "string" ? detalle : "Error al generar el Excel.");
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "pendientes_evaluacion.xlsx";
+      a.download = nombreArchivo;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       URL.revokeObjectURL(url);
+      setMsgAccion("Descarga iniciada.");
     } catch (e) {
-      setMsgAccion("No se pudo descargar el Excel de pendientes.");
+      const msg =
+        e.response?.data instanceof Blob
+          ? "Error del servidor al generar el archivo."
+          : e.response?.data?.detail || e.message || "No se pudo descargar el Excel.";
+      setMsgAccion(typeof msg === "string" ? msg : "No se pudo descargar el Excel.");
     }
   };
 
+  const onDescargarPendientes = async () => {
+    const params = {};
+    if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
+    if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
+    await descargarBlobExcel(
+      () => descargarPendientesExcel(params),
+      "pendientes_evaluacion.xlsx"
+    );
+  };
+
   const onDescargarSinFoto = async () => {
+    await descargarBlobExcel(
+      () => descargarSinFotoExcel(),
+      "instructores_sin_foto.xlsx"
+    );
+  };
+
+  const onDescargarPdfInstructor = async (inst) => {
+    if (!inst?.id_instructor) return;
     try {
-      const blob = await descargarSinFotoExcel();
+      const params = {};
+      if (filtros.periodo_id) params.periodo_id = filtros.periodo_id;
+      const blob = await descargarInstructorPdf(inst.id_instructor, params);
+      if (blob.type && blob.type.includes("application/json")) {
+        const texto = await blob.text();
+        let detalle = "Error al generar el PDF.";
+        try {
+          const j = JSON.parse(texto);
+          detalle = j.detail || detalle;
+        } catch { /* ignore */ }
+        setMsgAccion(typeof detalle === "string" ? detalle : "Error al generar el PDF.");
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "instructores_sin_foto.xlsx";
+      a.download = `reporte_instructor_${inst.id_instructor}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       URL.revokeObjectURL(url);
+      setMsgAccion("PDF descargado.");
     } catch (e) {
-      setMsgAccion("No se pudo descargar el Excel de sin foto.");
+      setMsgAccion(e.response?.data?.detail || "No se pudo descargar el PDF del instructor.");
     }
   };
 
@@ -397,8 +448,11 @@ function Reportes() {
                         <th style={{ textAlign: "center", padding: "12px 14px", color: "#6b7280", fontWeight: 600, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                           Respuestas
                         </th>
-                        <th style={{ textAlign: "left", padding: "12px 14px", color: "#6b7280", fontWeight: 600, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em", width: "35%" }}>
+                        <th style={{ textAlign: "left", padding: "12px 14px", color: "#6b7280", fontWeight: 600, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em", width: "30%" }}>
                           Barra de progreso
+                        </th>
+                        <th style={{ textAlign: "center", padding: "12px 14px", color: "#6b7280", fontWeight: 600, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                          PDF
                         </th>
                       </tr>
                     </thead>
@@ -485,6 +539,25 @@ function Reportes() {
                                 </span>
                               </div>
                             </td>
+                            <td style={{ padding: "14px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                title="Descargar PDF del instructor"
+                                onClick={() => onDescargarPdfInstructor(inst)}
+                                style={{
+                                  border: "1px solid #dc2626",
+                                  background: "#fff",
+                                  color: "#dc2626",
+                                  borderRadius: 8,
+                                  padding: "6px 10px",
+                                  cursor: "pointer",
+                                  fontWeight: 600,
+                                  fontSize: "0.8rem",
+                                }}
+                              >
+                                <i className="bi bi-file-earmark-pdf"></i> PDF
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
@@ -498,9 +571,18 @@ function Reportes() {
           {/* ── Detalle por pregunta al oprimir un instructor ── */}
           {instructorSeleccionado && (
             <div className="home-card" style={{ marginTop: "24px" }}>
-              <div className="home-card-header" style={{ display: "flex", justifyContent: "space-between" }}>
+              <div className="home-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <h3><i className="bi bi-list-check"></i> Detalle: {instructorSeleccionado.nombre}</h3>
-                <button onClick={() => setInstructorSeleccionado(null)} style={{ width: "auto", margin: 0, padding: "6px 14px" }}>Cerrar</button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => onDescargarPdfInstructor(instructorSeleccionado)}
+                    style={{ width: "auto", margin: 0, padding: "6px 14px", border: "1px solid #dc2626", background: "#fff", color: "#dc2626", borderRadius: 8, fontWeight: 600 }}
+                  >
+                    <i className="bi bi-file-earmark-pdf"></i> Descargar PDF
+                  </button>
+                  <button onClick={() => setInstructorSeleccionado(null)} style={{ width: "auto", margin: 0, padding: "6px 14px" }}>Cerrar</button>
+                </div>
               </div>
               <div className="home-card-body">
                 {cargandoDetalle && <p>Cargando detalle...</p>}

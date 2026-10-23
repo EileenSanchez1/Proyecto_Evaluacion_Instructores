@@ -229,3 +229,99 @@ def excel_consolidado_evaluacion(data: dict) -> bytes:
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def pdf_reporte_instructor(data: dict) -> bytes:
+    """
+    Genera un PDF simple por instructor: foto (si hay path), nombre, correo,
+    promedio general y promedio por pregunta (similar al consolidado Excel).
+    data keys esperadas: nombre, apellido, correo, foto_path (opcional),
+    promedio_general, preguntas (list of {orden, descripcion, nota, porcentaje, escala})
+    """
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    import os
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle("TitleSENA", parent=styles["Heading1"], fontSize=16, textColor=colors.HexColor("#1a4a2e"), alignment=TA_CENTER, spaceAfter=6)
+    sub_style = ParagraphStyle("SubSENA", parent=styles["Normal"], fontSize=10, textColor=colors.HexColor("#374151"), alignment=TA_CENTER, spaceAfter=12)
+    h2 = ParagraphStyle("H2SENA", parent=styles["Heading2"], fontSize=12, textColor=colors.HexColor("#1a4a2e"), spaceBefore=10, spaceAfter=6)
+    body = ParagraphStyle("BodySENA", parent=styles["Normal"], fontSize=9, leading=12)
+
+    story = []
+    story.append(Paragraph("SENA — Evaluación de Instructores", title_style))
+    story.append(Paragraph("Reporte individual de resultados", sub_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#2d7a4f"), spaceAfter=12))
+
+    nombre = f"{data.get('nombre') or ''} {data.get('apellido') or ''}".strip() or "Instructor"
+    correo = data.get("correo") or "—"
+    foto = data.get("foto_path")
+
+    header_data = []
+    if foto and os.path.isfile(foto):
+        try:
+            img = Image(foto, width=2.2*cm, height=2.2*cm)
+            header_data.append([img, Paragraph(f"<b>{nombre}</b><br/>{correo}", body)])
+        except Exception:
+            header_data.append([Paragraph(f"<b>{nombre}</b><br/>{correo}", body)])
+    else:
+        header_data.append([Paragraph(f"<b>{nombre}</b><br/>{correo}", body)])
+
+    t = Table(header_data, colWidths=[3*cm, 14*cm] if len(header_data[0]) == 2 else [17*cm])
+    t.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 10))
+
+    prom = data.get("promedio_general")
+    if prom is not None:
+        story.append(Paragraph(f"<b>Promedio general:</b> {prom:.2f} / 5.0  ({(prom/5)*100:.1f} %)", h2))
+    else:
+        story.append(Paragraph("<b>Promedio general:</b> Sin datos", h2))
+
+    story.append(Paragraph("Detalle por pregunta", h2))
+    preguntas = data.get("preguntas") or []
+    if not preguntas:
+        story.append(Paragraph("No hay respuestas registradas para este instructor.", body))
+    else:
+        rows = [["#", "Pregunta", "Nota", "%", "Escala"]]
+        for p in preguntas:
+            desc = (p.get("descripcion") or "")[:80]
+            rows.append([
+                str(p.get("orden") or ""),
+                Paragraph(desc, body),
+                f"{p.get('nota', 0):.2f}",
+                f"{p.get('porcentaje', 0):.0f}%",
+                p.get("escala") or "—",
+            ])
+        tabla = Table(rows, colWidths=[1*cm, 10*cm, 1.8*cm, 1.5*cm, 2.5*cm])
+        tabla.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a4a2e")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d1d5db")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f4f6")]),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(tabla)
+
+    story.append(Spacer(1, 16))
+    story.append(Paragraph("Documento generado automáticamente por el sistema de Evaluación de Instructores SENA.", ParagraphStyle("Foot", parent=styles["Normal"], fontSize=7, textColor=colors.gray, alignment=TA_CENTER)))
+
+    doc.build(story)
+    return buf.getvalue()
