@@ -621,7 +621,7 @@ function Fichas() {
       const fd = new FormData();
       fd.append("archivo", archivoCarga);
       if (periodoCarga) fd.append("id_periodo", periodoCarga);
-      fd.append("enviar_correo", "true");
+      fd.append("enviar_correo", "false");
       if (fichaSeleccionada?.id_ficha) {
         fd.append("id_ficha", fichaSeleccionada.id_ficha);
       }
@@ -745,7 +745,7 @@ function Fichas() {
         <h4><i className="bi bi-upload"></i> Carga masiva de aprendices (coordinación)</h4>
         <p className="subtitulo" style={{ marginBottom: 12 }}>
           Sube el <strong>Reporte de Aprendices</strong> SENA (.xlsx) con columnas: <code>Tipo de Documento, Número de Documento, Nombre, Apellidos, Celular, Correo Electrónico, Estado</code>. La ficha se lee de «Ficha de Caracterización» del archivo (o formato CSV simple).
-          Cada aprendiz queda asignado a su ficha y recibe correo con usuario y contraseña.
+          Cada aprendiz queda asignado a su ficha. Los correos se envían después desde el detalle de la ficha con el botón de enviar correos.
         </p>
         <form onSubmit={manejarCargaMasiva} className="form-inline-row" style={{ flexWrap: "wrap", gap: 12 }}>
           <div>
@@ -767,7 +767,7 @@ function Fichas() {
           </div>
           <div style={{ alignSelf: "flex-end" }}>
             <button type="submit" className="btn btn-success" disabled={enviandoCarga}>
-              {enviandoCarga ? "Cargando..." : "Subir y enviar correos"}
+              {enviandoCarga ? "Cargando..." : "Subir aprendices"}
             </button>
           </div>
         </form>
