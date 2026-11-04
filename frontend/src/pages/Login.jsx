@@ -34,7 +34,17 @@ function Login() {
   const [confirmPass, setConfirmPass] = useState("");
   const [pasoAdmin, setPasoAdmin] = useState(1);
 
-  const guardarSesion = (respuesta) => {
+  const guardarSesion = (respuesta, rolesPermitidos) => {
+    const rolUsuario = respuesta?.usuario?.rol;
+    if (rolesPermitidos && rolesPermitidos.length > 0) {
+      if (!rolUsuario || !rolesPermitidos.includes(rolUsuario)) {
+        const err = new Error(
+          `Este acceso es solo para: ${rolesPermitidos.join(", ")}. Tu cuenta es «${rolUsuario || "desconocido"}».`
+        );
+        err.esRolIncorrecto = true;
+        throw err;
+      }
+    }
     localStorage.setItem("token", respuesta.access_token);
     localStorage.setItem("usuario", JSON.stringify(respuesta.usuario));
   };
@@ -66,12 +76,16 @@ function Login() {
     setCargando(true);
     try {
       const respuesta = await login({ correo: correo.trim(), contrasena });
-      guardarSesion(respuesta);
+      guardarSesion(respuesta, ["Aprendiz"]);
       setMensaje("Inicio de sesión exitoso");
       setTimeout(() => navigate("/"), 400);
     } catch (error) {
       setEsError(true);
-      setMensaje(error.response?.data?.detail || "Correo o contraseña incorrectos");
+      setMensaje(
+        error.esRolIncorrecto
+          ? error.message
+          : error.response?.data?.detail || "Correo o contraseña incorrectos"
+      );
     } finally {
       setCargando(false);
     }
@@ -130,12 +144,16 @@ function Login() {
         codigo: codigo.trim(),
         nueva_contrasena: contrasena,
       });
-      guardarSesion(res);
+      guardarSesion(res, ["Instructor"]);
       setMensaje("Contraseña creada. Bienvenido/a.");
       setTimeout(() => navigate("/"), 400);
     } catch (err) {
       setEsError(true);
-      setMensaje(err.response?.data?.detail || "No se pudo crear la contraseña.");
+      setMensaje(
+        err.esRolIncorrecto
+          ? err.message
+          : err.response?.data?.detail || "No se pudo crear la contraseña."
+      );
     } finally {
       setCargando(false);
     }
@@ -155,12 +173,16 @@ function Login() {
         correo: correo.trim().toLowerCase(),
         contrasena,
       });
-      guardarSesion(res);
+      guardarSesion(res, ["Instructor"]);
       setMensaje("Inicio de sesión exitoso");
       setTimeout(() => navigate("/"), 400);
     } catch (err) {
       setEsError(true);
-      setMensaje(err.response?.data?.detail || "Correo o contraseña incorrectos");
+      setMensaje(
+        err.esRolIncorrecto
+          ? err.message
+          : err.response?.data?.detail || "Correo o contraseña incorrectos"
+      );
     } finally {
       setCargando(false);
     }
@@ -204,12 +226,16 @@ function Login() {
         correo: correo.trim().toLowerCase(),
         codigo: codigo.trim(),
       });
-      guardarSesion(res);
+      guardarSesion(res, ["Administrador", "Admin"]);
       setMensaje("Acceso de administrador concedido.");
       setTimeout(() => navigate("/"), 400);
     } catch (err) {
       setEsError(true);
-      setMensaje(err.response?.data?.detail || "Código inválido o expirado.");
+      setMensaje(
+        err.esRolIncorrecto
+          ? err.message
+          : err.response?.data?.detail || "Código inválido o expirado."
+      );
     } finally {
       setCargando(false);
     }

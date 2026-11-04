@@ -175,10 +175,14 @@ class AprendizService:
     @staticmethod
     def to_read(session: Session, aprendiz: Aprendiz) -> dict:
         activo = True
+        credenciales_enviadas = False
         if aprendiz.id_usuario:
             usuario = session.get(Usuario, aprendiz.id_usuario)
             if usuario is not None:
                 activo = bool(usuario.activo)
+                credenciales_enviadas = bool(
+                    getattr(usuario, "credenciales_enviadas", False)
+                )
         return {
             "id_aprendiz": aprendiz.id_aprendiz,
             "nombre": aprendiz.nombre,
@@ -187,6 +191,7 @@ class AprendizService:
             "id_ficha": aprendiz.id_ficha,
             "id_periodo": aprendiz.id_periodo,
             "activo": activo,
+            "credenciales_enviadas": credenciales_enviadas,
         }
 
     @staticmethod

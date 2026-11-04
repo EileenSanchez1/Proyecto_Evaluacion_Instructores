@@ -5,6 +5,7 @@ import {
   obtenerInstructor,
   eliminarInstructor,
 } from "../services/instructorService";
+import { mediaUrl } from "../utils/mediaUrl";
 import "../styles/Instructores.css";
 
 function EliminarInstructor() {
@@ -53,8 +54,7 @@ function EliminarInstructor() {
 
   const getFotoUrl = (ruta) => {
     if (!ruta) return null;
-    if (ruta.startsWith("http")) return ruta;
-    return `http://localhost:8000${ruta}`;
+    return mediaUrl(ruta);
   };
 
   if (cargando) {

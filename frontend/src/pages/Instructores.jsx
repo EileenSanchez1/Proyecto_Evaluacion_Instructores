@@ -4,6 +4,7 @@ import { listarInstructores, eliminarInstructor, obtenerInstructor, reactivarIns
 import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { esAdmin as esAdminSesion, obtenerUsuarioSesion } from "../utils/sesion";
+import { mediaUrl } from "../utils/mediaUrl";
 import "../styles/Instructores.css";
 
 function Instructores() {
@@ -23,9 +24,16 @@ function Instructores() {
   const [enviandoCorreoUnoInst, setEnviandoCorreoUnoInst] = useState(null);
 
   const enviarCorreosPendientes = async () => {
+    const pendientes = instructores.filter(
+      (i) => i.activo !== false && !i.credenciales_enviadas
+    ).length;
+    if (pendientes === 0) {
+      alert("No hay instructores activos pendientes de recibir correo.");
+      return;
+    }
     if (
       !window.confirm(
-        "¿Enviar usuario y contraseña solo a los instructores ACTIVOS que aún no han recibido correo?\n\nQuienes ya recibieron credenciales se omiten."
+        `¿Enviar usuario y contraseña a ${pendientes} instructor(es) ACTIVO(S) que aún no han recibido correo?\n\nQuienes ya recibieron credenciales se omiten.`
       )
     )
       return;
@@ -33,6 +41,7 @@ function Instructores() {
       setEnviandoCorreosInst(true);
       const res = await reenviarCorreosInstructores({ solo_pendientes: true });
       alert(res.mensaje || `Enviados: ${res.enviados}`);
+      await cargarInstructores();
     } catch (e) {
       alert(e.response?.data?.detail || "No se pudieron enviar los correos.");
     } finally {
@@ -42,9 +51,12 @@ function Instructores() {
 
   const enviarCorreoUnInstructor = async (inst) => {
     if (!inst?.id_instructor) return;
+    const yaEnviado = !!inst.credenciales_enviadas;
     if (
       !window.confirm(
-        `¿Enviar correo de acceso solo a ${inst.nombre} ${inst.apellido} (${inst.correo})?`
+        yaEnviado
+          ? `Ya se envió correo a ${inst.nombre} ${inst.apellido}.\n¿Reenviar credenciales de acceso a ${inst.correo}?`
+          : `¿Enviar correo de acceso solo a ${inst.nombre} ${inst.apellido} (${inst.correo})?`
       )
     )
       return;
@@ -52,6 +64,7 @@ function Instructores() {
       setEnviandoCorreoUnoInst(inst.id_instructor);
       const res = await reenviarCorreoInstructor(inst.id_instructor);
       alert(res.mensaje || "Correo enviado.");
+      await cargarInstructores();
     } catch (e) {
       alert(e.response?.data?.detail || "No se pudo enviar el correo.");
     } finally {
@@ -302,17 +315,32 @@ function Instructores() {
 
       {esAdmin && (
         <div style={{ marginBottom: 12 }}>
-          <button
-            type="button"
-            className="btn-nuevo"
-            style={{ background: "#15803d" }}
-            disabled={enviandoCorreosInst}
-            onClick={enviarCorreosPendientes}
-            title="Solo activos pendientes de recibir credenciales"
-          >
-            <i className="bi bi-envelope-arrow-up"></i>{" "}
-            {enviandoCorreosInst ? "Enviando..." : "Enviar correos (pendientes)"}
-          </button>
+          {(() => {
+            const pendientesCount = instructores.filter(
+              (i) => i.activo !== false && !i.credenciales_enviadas
+            ).length;
+            return (
+              <button
+                type="button"
+                className="btn-nuevo"
+                style={{ background: pendientesCount > 0 ? "#15803d" : "#6b7280" }}
+                disabled={enviandoCorreosInst || pendientesCount === 0}
+                onClick={enviarCorreosPendientes}
+                title={
+                  pendientesCount > 0
+                    ? `Solo activos pendientes de recibir credenciales (${pendientesCount})`
+                    : "No hay instructores pendientes de correo"
+                }
+              >
+                <i className="bi bi-envelope-arrow-up"></i>{" "}
+                {enviandoCorreosInst
+                  ? "Enviando..."
+                  : pendientesCount > 0
+                    ? `Enviar correos (pendientes: ${pendientesCount})`
+                    : "Enviar correos (0 pendientes)"}
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -356,7 +384,7 @@ function Instructores() {
                 {inst.foto ? (
                   <img
                     className="foto"
-                    src={`http://127.0.0.1:8000${inst.foto}`}
+                    src={mediaUrl(inst.foto)}
                     alt={inst.nombre}
                     onError={(e) => {
                       e.target.style.display = "none";
@@ -380,16 +408,22 @@ function Instructores() {
               {esAdmin && inst.activo !== false && (
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-success"
+                  className={`btn btn-sm ${inst.credenciales_enviadas ? "btn-outline-secondary" : "btn-outline-success"}`}
                   style={{ marginBottom: 8 }}
                   disabled={enviandoCorreoUnoInst === inst.id_instructor}
                   onClick={() => enviarCorreoUnInstructor(inst)}
-                  title="Enviar correo solo a este instructor"
+                  title={
+                    inst.credenciales_enviadas
+                      ? "Correo ya enviado. Clic para reenviar"
+                      : "Enviar correo solo a este instructor"
+                  }
                 >
-                  <i className="bi bi-envelope-check"></i>{" "}
+                  <i className={`bi ${inst.credenciales_enviadas ? "bi-envelope-check-fill" : "bi-envelope-check"}`}></i>{" "}
                   {enviandoCorreoUnoInst === inst.id_instructor
                     ? "Enviando..."
-                    : "Enviar correo"}
+                    : inst.credenciales_enviadas
+                      ? "Correo enviado · Reenviar"
+                      : "Enviar correo"}
                 </button>
               )}
               {esAdmin ? (

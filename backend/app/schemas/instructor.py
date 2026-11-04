@@ -24,6 +24,7 @@ class InstructorRead(InstructorBase):
     id_instructor: int
     resultados_aprendizaje: List[ResultadoAprendizajeRead] = []
     activo: bool = True
+    credenciales_enviadas: bool = False
 
 
 class InstructorUpdate(SQLModel):

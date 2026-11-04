@@ -272,13 +272,20 @@
 }
 
 .detalle-aprendices .tabla-simple th:nth-child(1),
-.detalle-aprendices .tabla-simple td:nth-child(1) { width: 22%; }
+.detalle-aprendices .tabla-simple td:nth-child(1) { width: 20%; }
 .detalle-aprendices .tabla-simple th:nth-child(2),
-.detalle-aprendices .tabla-simple td:nth-child(2) { width: 38%; }
+.detalle-aprendices .tabla-simple td:nth-child(2) { width: 28%; }
 .detalle-aprendices .tabla-simple th:nth-child(3),
-.detalle-aprendices .tabla-simple td:nth-child(3) { width: 14%; }
+.detalle-aprendices .tabla-simple td:nth-child(3) { width: 12%; }
 .detalle-aprendices .tabla-simple th:nth-child(4),
-.detalle-aprendices .tabla-simple td:nth-child(4) { width: 26%; }
+.detalle-aprendices .tabla-simple td:nth-child(4) { width: 14%; }
+.detalle-aprendices .tabla-simple th:nth-child(5),
+.detalle-aprendices .tabla-simple td:nth-child(5) { width: 26%; }
+
+.detalle-body .badge-aprendices {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+}
 
 .detalle-aprendices .acciones-tabla {
   white-space: nowrap;
@@ -292,26 +299,29 @@
 .modal-header {
   background: var(--sena-verde);
   color: white;
-  padding: 18px 24px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 0;
 }
 
 .modal-header h5 {
   margin: 0;
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
+  line-height: 1.2;
 }
 
 .modal-header button {
   background: none;
   border: none;
   color: white;
-  font-size: 1.2rem;
+  font-size: 1rem;
   cursor: pointer;
   opacity: 0.85;
   line-height: 1;
+  padding: 2px 4px;
 }
 
 .modal-header button:hover {
@@ -319,28 +329,28 @@
 }
 
 .modal-body {
-  padding: 30px;
+  padding: 16px 20px 20px;
   text-align: center;
   overflow-y: auto;
 }
 
 .modal-body h3 {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   font-weight: 700;
   color: var(--sena-texto);
-  font-size: 1.4rem;
+  font-size: 1.15rem;
 }
 
 .modal-body hr {
-  margin: 20px auto;
-  width: 60px;
+  margin: 10px auto;
+  width: 48px;
   border: 2px solid var(--sena-verde);
   border-radius: 2px;
 }
 
 .detalle-body p {
-  font-size: 0.95rem;
-  margin: 12px 0;
+  font-size: 0.9rem;
+  margin: 6px 0;
   color: var(--sena-texto-claro);
   text-align: left;
   display: flex;

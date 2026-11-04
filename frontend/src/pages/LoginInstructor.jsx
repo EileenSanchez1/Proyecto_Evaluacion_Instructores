@@ -31,6 +31,14 @@ function LoginInstructor() {
   const [cargando, setCargando] = useState(false);
 
   const guardarSesion = (respuesta) => {
+    const rolUsuario = respuesta?.usuario?.rol;
+    if (rolUsuario !== "Instructor") {
+      const err = new Error(
+        `Este acceso es solo para instructores. Tu cuenta es «${rolUsuario || "desconocido"}».`
+      );
+      err.esRolIncorrecto = true;
+      throw err;
+    }
     localStorage.setItem("token", respuesta.access_token);
     localStorage.setItem("usuario", JSON.stringify(respuesta.usuario));
   };
@@ -88,7 +96,11 @@ function LoginInstructor() {
       setTimeout(() => navigate("/"), 500);
     } catch (error) {
       setEsError(true);
-      setMensaje(error.response?.data?.detail || "No se pudo crear la contraseña.");
+      setMensaje(
+        error.esRolIncorrecto
+          ? error.message
+          : error.response?.data?.detail || "No se pudo crear la contraseña."
+      );
     } finally {
       setCargando(false);
     }
@@ -111,7 +123,11 @@ function LoginInstructor() {
       setTimeout(() => navigate("/"), 400);
     } catch (error) {
       setEsError(true);
-      setMensaje(error.response?.data?.detail || "Correo o contraseña incorrectos.");
+      setMensaje(
+        error.esRolIncorrecto
+          ? error.message
+          : error.response?.data?.detail || "Correo o contraseña incorrectos."
+      );
     } finally {
       setCargando(false);
     }

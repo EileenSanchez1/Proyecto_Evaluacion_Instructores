@@ -22,6 +22,7 @@ import {
 } from "../services/Reporteservice";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
+import { mediaUrl } from "../utils/mediaUrl";
 import "../styles/Evaluaciones.css";
 import "../styles/Home.css";
 import "../styles/Instructores.css";
@@ -554,7 +555,7 @@ function Evaluaciones() {
                       {inst.foto ? (
                         <img
                           className="foto"
-                          src={`http://localhost:8000${inst.foto}`}
+                          src={mediaUrl(inst.foto)}
                           alt={inst.nombre}
                           onError={(e) => {
                             e.target.style.display = "none";

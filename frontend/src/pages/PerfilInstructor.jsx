@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { obtenerUsuarioSesion } from "../utils/sesion";
 import { obtenerInstructor } from "../services/instructorService";
 import api from "../api/axiosConfig";
+import { mediaUrl } from "../utils/mediaUrl";
 import "../styles/Home.css";
 
 /**
@@ -40,9 +41,8 @@ function PerfilInstructor() {
 
   const urlFoto = (ruta) => {
     if (!ruta) return null;
-    if (ruta.startsWith("http")) return ruta;
-    const base = "http://127.0.0.1:8000";
-    return `${base}${ruta}${ruta.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    const url = mediaUrl(ruta);
+    return `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
   };
 
   const handleFotoChange = async (e) => {

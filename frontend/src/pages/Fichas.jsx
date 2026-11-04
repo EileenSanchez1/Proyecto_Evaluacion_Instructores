@@ -315,20 +315,51 @@ function Fichas() {
   };
 
 
-    const reenviarCorreos = async () => {
+    const recargarAprendicesFicha = async () => {
     if (!fichaSeleccionada) return;
-    if (
-      !window.confirm(
-        "¿Enviar usuario y contraseña solo a los aprendices ACTIVOS de esta ficha que aún no han recibido correo?\n\nLos inactivos y quienes ya recibieron credenciales se omiten."
+    const aprs = await listarAprendicesPorFicha(fichaSeleccionada.id_ficha).catch(() => []);
+    setAprendicesFicha(Array.isArray(aprs) ? aprs : []);
+  };
+
+  /** soloPendientes=true: solo quienes no han recibido; false: reenvía a todos los activos */
+  const reenviarCorreos = async (soloPendientes = true) => {
+    if (!fichaSeleccionada) return;
+    const activos = aprendicesFicha.filter((a) => a.activo !== false);
+    const pendientes = activos.filter((a) => !a.credenciales_enviadas).length;
+    const yaEnviados = activos.filter((a) => a.credenciales_enviadas).length;
+
+    if (soloPendientes) {
+      if (pendientes === 0) {
+        alert("No hay aprendices activos pendientes de recibir correo en esta ficha.");
+        return;
+      }
+      if (
+        !window.confirm(
+          `¿Enviar usuario y contraseña a ${pendientes} aprendiz(ces) ACTIVO(S) que aún no han recibido correo?\n\nLos inactivos y quienes ya recibieron se omiten.`
+        )
       )
-    )
-      return;
+        return;
+    } else {
+      if (activos.length === 0) {
+        alert("No hay aprendices activos en esta ficha.");
+        return;
+      }
+      if (
+        !window.confirm(
+          `¿Reenviar credenciales a TODOS los ${activos.length} aprendiz(ces) activos de esta ficha?\n\n` +
+            `(${yaEnviados} ya habían recibido correo; ${pendientes} están pendientes.)\n` +
+            `Se generará/enviará de nuevo la contraseña temporal.`
+        )
+      )
+        return;
+    }
     try {
       setEnviandoCorreosFicha(true);
       const res = await reenviarCorreosFicha(fichaSeleccionada.id_ficha, {
-        solo_pendientes: true,
+        solo_pendientes: !!soloPendientes,
       });
       alert(res.mensaje || `Enviados: ${res.enviados}`);
+      await recargarAprendicesFicha();
     } catch (e) {
       alert(e.response?.data?.detail || "No se pudieron enviar los correos.");
     } finally {
@@ -338,9 +369,12 @@ function Fichas() {
 
   const enviarCorreoUnAprendiz = async (a) => {
     if (!fichaSeleccionada || !a?.id_aprendiz) return;
+    const yaEnviado = !!a.credenciales_enviadas;
     if (
       !window.confirm(
-        `¿Enviar usuario y contraseña solo a ${a.nombre} ${a.apellido} (${a.correo})?`
+        yaEnviado
+          ? `Ya se envió correo a ${a.nombre} ${a.apellido}.\n¿Reenviar credenciales de acceso a ${a.correo}?`
+          : `¿Enviar usuario y contraseña solo a ${a.nombre} ${a.apellido} (${a.correo})?`
       )
     )
       return;
@@ -351,6 +385,7 @@ function Fichas() {
         a.id_aprendiz
       );
       alert(res.mensaje || "Correo enviado.");
+      await recargarAprendicesFicha();
     } catch (e) {
       alert(e.response?.data?.detail || "No se pudo enviar el correo.");
     } finally {
@@ -935,16 +970,49 @@ function Fichas() {
                       <i className="bi bi-person-plus"></i>{" "}
                       {mostrarCrearAprendiz ? "Cancelar" : "Nuevo aprendiz"}
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-success btn-sm btn-reenviar-correos"
-                      disabled={enviandoCorreosFicha || aprendicesFicha.length === 0}
-                      onClick={reenviarCorreos}
-                      title="Solo activos que aún no han recibido correo"
-                    >
-                      <i className="bi bi-envelope-arrow-up"></i>{" "}
-                      {enviandoCorreosFicha ? "Enviando..." : "Enviar correos a la ficha"}
-                    </button>
+                    {(() => {
+                      const activosApr = aprendicesFicha.filter((a) => a.activo !== false);
+                      const pendientesApr = activosApr.filter((a) => !a.credenciales_enviadas).length;
+                      const yaEnviadosApr = activosApr.filter((a) => a.credenciales_enviadas).length;
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-success btn-sm"
+                            disabled={enviandoCorreosFicha || pendientesApr === 0}
+                            onClick={() => reenviarCorreos(true)}
+                            title={
+                              pendientesApr > 0
+                                ? `Solo activos que aún no han recibido correo (${pendientesApr})`
+                                : "No hay aprendices pendientes de correo"
+                            }
+                          >
+                            <i className="bi bi-envelope-arrow-up"></i>{" "}
+                            {enviandoCorreosFicha
+                              ? "Enviando..."
+                              : `Pendientes: ${pendientesApr}`}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm"
+                            disabled={enviandoCorreosFicha || yaEnviadosApr === 0}
+                            onClick={() => reenviarCorreos(false)}
+                            title={
+                              yaEnviadosApr > 0
+                                ? `Reenviar credenciales a los ${activosApr.length} activos (incluye los que ya recibieron)`
+                                : "Aún no hay correos enviados para reenviar"
+                            }
+                          >
+                            <i className="bi bi-envelope-check"></i>{" "}
+                            {enviandoCorreosFicha
+                              ? "Enviando..."
+                              : yaEnviadosApr > 0
+                                ? `Reenviar a todos (${yaEnviadosApr} ya enviados)`
+                                : "Reenviar a todos"}
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
                 {mostrarCrearAprendiz && (
@@ -1034,6 +1102,7 @@ function Fichas() {
                           <th>Nombre</th>
                           <th>Correo</th>
                           <th>Estado</th>
+                          <th>Correo acceso</th>
                           <th>Acciones</th>
                         </tr>
                       </thead>
@@ -1046,6 +1115,17 @@ function Fichas() {
                               <span className={`estado-badge ${a.activo ? "activo" : "inactivo"}`}>
                                 {a.activo ? "Activo" : "Inactivo"}
                               </span>
+                            </td>
+                            <td style={{ fontSize: "0.8rem" }}>
+                              {a.credenciales_enviadas ? (
+                                <span style={{ color: "#15803d", fontWeight: 600 }} title="Ya se enviaron credenciales">
+                                  <i className="bi bi-envelope-check-fill"></i> Enviado
+                                </span>
+                              ) : (
+                                <span style={{ color: "#b45309", fontWeight: 600 }} title="Aún no se ha enviado correo de acceso">
+                                  <i className="bi bi-envelope-exclamation"></i> Pendiente
+                                </span>
+                              )}
                             </td>
                             <td className="acciones-tabla" style={{ whiteSpace: "nowrap" }}>
                               <button
@@ -1060,12 +1140,21 @@ function Fichas() {
                                 <>
                                   <button
                                     type="button"
-                                    className="btn btn-sm btn-outline-success"
-                                    title="Enviar correo solo a este aprendiz"
+                                    className={`btn btn-sm ${a.credenciales_enviadas ? "btn-outline-secondary" : "btn-outline-success"}`}
+                                    title={
+                                      a.credenciales_enviadas
+                                        ? "Correo ya enviado. Clic para reenviar"
+                                        : "Enviar correo solo a este aprendiz"
+                                    }
                                     disabled={enviandoCorreoUno === a.id_aprendiz}
                                     onClick={() => enviarCorreoUnAprendiz(a)}
                                   >
-                                    <i className="bi bi-envelope"></i>
+                                    <i className={`bi ${a.credenciales_enviadas ? "bi-envelope-check-fill" : "bi-envelope"}`}></i>
+                                    {enviandoCorreoUno === a.id_aprendiz
+                                      ? " Enviando..."
+                                      : a.credenciales_enviadas
+                                        ? " Reenviar"
+                                        : " Enviar"}
                                   </button>{" "}
                                 </>
                               )}
