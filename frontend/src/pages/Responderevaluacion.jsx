@@ -5,6 +5,7 @@ import { listarPreguntasActivas } from "../services/Preguntaservice";
 import { crearRespuestasBulk, listarRespuestasPorEvaluacion } from "../services/Respuestaservice";
 import { obtenerInstructor } from "../services/instructorService";
 import { obtenerUsuarioSesion } from "../utils/sesion";
+import { mediaUrl } from "../utils/mediaUrl";
 import "../styles/Evaluaciones.css";
 
 function ResponderEvaluacion() {
@@ -175,7 +176,7 @@ function ResponderEvaluacion() {
       <div className="instructor-card-destacado">
         <div className="instructor-perfil">
           {instructor.foto ? (
-            <img className="instructor-foto-lg" src={`http://localhost:8000${instructor.foto}`} alt={instructor.nombre} />
+            <img className="instructor-foto-lg" src={mediaUrl(instructor.foto)} alt={instructor.nombre} />
           ) : (
             <div className="instructor-foto-placeholder-lg">
               <i className="bi bi-person-fill"></i>

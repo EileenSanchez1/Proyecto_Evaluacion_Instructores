@@ -158,6 +158,13 @@ class InstructorService:
                         "estado": getattr(ra, "estado", True),
                     }
                 )
+        credenciales_enviadas = False
+        if instructor.id_usuario:
+            usuario = session.get(Usuario, instructor.id_usuario)
+            if usuario is not None:
+                credenciales_enviadas = bool(
+                    getattr(usuario, "credenciales_enviadas", False)
+                )
         return {
             "id_instructor": instructor.id_instructor,
             "nombre": instructor.nombre,
@@ -168,6 +175,7 @@ class InstructorService:
             "planta_contrato": getattr(instructor, "planta_contrato", None),
             "resultados_aprendizaje": ras,
             "activo": InstructorService.es_activo(session, instructor),
+            "credenciales_enviadas": credenciales_enviadas,
         }
 
     @staticmethod

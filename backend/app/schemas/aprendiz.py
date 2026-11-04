@@ -32,6 +32,7 @@ class AprendizRead(SQLModel):
     id_ficha: int
     id_periodo: int
     activo: bool = True
+    credenciales_enviadas: bool = False
 
 
 class AprendizUpdate(SQLModel):

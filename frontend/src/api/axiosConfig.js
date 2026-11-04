@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+// Usa VITE_API_URL en .env del frontend para apuntar a un backend de red
+// (ej. http://192.168.1.10:8000). Así fotos y API funcionan en todos los PCs.
+const API_BASE =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  "http://127.0.0.1:8000";
+
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
