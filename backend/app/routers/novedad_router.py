@@ -45,8 +45,15 @@ def contar_no_leidas(session: Session = Depends(get_session)):
     response_model=List[NovedadRead],
     dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
 )
-def listar_novedades(session: Session = Depends(get_session)):
-    return session.exec(select(Novedad).order_by(Novedad.fecha.desc())).all()
+def listar_novedades(
+    offset: int = 0,
+    limit: int = 100,
+    session: Session = Depends(get_session),
+):
+    limit = min(max(limit, 1), 200)
+    return session.exec(
+        select(Novedad).order_by(Novedad.fecha.desc()).offset(offset).limit(limit)
+    ).all()
 
 
 @router.patch(

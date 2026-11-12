@@ -13,43 +13,56 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_SSLMODE = os.getenv("DB_SSLMODE", "require")
 
+# echo de SQL: solo en desarrollo. En producción poner SQL_ECHO=false
+_SQL_ECHO = os.getenv("SQL_ECHO", "false").strip().lower() in ("1", "true", "yes", "on")
+
 # Si todas las variables de PostgreSQL están configuradas, usar PostgreSQL
 if all([DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD]):
     DATABASE_URL = (
-        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode={DB_SSLMODE}"
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}"
+        f"@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode={DB_SSLMODE}"
     )
     engine = create_engine(
         DATABASE_URL,
-        echo=True,
+        echo=_SQL_ECHO,
+        pool_pre_ping=True,
+        pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "10")),
         connect_args={
-            "connect_timeout": 10
-        }
+            "connect_timeout": 10,
+        },
     )
-    print("✅ Configuración de PostgreSQL cargada (Neon)")
+    print("✅ Configuración de PostgreSQL cargada")
 else:
-    # Fallback a SQLite persistente en archivo
+    # Fallback a SQLite persistente en archivo (solo desarrollo local)
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     SQLITE_PATH = os.path.join(BASE_DIR, "database.sqlite")
     DATABASE_URL = f"sqlite:///{SQLITE_PATH}"
     engine = create_engine(
         DATABASE_URL,
-        echo=True,
-        connect_args={"check_same_thread": False}
+        echo=_SQL_ECHO,
+        connect_args={"check_same_thread": False},
     )
     print(f"⚠️  Usando SQLite persistente: {SQLITE_PATH}")
+
 
 def get_session():
     with Session(engine) as session:
         yield session
+
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
     # Compat: columna de control de envío de credenciales
     try:
         from sqlalchemy import text
+
         with engine.begin() as conn:
-            conn.execute(text(
-                "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS credenciales_enviadas BOOLEAN DEFAULT FALSE"
-            ))
+            conn.execute(
+                text(
+                    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "
+                    "credenciales_enviadas BOOLEAN DEFAULT FALSE"
+                )
+            )
     except Exception as e:
         print(f"[DB] credenciales_enviadas: {e}")

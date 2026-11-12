@@ -66,6 +66,22 @@ def ensure_extra_columns():
                     ))
                 except Exception:
                     pass
+
+            # Índices de rendimiento (idempotentes en PostgreSQL)
+            for stmt in (
+                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_aprendiz ON evaluaciones (id_aprendiz)",
+                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_instructor ON evaluaciones (id_instructor)",
+                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_periodo ON evaluaciones (id_periodo)",
+                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_estado ON evaluaciones (estado)",
+                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_aip ON evaluaciones (id_aprendiz, id_instructor, id_periodo)",
+                "CREATE INDEX IF NOT EXISTS ix_respuestas_evaluacion ON respuestas (id_evaluacion)",
+                "CREATE INDEX IF NOT EXISTS ix_respuestas_instructor ON respuestas (id_instructor)",
+                "CREATE INDEX IF NOT EXISTS ix_ficha_instructor_activo ON ficha_instructor (id_ficha, id_periodo, activo)",
+            ):
+                try:
+                    conn.execute(text(stmt))
+                except Exception:
+                    pass
     except Exception as e:
         print(f"[schema] Aviso ensure_extra_columns: {e}")
 
@@ -76,16 +92,25 @@ app = FastAPI(
 )
 
 # =========================
-# CORS
+# CORS (configurable por entorno)
 # =========================
+# CORS_ORIGINS = lista separada por comas. Ej:
+#   CORS_ORIGINS=https://evaluacion.sena.edu.co,https://www.sena.edu.co
+_default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+_cors_env = os.getenv("CORS_ORIGINS", "").strip()
+if _cors_env:
+    allow_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+else:
+    allow_origins = _default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -125,11 +150,19 @@ def _seed_roles_y_admin():
                     nombre="Admin",
                     apellido="Sistema",
                     correo="admin@sena.edu.co",
-                    contrasena=password_hash.hash("Admin123!"),
+                    contrasena=password_hash.hash(os.getenv("ADMIN_INITIAL_PASSWORD", "Admin123!")),
                     id_rol=admin_rol.id_rol,
                     activo=True
                 ))
                 session.commit()
+
+
+# =========================
+# Healthcheck (datacenter / docker)
+# =========================
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "evaluacion-instructores", "version": "1.0.0"}
 
 # =========================
 # Routers

@@ -6,6 +6,7 @@ import { crearRespuestasBulk, listarRespuestasPorEvaluacion } from "../services/
 import { obtenerInstructor } from "../services/instructorService";
 import { obtenerUsuarioSesion } from "../utils/sesion";
 import { mediaUrl } from "../utils/mediaUrl";
+import { esEvaluacionCerrada, mensajeErrorApi } from "../utils/evaluacionEstado";
 import "../styles/Evaluaciones.css";
 
 function ResponderEvaluacion() {
@@ -40,7 +41,7 @@ function ResponderEvaluacion() {
         const inst = await obtenerInstructor(ev.id_instructor);
         setInstructor(inst);
 
-        const yaEvaluado = ev.estado === "Evaluado";
+        const yaEvaluado = esEvaluacionCerrada(ev.estado);
 
         if (yaEvaluado) {
           // ── CARGAR RESPUESTAS REALES ──
@@ -125,7 +126,7 @@ function ResponderEvaluacion() {
       navigate("/evaluaciones");
     } catch (err) {
       const detalle = err.response?.data?.detail;
-      setError(typeof detalle === "string" ? detalle : "Error al enviar la evaluación.");
+      setError(mensajeErrorApi(err, "Error al enviar la evaluación."));
     } finally {
       setEnviando(false);
     }
@@ -150,7 +151,7 @@ function ResponderEvaluacion() {
     );
   }
 
-  const yaEvaluado = evaluacion.estado === "Evaluado";
+  const yaEvaluado = esEvaluacionCerrada(evaluacion.estado);
 
   return (
     <div className="pagina-evaluaciones">
