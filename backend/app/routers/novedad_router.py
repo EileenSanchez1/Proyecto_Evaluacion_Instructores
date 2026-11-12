@@ -10,7 +10,11 @@ from app.services.email_service import enviar_novedad_resuelta
 router = APIRouter(prefix="/novedades", tags=["Novedades"])
 
 
-@router.post("/", response_model=dict)
+@router.post(
+    "/",
+    response_model=dict,
+    dependencies=[Depends(require_roles("Aprendiz", "Administrador", "Coordinador", "Instructor"))],
+)
 def crear_novedad(datos: NovedadCreate, session: Session = Depends(get_session)):
     mensaje = (datos.mensaje or "").strip()
     palabras = [p for p in mensaje.split() if p]

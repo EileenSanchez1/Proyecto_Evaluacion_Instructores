@@ -15,11 +15,11 @@ def crear(ficha_instructor: FichaInstructorCreate, session: Session = Depends(ge
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/", response_model=List[FichaInstructorRead])
+@router.get("/", response_model=List[FichaInstructorRead], dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def listar(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), session: Session = Depends(get_session)):
     return FichaInstructorService.listar(session, offset, limit)
 
-@router.get("/ficha/{id_ficha}", response_model=List[FichaInstructorRead])
+@router.get("/ficha/{id_ficha}", response_model=List[FichaInstructorRead], dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def por_ficha(
     id_ficha: int,
     incluir_inactivos: bool = Query(False),
@@ -32,7 +32,7 @@ def por_ficha(
         session, id_ficha, solo_activos=not incluir_inactivos
     )
 
-@router.get("/ficha/{id_ficha}/periodo/{id_periodo}", response_model=List[FichaInstructorRead])
+@router.get("/ficha/{id_ficha}/periodo/{id_periodo}", response_model=List[FichaInstructorRead], dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def por_ficha_y_periodo(id_ficha: int, id_periodo: int, session: Session = Depends(get_session)):
     """
     Instructores de una ficha en un periodo.
@@ -57,11 +57,11 @@ def por_ficha_y_periodo(id_ficha: int, id_periodo: int, session: Session = Depen
             activos.append(item)
     return activos
 
-@router.get("/instructor/{id_instructor}", response_model=List[FichaInstructorRead])
+@router.get("/instructor/{id_instructor}", response_model=List[FichaInstructorRead], dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def por_instructor(id_instructor: int, session: Session = Depends(get_session)):
     return FichaInstructorService.listar_por_instructor(session, id_instructor)
 
-@router.get("/{relacion_id}", response_model=FichaInstructorRead)
+@router.get("/{relacion_id}", response_model=FichaInstructorRead, dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def buscar(relacion_id: int, session: Session = Depends(get_session)):
     r = FichaInstructorService.buscar(session, relacion_id)
     if not r:

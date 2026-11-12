@@ -16,12 +16,12 @@ from app.services.respuesta_service import RespuestaService
 
 router = APIRouter(prefix="/reportes", tags=["Reportes"])
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def generar_reporte(evaluacion_id: int = Query(...), session: Session = Depends(get_session)):
     resultado = RespuestaService.calcular_puntaje(session, evaluacion_id)
     return {"evaluacion_id": evaluacion_id, "reporte": resultado}
 
-@router.get("/instructor")
+@router.get("/instructor", dependencies=[Depends(require_roles("Administrador", "Coordinador", "Instructor"))])
 def generar_reporte_instructor(evaluacion_id: int = Query(...), instructor_id: int = Query(...), session: Session = Depends(get_session)):
     resultado = RespuestaService.calcular_puntaje_por_instructor(session, evaluacion_id, instructor_id)
     return {"evaluacion_id": evaluacion_id, "reporte": resultado}
@@ -88,19 +88,21 @@ def historial_evaluaciones(
     ficha_id: Optional[int] = Query(None),
     session: Session = Depends(get_session)
 ):
-    statement = select(Evaluacion, Aprendiz, Ficha, Periodo, Instructor).join(
-        Aprendiz, Evaluacion.id_aprendiz == Aprendiz.id_aprendiz
-    ).join(
-        Ficha, Aprendiz.id_ficha == Ficha.id_ficha
-    ).join(
-        Periodo, Evaluacion.id_periodo == Periodo.id_periodo
-    ).join(
-        Instructor, Evaluacion.id_instructor == Instructor.id_instructor
+    # LEFT OUTER JOIN: si falta aprendiz/ficha/periodo/instructor, la evaluación
+    # sigue apareciendo (antes un INNER JOIN la ocultaba por completo).
+    statement = (
+        select(Evaluacion, Aprendiz, Ficha, Periodo, Instructor)
+        .select_from(Evaluacion)
+        .outerjoin(Aprendiz, Evaluacion.id_aprendiz == Aprendiz.id_aprendiz)
+        .outerjoin(Ficha, Aprendiz.id_ficha == Ficha.id_ficha)
+        .outerjoin(Periodo, Evaluacion.id_periodo == Periodo.id_periodo)
+        .outerjoin(Instructor, Evaluacion.id_instructor == Instructor.id_instructor)
     )
 
     if periodo_id:
         statement = statement.where(Evaluacion.id_periodo == periodo_id)
     if ficha_id:
+        # Solo aplica cuando hay aprendiz con esa ficha
         statement = statement.where(Aprendiz.id_ficha == ficha_id)
 
     statement = statement.order_by(Evaluacion.fecha.desc())
@@ -108,21 +110,40 @@ def historial_evaluaciones(
 
     historial = []
     for evaluacion, aprendiz, ficha, periodo, instructor in resultados:
+        if evaluacion is None:
+            continue
+        fecha_str = None
+        if evaluacion.fecha is not None:
+            try:
+                fecha_str = evaluacion.fecha.isoformat()
+            except Exception:
+                fecha_str = str(evaluacion.fecha)
         historial.append({
             "id_evaluacion": evaluacion.id_evaluacion,
-            "fecha": evaluacion.fecha.isoformat(),
-            "estado": evaluacion.estado,
-            "periodo": periodo.nombre,
-            "aprendiz": f"{aprendiz.nombre} {aprendiz.apellido}",
-            "ficha": ficha.numero_ficha,
-            "programa": ficha.programa,
-            "instructor": f"{instructor.nombre} {instructor.apellido}"
+            "fecha": fecha_str,
+            "estado": evaluacion.estado or "Pendiente",
+            "periodo": periodo.nombre if periodo else "—",
+            "aprendiz": (
+                f"{aprendiz.nombre} {aprendiz.apellido}".strip()
+                if aprendiz
+                else "—"
+            ),
+            "ficha": ficha.numero_ficha if ficha else "—",
+            "programa": ficha.programa if ficha else "—",
+            "instructor": (
+                f"{instructor.nombre} {instructor.apellido}".strip()
+                if instructor
+                else "—"
+            ),
         })
     return historial
 
 
 
-@router.get("/evaluacion/{evaluacion_id}/detalle")
+@router.get(
+    "/evaluacion/{evaluacion_id}/detalle",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
 def detalle_evaluacion(
     evaluacion_id: int,
     session: Session = Depends(get_session),
@@ -194,7 +215,10 @@ def detalle_evaluacion(
     }
 
 
-@router.get("/mis-evaluaciones")
+@router.get(
+    "/mis-evaluaciones",
+    dependencies=[Depends(require_roles("Instructor", "Administrador", "Coordinador"))],
+)
 def mis_evaluaciones_instructor(
     instructor_id: int = Query(...),
     periodo_id: Optional[int] = Query(None),
@@ -230,7 +254,10 @@ def mis_evaluaciones_instructor(
     return items
 
 
-@router.get("/instructor/{instructor_id}/preguntas")
+@router.get(
+    "/instructor/{instructor_id}/preguntas",
+    dependencies=[Depends(require_roles("Instructor", "Administrador", "Coordinador"))],
+)
 def reporte_por_preguntas(
     instructor_id: int,
     periodo_id: Optional[int] = Query(None),
@@ -415,7 +442,7 @@ def reporte_por_preguntas(
     }
 
 
-@router.get("/mi-promedio")
+@router.get("/mi-promedio", dependencies=[Depends(require_roles("Instructor", "Administrador", "Coordinador"))])
 def mi_promedio_instructor(
     instructor_id: int = Query(...),
     periodo_id: Optional[int] = Query(None),

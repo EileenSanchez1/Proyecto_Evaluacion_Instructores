@@ -17,7 +17,11 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=PreguntaRead)
+@router.post(
+    "/",
+    response_model=PreguntaRead,
+    dependencies=[Depends(require_roles("Administrador"))],
+)
 def crear_pregunta(
     pregunta: PreguntaCreate,
     session: Session = Depends(get_session)
@@ -28,7 +32,11 @@ def crear_pregunta(
     )
 
 
-@router.get("/", response_model=List[PreguntaRead])
+@router.get(
+    "/",
+    response_model=List[PreguntaRead],
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
 def listar_preguntas(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -41,14 +49,22 @@ def listar_preguntas(
     )
 
 
-@router.get("/activas", response_model=List[PreguntaRead])
+@router.get(
+    "/activas",
+    response_model=List[PreguntaRead],
+    dependencies=[Depends(require_roles("Aprendiz", "Instructor", "Administrador", "Coordinador"))],
+)
 def listar_preguntas_activas(
     session: Session = Depends(get_session)
 ):
     return PreguntaService.listar_activas(session)
 
 
-@router.get("/{pregunta_id}", response_model=PreguntaRead)
+@router.get(
+    "/{pregunta_id}",
+    response_model=PreguntaRead,
+    dependencies=[Depends(require_roles("Aprendiz", "Instructor", "Administrador", "Coordinador"))],
+)
 def buscar_pregunta(
     pregunta_id: int,
     session: Session = Depends(get_session)
@@ -67,7 +83,11 @@ def buscar_pregunta(
     return pregunta
 
 
-@router.put("/{pregunta_id}", response_model=PreguntaRead)
+@router.put(
+    "/{pregunta_id}",
+    response_model=PreguntaRead,
+    dependencies=[Depends(require_roles("Administrador"))],
+)
 def actualizar_pregunta(
     pregunta_id: int,
     pregunta_update: PreguntaUpdate,
@@ -88,7 +108,10 @@ def actualizar_pregunta(
     return pregunta
 
 
-@router.delete("/{pregunta_id}")
+@router.delete(
+    "/{pregunta_id}",
+    dependencies=[Depends(require_roles("Administrador"))],
+)
 def eliminar_pregunta(
     pregunta_id: int,
     session: Session = Depends(get_session)

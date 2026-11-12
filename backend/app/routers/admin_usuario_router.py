@@ -201,10 +201,7 @@ def promover_administrador(
     except Exception as e:
         print(f"[ADMIN] No se pudo enviar correo de invitación: {e}")
 
-    print(f"\n{'='*50}")
-    print(f"[ADMIN] Nuevo admin creado: {correo}")
-    print(f"[ADMIN] Contraseña temporal: {password_temporal}")
-    print(f"{'='*50}\n")
+    print(f"[ADMIN] Nuevo admin creado: {correo} (contraseña temporal no se registra en logs)")
 
     return {
         "mensaje": (

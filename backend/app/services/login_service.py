@@ -5,7 +5,7 @@ from pwdlib import PasswordHash
 from app.models.usuario import Usuario
 from app.models.rol import Rol
 from app.models.instructor import Instructor
-from app.config.security import generar_codigo_numerico, guardar_codigo
+from app.config.security import log_codigo_debug, generar_codigo_numerico, guardar_codigo
 try:
     from app.services.email_service import (
         enviar_codigo_recuperacion as mail_codigo_recuperacion,
@@ -76,16 +76,14 @@ class LoginService:
         correo = (correo or "").strip().lower()
         codigo = generar_codigo_numerico(6)
         guardar_codigo(correo, codigo, tipo="recuperacion", expiracion_minutos=15)
-        print(f"\n{'='*50}")
-        print(f"[EMAIL] Código de recuperación para {correo}: {codigo}")
-        print(f"{'='*50}\n")
+        log_codigo_debug("recuperacion", correo, codigo)
         if mail_codigo_recuperacion:
             try:
                 ok = mail_codigo_recuperacion(correo, codigo)
                 if not ok:
-                    print("[EMAIL] Aviso: no se envió correo de recuperación. Usa el de la consola.")
+                    print("[EMAIL] Aviso: no se envió correo de recuperación.")
             except Exception as e:
-                print(f"[EMAIL] Error recuperación: {e}")
+                print(f"[EMAIL] Error recuperación: {type(e).__name__}")
         return codigo
 
     @staticmethod
@@ -95,23 +93,18 @@ class LoginService:
         codigo = generar_codigo_numerico(6)
         guardar_codigo(correo, codigo, tipo="instructor", expiracion_minutos=15)
 
-        # Respaldo en consola del backend
-        print(f"\n{'='*50}")
-        print(f"[EMAIL] Código de verificación instructor para {correo}: {codigo}")
-        print(f"{'='*50}\n")
-
-        # Envío real al correo del instructor (mismo SMTP que recuperación)
+        log_codigo_debug("instructor", correo, codigo)
         if mail_codigo_instructor:
             try:
                 ok = mail_codigo_instructor(correo, codigo)
                 if ok:
                     print(f"[EMAIL] Código de instructor enviado a {correo}")
                 else:
-                    print("[EMAIL] No se pudo enviar al instructor. Usa el código de la consola.")
+                    print("[EMAIL] No se pudo enviar al instructor.")
             except Exception as e:
-                print(f"[EMAIL] Error enviando a instructor: {e}")
+                print(f"[EMAIL] Error enviando a instructor: {type(e).__name__}")
         else:
-            print("[EMAIL] email_service no disponible; solo código en consola.")
+            print("[EMAIL] email_service no disponible.")
         return codigo
 
 
@@ -150,15 +143,13 @@ class LoginService:
         correo = (correo or "").strip().lower()
         codigo = generar_codigo_numerico(6)
         guardar_codigo(correo, codigo, tipo="admin", expiracion_minutos=10)
-        print(f"\n{"="*50}")
-        print(f"[EMAIL] Código de acceso ADMIN para {correo}: {codigo}")
-        print(f"{"="*50}\n")
+        log_codigo_debug("admin", correo, codigo)
         if mail_codigo_admin:
             try:
                 ok = mail_codigo_admin(correo, codigo)
                 if not ok:
-                    print("[EMAIL] No se pudo enviar código admin. Usa el de la consola.")
+                    print("[EMAIL] No se pudo enviar código admin.")
             except Exception as e:
-                print(f"[EMAIL] Error admin: {e}")
+                print(f"[EMAIL] Error admin: {type(e).__name__}")
         return codigo
 

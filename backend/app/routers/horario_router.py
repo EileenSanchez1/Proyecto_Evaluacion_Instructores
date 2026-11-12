@@ -34,7 +34,7 @@ def crear_horario(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=List[HorarioRead])
+@router.get("/", response_model=List[HorarioRead], dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def listar_horarios(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -43,7 +43,7 @@ def listar_horarios(
     return HorarioService.listar(session, offset, limit)
 
 
-@router.get("/{horario_id}", response_model=HorarioRead)
+@router.get("/{horario_id}", response_model=HorarioRead, dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def buscar_horario(
     horario_id: int,
     session: Session = Depends(get_session)
@@ -56,7 +56,7 @@ def buscar_horario(
     return horario
 
 
-@router.get("/instructor/{id_instructor}", response_model=List[HorarioRead])
+@router.get("/instructor/{id_instructor}", response_model=List[HorarioRead], dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def listar_horarios_por_instructor(
     id_instructor: int,
     session: Session = Depends(get_session)
@@ -64,7 +64,7 @@ def listar_horarios_por_instructor(
     return HorarioService.listar_por_instructor(session, id_instructor)
 
 
-@router.get("/ficha/{id_ficha}", response_model=List[HorarioRead])
+@router.get("/ficha/{id_ficha}", response_model=List[HorarioRead], dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))])
 def listar_horarios_por_ficha(
     id_ficha: int,
     session: Session = Depends(get_session)

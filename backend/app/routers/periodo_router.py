@@ -32,7 +32,11 @@ def crear_periodo(
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
-@router.get("/", response_model=List[PeriodoRead])
+@router.get(
+    "/",
+    response_model=List[PeriodoRead],
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))],
+)
 def listar_periodos(
     session: Session = Depends(get_session),
     offset: int = 0,
@@ -41,14 +45,22 @@ def listar_periodos(
     return PeriodoService.listar(session, offset, limit)
 
 
-@router.get("/activos", response_model=List[PeriodoRead])
+@router.get(
+    "/activos",
+    response_model=List[PeriodoRead],
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))],
+)
 def listar_periodos_activos(
     session: Session = Depends(get_session)
 ):
     return PeriodoService.listar_activos(session)
 
 
-@router.get("/{periodo_id}", response_model=PeriodoRead)
+@router.get(
+    "/{periodo_id}",
+    response_model=PeriodoRead,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))],
+)
 def buscar_periodo(
     periodo_id: int,
     session: Session = Depends(get_session)

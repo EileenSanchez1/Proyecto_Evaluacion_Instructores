@@ -2,14 +2,44 @@ from datetime import datetime, timedelta, timezone
 import os
 import random
 import string
+import logging
 
 import jwt
 from fastapi import HTTPException, status
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "CAMBIAR_ESTA_CLAVE_EN_ENV")
+logger = logging.getLogger("app.security")
+
+# En producción: definir JWT_SECRET_KEY fuerte en .env (mín. 32 caracteres).
+_raw_secret = (os.getenv("JWT_SECRET_KEY") or "").strip()
+_default_inseguro = "CAMBIAR_ESTA_CLAVE_EN_ENV"
+ENV_NAME = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "development").strip().lower()
+IS_PRODUCTION = ENV_NAME in ("production", "prod", "staging")
+
+if not _raw_secret or _raw_secret == _default_inseguro:
+    if IS_PRODUCTION:
+        raise RuntimeError(
+            "JWT_SECRET_KEY no está configurada o usa el valor por defecto. "
+            "Defina una clave aleatoria de al menos 32 caracteres en el entorno."
+        )
+    SECRET_KEY = _default_inseguro
+    logger.warning(
+        "JWT_SECRET_KEY no configurada: usando valor de desarrollo inseguro. "
+        "No usar en producción."
+    )
+else:
+    if len(_raw_secret) < 32 and IS_PRODUCTION:
+        raise RuntimeError("JWT_SECRET_KEY debe tener al menos 32 caracteres en producción.")
+    SECRET_KEY = _raw_secret
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-RESET_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "30"))
+
+# Solo en desarrollo: permitir imprimir códigos en consola si SMTP falla
+ALLOW_DEBUG_CODES = (
+    not IS_PRODUCTION
+    and (os.getenv("ALLOW_DEBUG_CODES", "true").strip().lower() in ("1", "true", "yes", "on"))
+)
 
 _codigos_recuperacion = {}
 _codigos_instructor = {}
@@ -151,3 +181,16 @@ def limpiar_codigo(correo: str, tipo: str = "recuperacion"):
         _codigos_instructor.pop(key, None)
     elif tipo == "admin":
         _codigos_admin.pop(key, None)
+
+
+def log_codigo_debug(tipo: str, correo: str, codigo: str) -> None:
+    """Solo en desarrollo y si ALLOW_DEBUG_CODES=true. Nunca en producción."""
+    if ALLOW_DEBUG_CODES:
+        logger.warning(
+            "[DEBUG] Código %s generado para %s (solo desarrollo): %s",
+            tipo,
+            correo,
+            codigo,
+        )
+    else:
+        logger.info("Código %s generado para %s (no se imprime el valor).", tipo, correo)
