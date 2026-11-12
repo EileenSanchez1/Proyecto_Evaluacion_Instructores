@@ -318,7 +318,7 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
     show_code = any(
     (os.getenv(k) or "").strip().lower() in ("1", "true", "yes", "on")
     for k in ("ALLOW_SHOW_ADMIN_CODE", "ALLOW_DEBUG_CODES")
-)
+    )
 
     if email_ok:
         mensaje = (

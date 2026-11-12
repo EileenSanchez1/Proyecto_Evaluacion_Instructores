@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Index, Column, String
@@ -26,7 +26,7 @@ class Evaluacion(SQLModel, table=True):
     id_periodo: int = Field(foreign_key="periodos.id_periodo", nullable=False, index=True)
     id_instructor: int = Field(foreign_key="instructores.id_instructor", nullable=False, index=True)
     estado: str = Field(default="Pendiente", max_length=20, nullable=False, index=True)
-    fecha: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    fecha: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
     # Comentario general del aprendiz (aparte de observaciones por pregunta)
     observacion_general: Optional[str] = Field(default=None, max_length=1000)
 

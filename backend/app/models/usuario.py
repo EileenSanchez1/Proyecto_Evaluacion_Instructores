@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlmodel import SQLModel, Field, Relationship
@@ -57,7 +57,7 @@ class Usuario(SQLModel, table=True):
     )
 
     fecha_creacion: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=lambda: datetime.now(timezone.utc),
         nullable=False
     )
 
