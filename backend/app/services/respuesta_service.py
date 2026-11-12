@@ -67,6 +67,11 @@ class RespuestaService:
         evaluacion = EvaluacionRepository.buscar(session, respuesta.id_evaluacion)
         if not evaluacion:
             raise ValueError("La evaluación no existe.")
+        estado = (evaluacion.estado or "").strip().lower()
+        if estado in ("completada", "finalizada", "enviada", "respondida", "evaluado"):
+            raise ValueError(
+                "Esta evaluación ya fue completada. No se pueden agregar más respuestas."
+            )
         if not PreguntaRepository.buscar(session, respuesta.id_pregunta):
             raise ValueError("La pregunta no existe.")
         if not InstructorRepository.buscar(session, respuesta.id_instructor):

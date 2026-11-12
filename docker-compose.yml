@@ -1,0 +1,46 @@
+# Despliegue mínimo backend + PostgreSQL para datacenter / pruebas
+# Uso:
+#   1. cp backend/.env.example backend/.env  y editar secretos
+#   2. docker compose up -d --build
+#   3. Verificar: curl http://localhost:8000/health
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-evaluacion_instructores}
+      POSTGRES_USER: ${DB_USER:-evaluacion_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cambiar_password_fuerte}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-evaluacion_user} -d ${DB_NAME:-evaluacion_instructores}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_SSLMODE: disable
+      SQL_ECHO: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/app/uploads
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:

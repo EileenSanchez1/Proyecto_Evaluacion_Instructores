@@ -23,6 +23,7 @@ import {
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
 import { listarResultadosAprendizaje } from "../services/resultadoAprendizajeService";
 import { mediaUrl } from "../utils/mediaUrl";
+import { esEvaluacionCerrada, etiquetaEstado, mensajeErrorApi } from "../utils/evaluacionEstado";
 import "../styles/Evaluaciones.css";
 import "../styles/Home.css";
 import "../styles/Instructores.css";
@@ -244,7 +245,7 @@ function Evaluaciones() {
       navigate(`/evaluaciones/responder/${ev.id_evaluacion}`);
     } catch (err) {
       setError(
-        err.response?.data?.detail || "No se pudo iniciar la evaluación."
+        mensajeErrorApi(err, "No se pudo iniciar la evaluación.")
       );
     }
   };
@@ -340,7 +341,7 @@ function Evaluaciones() {
                     <td>
                       <span
                         className={`badge-estado ${
-                          h.estado === "Evaluado" ? "evaluado" : "pendiente"
+                          esEvaluacionCerrada(h.estado) ? "evaluado" : "pendiente"
                         }`}
                       >
                         {h.estado}
@@ -498,9 +499,9 @@ function Evaluaciones() {
                               fontSize: "0.8rem",
                               fontWeight: 600,
                               background:
-                                h.estado === "Evaluado" ? "#d1fae5" : "#fef3c7",
+                                esEvaluacionCerrada(h.estado) ? "#d1fae5" : "#fef3c7",
                               color:
-                                h.estado === "Evaluado" ? "#065f46" : "#92400e",
+                                esEvaluacionCerrada(h.estado) ? "#065f46" : "#92400e",
                             }}
                           >
                             {h.estado || "—"}
@@ -547,7 +548,7 @@ function Evaluaciones() {
                 const { estado, id_evaluacion } = obtenerEstadoInstructor(
                   inst.id_instructor
                 );
-                const yaEvaluado = estado === "Evaluado";
+                const yaEvaluado = esEvaluacionCerrada(estado);
 
                 return (
                   <div className="evaluacion-card instructor-card" key={inst.id_instructor}>
