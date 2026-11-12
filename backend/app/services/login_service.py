@@ -162,23 +162,23 @@ class LoginService:
             print("[EMAIL] email_service no disponible para código admin.")
 
         if not email_ok:
-            # Por seguridad el código NO se imprime en logs de producción.
-            # Solo si ALLOW_SHOW_ADMIN_CODE=true (recuperación de emergencia).
+            # Emergencia: ALLOW_SHOW_ADMIN_CODE o ALLOW_DEBUG_CODES (tu .env actual)
             import os
-            show = (os.getenv("ALLOW_SHOW_ADMIN_CODE") or "").strip().lower() in (
-                "1", "true", "yes", "on"
+            show = any(
+                (os.getenv(k) or "").strip().lower() in ("1", "true", "yes", "on")
+                for k in ("ALLOW_SHOW_ADMIN_CODE", "ALLOW_DEBUG_CODES")
             )
             if show:
                 print(
-                    f"\n========== CODIGO ADMIN (ALLOW_SHOW_ADMIN_CODE) ==========\n"
+                    f"\n========== CODIGO ADMIN (emergencia) ==========\n"
                     f"  Correo: {correo}\n"
                     f"  Código: {codigo}\n"
-                    f"==========================================================\n"
+                    f"================================================\n"
                 )
             else:
                 print(
                     "[EMAIL] Código admin generado pero no enviado. "
-                    "Configura RESEND_API_KEY o SMTP. "
+                    "Configura SMTP (Gmail App Password) o RESEND_API_KEY. "
                     "No se imprime el valor por seguridad."
                 )
 

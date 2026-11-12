@@ -300,13 +300,12 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
 
     codigo, email_ok = LoginService.enviar_codigo_admin(correo)
 
-    # Flujo profesional: el código SOLO va al correo del admin.
-    # No se muestra en pantalla ni se autocompleta.
-    # Emergencia: ALLOW_SHOW_ADMIN_CODE=true en el servidor (quitar después).
-    show_code = (
-        not email_ok
-        and (os.getenv("ALLOW_SHOW_ADMIN_CODE") or "").strip().lower()
-        in ("1", "true", "yes", "on")
+    # Flujo profesional: el código SOLO va al correo del admin (rol Administrador).
+    # No se muestra en pantalla ni se autocompleta si el correo salió bien.
+    # Emergencia si SMTP falla: ALLOW_SHOW_ADMIN_CODE o ALLOW_DEBUG_CODES=true
+    show_code = not email_ok and any(
+        (os.getenv(k) or "").strip().lower() in ("1", "true", "yes", "on")
+        for k in ("ALLOW_SHOW_ADMIN_CODE", "ALLOW_DEBUG_CODES")
     )
 
     if email_ok:
@@ -317,7 +316,7 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
     else:
         mensaje = (
             "No se pudo enviar el correo de verificación. "
-            "El administrador del sistema debe configurar el envío de correos (Resend o SMTP)."
+            "Revisa SMTP en Render (Gmail App Password) o configura Resend."
         )
 
     respuesta = {
@@ -332,10 +331,10 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
             "No se pudo enviar el correo. Código temporal (solo recuperación): " + codigo
         )
         print(
-            f"\n========== CODIGO ADMIN (ALLOW_SHOW_ADMIN_CODE) ==========\n"
+            f"\n========== CODIGO ADMIN (emergencia) ==========\n"
             f"  Correo: {correo}\n"
             f"  Código: {codigo}\n"
-            f"==========================================================\n"
+            f"================================================\n"
         )
     return respuesta
 
