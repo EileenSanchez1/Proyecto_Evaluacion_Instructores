@@ -22,8 +22,8 @@ from app.models.horario import Horario
 
 password_hash = PasswordHash.recommended()
 
-CORREO_ADMIN = "admin@evaluacion.com"
-CONTRASENA_ADMIN = "Admin12345"
+CORREO_ADMIN = "essg34682735@soy.sena.edu.co"
+CONTRASENA_ADMIN = "Admin123!"
 
 
 def crear_admin():
@@ -49,8 +49,8 @@ def crear_admin():
             )
 
         admin = Usuario(
-            nombre="Administrador",
-            apellido="Sistema",
+            nombre="Eileen",
+            apellido="Sanchez",
             correo=CORREO_ADMIN,
             contrasena=password_hash.hash(CONTRASENA_ADMIN),
             id_rol=rol_admin.id_rol

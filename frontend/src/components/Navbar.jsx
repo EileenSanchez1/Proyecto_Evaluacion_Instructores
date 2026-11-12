@@ -31,7 +31,7 @@ function Navbar() {
   return (
     <>
       <nav className="navbar">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
           <button
             className="navbar-hamburger"
             onClick={abrirMenu}
@@ -46,13 +46,16 @@ function Navbar() {
         </div>
 
         <div className="navbar-user">
-          <div className="user-avatar">{inicial}</div>
+          <div className="user-avatar" title={nombreCompleto}>
+            {inicial}
+          </div>
           <div className="user-info">
             <span className="user-name">{nombreCompleto}</span>
             <span className="user-role">{usuario?.rol || "Aprendiz"}</span>
           </div>
-          <button className="btn-logout" onClick={manejarLogout}>
-            <i className="bi bi-box-arrow-right"></i> Cerrar sesión
+          <button className="btn-logout" onClick={manejarLogout} title="Cerrar sesión">
+            <i className="bi bi-box-arrow-right"></i>
+            <span className="logout-text">Cerrar sesión</span>
           </button>
         </div>
       </nav>
