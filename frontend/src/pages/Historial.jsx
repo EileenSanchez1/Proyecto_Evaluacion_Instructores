@@ -8,12 +8,13 @@ import {
   porcentajeDesdeValor,
   colorDesdePorcentaje,
 } from "../utils/escalaEvaluacion";
+import { esEvaluacionCerrada } from "../utils/evaluacionEstado";
 import "../styles/Evaluaciones.css";
 
 function formatearFecha(fecha) {
-  if (!fecha) return "-";
+  if (!fecha) return "—";
   const f = new Date(fecha);
-  if (Number.isNaN(f.getTime())) return fecha;
+  if (Number.isNaN(f.getTime())) return String(fecha);
   return f.toLocaleDateString("es-CO", {
     year: "numeric",
     month: "2-digit",
@@ -35,8 +36,12 @@ function Historial() {
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   useEffect(() => {
-    listarPeriodos().then(setPeriodos).catch(console.error);
-    listarFichas().then(setFichas).catch(console.error);
+    listarPeriodos()
+      .then((data) => setPeriodos(Array.isArray(data) ? data : []))
+      .catch(() => setPeriodos([]));
+    listarFichas()
+      .then((data) => setFichas(Array.isArray(data) ? data : []))
+      .catch(() => setFichas([]));
   }, []);
 
   const cargarHistorial = async () => {
@@ -48,9 +53,15 @@ function Historial() {
       if (filtros.ficha_id) params.ficha_id = filtros.ficha_id;
 
       const response = await api.get("/reportes/historial", { params });
-      setHistorial(response.data);
+      const data = response?.data;
+      setHistorial(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError("No se pudo cargar el historial.");
+      console.error(err);
+      setError(
+        err?.response?.data?.detail ||
+          "No se pudo cargar el historial de evaluaciones."
+      );
+      setHistorial([]);
     } finally {
       setCargando(false);
     }
@@ -80,59 +91,101 @@ function Historial() {
   };
 
   return (
-    <div className="container-fluid page-content-eval py-4">
-      <div className="evaluation-header">
+    <div className="pagina-evaluaciones">
+      <div className="encabezado-evaluacion">
         <div>
-          <h2>
-            <i className="bi bi-clock-history"></i> Evaluaciones
-          </h2>
-          <p>Consulta el registro completo de evaluaciones del sistema.</p>
+          <h1 className="titulo">
+            <i className="bi bi-clipboard-check" style={{ marginRight: 8 }} />
+            Evaluaciones
+          </h1>
+          <p className="subtitulo">
+            Consulta el registro completo de evaluaciones del sistema (Administrador y
+            Coordinador).
+          </p>
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
-        <div className="col-md-4">
-          <select
-            name="periodo_id"
-            className="form-select"
-            value={filtros.periodo_id}
-            onChange={manejarCambio}
-          >
-            <option value="">Todos los periodos</option>
-            {periodos.map((p) => (
-              <option key={p.id_periodo} value={p.id_periodo}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col-md-4">
-          <select
-            name="ficha_id"
-            className="form-select"
-            value={filtros.ficha_id}
-            onChange={manejarCambio}
-          >
-            <option value="">Todas las fichas</option>
-            {fichas.map((f) => (
-              <option key={f.id_ficha} value={f.id_ficha}>
-                {f.numero_ficha}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Filtros */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
+          marginBottom: 20,
+          alignItems: "center",
+        }}
+      >
+        <label style={{ fontWeight: 600, color: "#374151" }}>Periodo:</label>
+        <select
+          name="periodo_id"
+          value={filtros.periodo_id}
+          onChange={manejarCambio}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            minWidth: 200,
+            background: "#fff",
+          }}
+        >
+          <option value="">Todos los periodos</option>
+          {periodos.map((p) => (
+            <option key={p.id_periodo} value={p.id_periodo}>
+              {p.nombre}
+            </option>
+          ))}
+        </select>
+
+        <label style={{ fontWeight: 600, color: "#374151", marginLeft: 8 }}>
+          Ficha:
+        </label>
+        <select
+          name="ficha_id"
+          value={filtros.ficha_id}
+          onChange={manejarCambio}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            minWidth: 160,
+            background: "#fff",
+          }}
+        >
+          <option value="">Todas las fichas</option>
+          {fichas.map((f) => (
+            <option key={f.id_ficha} value={f.id_ficha}>
+              {f.numero_ficha}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {cargando && <p className="text-muted">Cargando historial...</p>}
-      {error && <p className="text-danger">{error}</p>}
+      {error && (
+        <div className="alerta alerta-error" role="alert">
+          <i className="bi bi-exclamation-triangle" />
+          {typeof error === "string" ? error : "Error al cargar el historial."}
+        </div>
+      )}
+
+      {cargando && (
+        <div className="cargando-centrado">
+          <div className="spinner" />
+          <p>Cargando historial...</p>
+        </div>
+      )}
 
       {!cargando && historial.length === 0 && (
-        <p className="text-muted">No hay evaluaciones registradas.</p>
+        <div className="estado-vacio" style={{ textAlign: "center", padding: 40 }}>
+          <h4>No hay evaluaciones registradas</h4>
+          <p style={{ color: "#6b7280" }}>
+            Cuando los aprendices evalúen instructores, aparecerán aquí.
+          </p>
+        </div>
       )}
 
       {!cargando && historial.length > 0 && (
-        <div className="table-responsive">
-          <table className="table table-hover align-middle evaluaciones-table">
+        <div className="tabla-historial">
+          <table className="tabla">
             <thead>
               <tr>
                 <th>ID</th>
@@ -141,6 +194,7 @@ function Historial() {
                 <th>Aprendiz</th>
                 <th>Ficha</th>
                 <th>Programa</th>
+                <th>Instructor</th>
                 <th>Estado</th>
                 <th>Detalle</th>
               </tr>
@@ -150,32 +204,18 @@ function Historial() {
                 <tr key={h.id_evaluacion}>
                   <td>#{h.id_evaluacion}</td>
                   <td>{formatearFecha(h.fecha)}</td>
-                  <td>{h.periodo}</td>
-                  <td>{h.aprendiz}</td>
-                  <td>{h.ficha}</td>
-                  <td>{h.programa}</td>
+                  <td>{h.periodo || "—"}</td>
+                  <td>{h.aprendiz || "—"}</td>
+                  <td>{h.ficha || "—"}</td>
+                  <td>{h.programa || "—"}</td>
+                  <td>{h.instructor || "—"}</td>
                   <td>
                     <span
-                      className="badge px-3 py-2"
-                      style={{
-                        backgroundColor:
-                          esEvaluacionCerrada(h.estado)
-                            ? "#d1fae5"
-                            : "#fef3c7",
-                        color:
-                          esEvaluacionCerrada(h.estado)
-                            ? "#065f46"
-                            : "#92400e",
-                        border:
-                          esEvaluacionCerrada(h.estado)
-                            ? "1px solid #a7f3d0"
-                            : "1px solid #fde68a",
-                        fontWeight: 700,
-                        borderRadius: "20px",
-                        display: "inline-block",
-                      }}
+                      className={`badge-estado ${
+                        esEvaluacionCerrada(h.estado) ? "evaluado" : "pendiente"
+                      }`}
                     >
-                      {h.estado}
+                      {h.estado || "Pendiente"}
                     </span>
                   </td>
                   <td>
@@ -185,6 +225,7 @@ function Historial() {
                       style={{ padding: "6px 12px", fontSize: "0.85rem" }}
                       onClick={() => verDetalle(h.id_evaluacion)}
                     >
+                      <i className="bi bi-eye" style={{ marginRight: 4 }} />
                       Ver detalle
                     </button>
                   </td>
@@ -222,7 +263,12 @@ function Historial() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {cargandoDetalle && <p>Cargando detalle...</p>}
+            {cargandoDetalle && (
+              <div className="cargando-centrado" style={{ minHeight: 120 }}>
+                <div className="spinner" />
+                <p>Cargando detalle...</p>
+              </div>
+            )}
             {detalle && (
               <>
                 <div
@@ -234,20 +280,22 @@ function Historial() {
                   }}
                 >
                   <div>
-                    <h3 style={{ margin: 0 }}>Detalle de evaluación</h3>
+                    <h3 style={{ margin: 0, color: "#1a3c28" }}>
+                      Detalle de evaluación
+                    </h3>
                     <p style={{ color: "#6b7280", margin: "6px 0 0" }}>
                       {detalle.fecha
                         ? new Date(detalle.fecha).toLocaleDateString("es-CO")
                         : ""}{" "}
-                      · Ficha {detalle.ficha} · {detalle.programa}
+                      · Ficha {detalle.ficha || "—"} · {detalle.programa || "—"}
                     </p>
                     <p style={{ margin: "4px 0 0" }}>
-                      <strong>Instructor:</strong> {detalle.instructor} ·{" "}
-                      <strong>Periodo:</strong> {detalle.periodo}
+                      <strong>Instructor:</strong> {detalle.instructor || "—"} ·{" "}
+                      <strong>Periodo:</strong> {detalle.periodo || "—"}
                     </p>
                     <p style={{ margin: "4px 0 0" }}>
-                      <strong>Aprendiz:</strong> {detalle.aprendiz} ·{" "}
-                      <strong>Estado:</strong> {detalle.estado}
+                      <strong>Aprendiz:</strong> {detalle.aprendiz || "—"} ·{" "}
+                      <strong>Estado:</strong> {detalle.estado || "—"}
                     </p>
                   </div>
                   <button
@@ -259,15 +307,25 @@ function Historial() {
                       borderRadius: 8,
                       padding: "8px 12px",
                       cursor: "pointer",
+                      height: "fit-content",
                     }}
                   >
                     Cerrar
                   </button>
                 </div>
 
-                <h4 style={{ marginTop: 8 }}>Respuestas por pregunta</h4>
-                <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: "0 0 10px" }}>
-                  Escala: <strong>Siempre</strong> · <strong>Algunas veces</strong> · <strong>Nunca</strong> (se muestra el porcentaje de desempeño).
+                <h4 style={{ marginTop: 8, color: "#1a3c28" }}>
+                  Respuestas por pregunta
+                </h4>
+                <p
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "0.85rem",
+                    margin: "0 0 10px",
+                  }}
+                >
+                  Escala: <strong>Siempre</strong> · <strong>Algunas veces</strong> ·{" "}
+                  <strong>Nunca</strong> (se muestra el porcentaje de desempeño).
                 </p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                   {(detalle.respuestas || []).map((r) => {
@@ -347,7 +405,7 @@ function Historial() {
                     }}
                   >
                     <h4 style={{ margin: "0 0 8px", color: "#065f46" }}>
-                      <i className="bi bi-chat-quote"></i> Observación general del
+                      <i className="bi bi-chat-quote" /> Observación general del
                       aprendiz
                     </h4>
                     <p style={{ margin: 0, color: "#1f2937", lineHeight: 1.5 }}>

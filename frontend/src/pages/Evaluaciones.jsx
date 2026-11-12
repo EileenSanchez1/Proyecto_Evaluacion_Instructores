@@ -1,6 +1,6 @@
 import { listarPeriodos } from "../services/PeriodoService";
 import { useEffect, useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   listarInstructoresPorFichaYPeriodo,
   listarFichasPorInstructor,
@@ -11,11 +11,10 @@ import { listarPreguntasActivas } from "../services/Preguntaservice";
 import { listarFichas } from "../services/FichaServices";
 import {
   obtenerUsuarioSesion,
-  esAdmin,
+  esAdminOCoordinador,
   esInstructor,
 } from "../utils/sesion";
 import {
-  historialEvaluaciones,
   miPromedioInstructor,
   reportePreguntasInstructor,
   misEvaluacionesInstructor,
@@ -32,13 +31,13 @@ function Evaluaciones() {
   const navigate = useNavigate();
 
   const [usuario] = useState(() => obtenerUsuarioSesion());
-  const esAdminUser = useMemo(() => esAdmin(), []);
+  // Admin y Coordinador usan /historial (pantalla unificada con filtros y detalle)
+  const esAdminOCoord = useMemo(() => esAdminOCoordinador(), []);
   const esInstructorUser = useMemo(() => esInstructor(), []);
 
   const [instructores, setInstructores] = useState([]);
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [preguntas, setPreguntas] = useState([]);
-  const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
@@ -51,6 +50,9 @@ function Evaluaciones() {
   const [mapaRA, setMapaRA] = useState({});
 
   useEffect(() => {
+    // Admin/Coordinador no usan esta vista
+    if (esAdminOCoord) return;
+
     let cancelado = false;
 
     listarPeriodos().then(setPeriodos).catch(() => {});
@@ -61,10 +63,7 @@ function Evaluaciones() {
         setCargando(true);
         setError("");
 
-        if (esAdminUser) {
-          const hist = await historialEvaluaciones();
-          if (!cancelado) setHistorial(hist || []);
-        } else if (esInstructorUser) {
+        if (esInstructorUser) {
           let idInstructor = usuario?.id_instructor;
           if (!idInstructor) {
             try {
@@ -214,7 +213,7 @@ function Evaluaciones() {
     return () => {
       cancelado = true;
     };
-  }, [esAdminUser, esInstructorUser, usuario?.id_instructor, usuario?.id_ficha, usuario?.id_periodo, usuario?.id_aprendiz, periodoIdInst]);
+  }, [esAdminOCoord, esInstructorUser, usuario?.id_instructor, usuario?.id_ficha, usuario?.id_periodo, usuario?.id_aprendiz, periodoIdInst]);
 
   const obtenerEstadoInstructor = (idInstructor) => {
     const ev = evaluaciones.find(
@@ -254,6 +253,11 @@ function Evaluaciones() {
     navigate(`/evaluaciones/${idEvaluacion}`);
   };
 
+  // Unificación: Admin y Coordinador usan solo /historial
+  if (esAdminOCoord) {
+    return <Navigate to="/historial" replace />;
+  }
+
   if (cargando) {
     return (
       <div className="pagina-evaluaciones">
@@ -270,16 +274,12 @@ function Evaluaciones() {
       <div className="encabezado-evaluacion">
         <div>
           <h1 className="titulo">
-            {esAdminUser
-              ? "Gestión de Evaluaciones"
-              : esInstructorUser
+            {esInstructorUser
               ? "Mis evaluaciones recibidas"
               : "Evaluación de Instructores"}
           </h1>
           <p className="subtitulo">
-            {esAdminUser
-              ? "Consulta el historial completo de evaluaciones del sistema"
-              : esInstructorUser
+            {esInstructorUser
               ? "Resumen de fichas asignadas y evaluaciones que has recibido (anónimas)"
               : "Evalúa a los instructores asignados a tu ficha de formación"}
           </p>
@@ -313,46 +313,6 @@ function Evaluaciones() {
           }}
         >
           {error}
-        </div>
-      )}
-
-      {/* ── ADMIN ── */}
-      {esAdminUser && (
-        <div className="tabla-container">
-          {historial.length === 0 ? (
-            <p style={{ color: "#6b7280" }}>No hay evaluaciones registradas.</p>
-          ) : (
-            <table className="tabla-evaluaciones">
-              <thead>
-                <tr>
-                  <th>Ficha</th>
-                  <th>Instructor</th>
-                  <th>Periodo</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historial.map((h, i) => (
-                  <tr key={h.id_evaluacion || i}>
-                    <td>{h.ficha}</td>
-                    <td>{h.instructor}</td>
-                    <td>{h.periodo}</td>
-                    <td>
-                      <span
-                        className={`badge-estado ${
-                          esEvaluacionCerrada(h.estado) ? "evaluado" : "pendiente"
-                        }`}
-                      >
-                        {h.estado}
-                      </span>
-                    </td>
-                    <td>{h.fecha || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
         </div>
       )}
 
@@ -531,7 +491,7 @@ function Evaluaciones() {
       )}
 
       {/* ── APRENDIZ ── */}
-      {!esAdminUser && !esInstructorUser && (
+      {!esInstructorUser && (
         <>
           {instructores.length === 0 ? (
             <div className="sin-datos">

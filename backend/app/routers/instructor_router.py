@@ -121,7 +121,11 @@ async def carga_masiva_instructores(
     return cargar_desde_filas(session, filas)
 
 
-@router.get("/", response_model=List[InstructorRead])
+@router.get(
+    "/",
+    response_model=List[InstructorRead],
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))],
+)
 def listar_instructores(
     incluir_inactivos: bool = False,
     session: Session = Depends(get_session),
@@ -131,7 +135,11 @@ def listar_instructores(
     return [InstructorService.to_read(session, i) for i in items]
 
 
-@router.get("/{instructor_id}", response_model=InstructorRead)
+@router.get(
+    "/{instructor_id}",
+    response_model=InstructorRead,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))],
+)
 def buscar_instructor(instructor_id: int, session: Session = Depends(get_session)):
     inst = InstructorService.buscar(session, instructor_id)
     if not inst:
@@ -206,7 +214,11 @@ def reactivar_instructor(instructor_id: int, session: Session = Depends(get_sess
     return {"mensaje": "Instructor reactivado correctamente."}
 
 
-@router.post("/{instructor_id}/foto", response_model=InstructorRead)
+@router.post(
+    "/{instructor_id}/foto",
+    response_model=InstructorRead,
+    dependencies=[Depends(require_roles("Instructor", "Administrador", "Coordinador"))],
+)
 def subir_foto_instructor(
     instructor_id: int,
     foto: UploadFile = File(...),

@@ -100,7 +100,10 @@ async def carga_masiva_aprendices(
     return resultado
 
 
-@router.get("/")
+@router.get(
+    "/",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
 def listar_aprendices(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=5000),
@@ -110,7 +113,10 @@ def listar_aprendices(
     return [AprendizService.to_read(session, a) for a in items]
 
 
-@router.get("/por-ficha/{id_ficha}")
+@router.get(
+    "/por-ficha/{id_ficha}",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
 def listar_por_ficha(id_ficha: int, session: Session = Depends(get_session)):
     items = AprendizService.listar_por_ficha(session, id_ficha)
     return [AprendizService.to_read(session, a) for a in items]
@@ -143,7 +149,10 @@ def reenviar_correos_ficha(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/{aprendiz_id}")
+@router.get(
+    "/{aprendiz_id}",
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz"))],
+)
 def buscar_aprendiz(
     aprendiz_id: int,
     session: Session = Depends(get_session)

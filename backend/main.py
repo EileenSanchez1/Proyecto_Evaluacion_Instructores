@@ -86,6 +86,20 @@ def ensure_extra_columns():
         print(f"[schema] Aviso ensure_extra_columns: {e}")
 
 
+
+def _admin_initial_password() -> str:
+    """Password del admin semilla. En producción debe venir de ADMIN_INITIAL_PASSWORD."""
+    env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "development").strip().lower()
+    pwd = (os.getenv("ADMIN_INITIAL_PASSWORD") or "").strip()
+    if pwd:
+        return pwd
+    if env in ("production", "prod", "staging"):
+        raise RuntimeError(
+            "ADMIN_INITIAL_PASSWORD es obligatorio en producción/staging "
+            "para crear el usuario admin inicial."
+        )
+    return "Admin123!"
+
 app = FastAPI(
     title="Sistema de Evaluación de Instructores",
     version="1.0.0"
@@ -150,7 +164,7 @@ def _seed_roles_y_admin():
                     nombre="Admin",
                     apellido="Sistema",
                     correo="admin@sena.edu.co",
-                    contrasena=password_hash.hash(os.getenv("ADMIN_INITIAL_PASSWORD", "Admin123!")),
+                    contrasena=password_hash.hash(_admin_initial_password()),
                     id_rol=admin_rol.id_rol,
                     activo=True
                 ))

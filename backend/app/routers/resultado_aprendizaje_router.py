@@ -34,7 +34,11 @@ def crear_resultado(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=List[ResultadoAprendizajeRead])
+@router.get(
+    "/",
+    response_model=List[ResultadoAprendizajeRead],
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))],
+)
 def listar_resultados(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -43,7 +47,11 @@ def listar_resultados(
     return ResultadoAprendizajeService.listar(session, offset, limit)
 
 
-@router.get("/{id_resultado}", response_model=ResultadoAprendizajeRead)
+@router.get(
+    "/{id_resultado}",
+    response_model=ResultadoAprendizajeRead,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador", "Aprendiz", "Instructor"))],
+)
 def buscar_resultado(
     id_resultado: int,
     session: Session = Depends(get_session)
