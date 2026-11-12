@@ -108,8 +108,9 @@ app = FastAPI(
 # =========================
 # CORS (configurable por entorno)
 # =========================
-# CORS_ORIGINS = lista separada por comas. Ej:
-#   CORS_ORIGINS=https://evaluacion.sena.edu.co,https://www.sena.edu.co
+# CORS_ORIGINS = lista separada por comas; se UNE a los defaults locales.
+# Ejemplo Railway/Vercel:
+#   CORS_ORIGINS=https://tu-app.vercel.app,https://tu-app-git-main.vercel.app
 _default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -117,19 +118,23 @@ _default_origins = [
     "http://127.0.0.1:3000",
 ]
 _cors_env = os.getenv("CORS_ORIGINS", "").strip()
-if _cors_env:
-    allow_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+_extra = [o.strip() for o in _cors_env.split(",") if o.strip()] if _cors_env else []
+if "*" in _extra:
+    allow_origins = ["*"]
+    _cors_credentials = False
 else:
-    allow_origins = _default_origins
+    allow_origins = list(dict.fromkeys(_default_origins + _extra))
+    _cors_credentials = True
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_credentials=True,
+    allow_credentials=_cors_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+print(f"[CORS] origins={allow_origins}")
 
 # =========================
 # STARTUP - Auto seed roles + admin
@@ -158,17 +163,40 @@ def _seed_roles_y_admin():
 
         admin_rol = session.exec(select(Rol).where(Rol.nombre == "Administrador")).first()
         if admin_rol:
-            admin = session.exec(select(Usuario).where(Usuario.correo == "essg34682735@soy.sena.edu.co")).first()
+            admin_correo = (
+                os.getenv("ADMIN_EMAIL") or "essg34682735@soy.sena.edu.co"
+            ).strip().lower()
+            admin = session.exec(
+                select(Usuario).where(Usuario.correo == admin_correo)
+            ).first()
             if not admin:
                 session.add(Usuario(
                     nombre="Eileen",
                     apellido="Sanchez",
-                    correo="essg34682735@soy.sena.edu.co",
+                    correo=admin_correo,
                     contrasena=password_hash.hash(_admin_initial_password()),
                     id_rol=admin_rol.id_rol,
-                    activo=True
+                    activo=True,
                 ))
                 session.commit()
+                print(f"[SEED] Admin creado: {admin_correo}")
+            else:
+                # Forzar reset de contraseña si RESET_ADMIN_PASSWORD=true
+                # (útil cuando olvidaste la clave en producción)
+                reset = (os.getenv("RESET_ADMIN_PASSWORD") or "").strip().lower() in (
+                    "1", "true", "yes", "on"
+                )
+                if reset:
+                    nueva = _admin_initial_password()
+                    admin.contrasena = password_hash.hash(nueva)
+                    admin.activo = True
+                    admin.id_rol = admin_rol.id_rol
+                    session.add(admin)
+                    session.commit()
+                    print(
+                        f"[SEED] RESET_ADMIN_PASSWORD: contraseña de {admin_correo} "
+                        f"restablecida a ADMIN_INITIAL_PASSWORD"
+                    )
 
 
 # =========================

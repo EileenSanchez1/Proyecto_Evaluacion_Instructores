@@ -1,21 +1,15 @@
 """
-Envío de correos profesional (Gmail SMTP / Resend).
+Envío de correos (Gmail SMTP / Resend).
 
-Prioridad:
-  1) Resend API (HTTPS) si existe RESEND_API_KEY  → recomendado en Render
-  2) SMTP (Gmail u otro) si existen SMTP_USER y SMTP_PASSWORD
+Prioridad: Resend si hay RESEND_API_KEY → si no, SMTP Gmail.
 
-Variables de entorno (Render → Environment del servicio backend):
+Variables Railway/Render (Environment):
   SMTP_HOST=smtp.gmail.com
   SMTP_PORT=587
-  SMTP_USER=tu_cuenta@gmail.com
-  SMTP_PASSWORD=xxxx xxxx xxxx xxxx   # App Password de 16 caracteres
-  SMTP_FROM=tu_cuenta@gmail.com
+  SMTP_USER=evaluacion.sena.instructores@gmail.com
+  SMTP_PASSWORD=xxxx xxxx xxxx xxxx
+  SMTP_FROM=evaluacion.sena.instructores@gmail.com
   SMTP_FROM_NAME=SENA Evaluación Instructores
-
-  # Alternativa HTTPS (más fiable en Render free):
-  RESEND_API_KEY=re_xxxx
-  RESEND_FROM=onboarding@resend.dev
 """
 
 from __future__ import annotations
@@ -31,10 +25,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Cargar .env desde la carpeta backend (no depende del cwd)
 _BACKEND_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(_BACKEND_DIR / ".env")
-load_dotenv()  # por si también está en el cwd
+load_dotenv()
 
 
 def _smtp_config():
@@ -44,7 +37,6 @@ def _smtp_config():
     except ValueError:
         port = 587
     user = (os.getenv("SMTP_USER") or "").strip()
-    # Gmail App Password a veces se pega con espacios; los quitamos
     password = (os.getenv("SMTP_PASSWORD") or "").strip().replace(" ", "")
     from_addr = (os.getenv("SMTP_FROM") or user).strip()
     from_name = (os.getenv("SMTP_FROM_NAME") or "SENA Evaluación Instructores").strip()
@@ -69,7 +61,6 @@ def _enviar_con_resend(
     api_key = (os.getenv("RESEND_API_KEY") or "").strip()
     from_addr = (os.getenv("RESEND_FROM") or "onboarding@resend.dev").strip()
     from_name = (os.getenv("SMTP_FROM_NAME") or "SENA Evaluación Instructores").strip()
-
     payload = {
         "from": f"{from_name} <{from_addr}>",
         "to": [destinatario],
@@ -78,7 +69,6 @@ def _enviar_con_resend(
     }
     if cuerpo_html:
         payload["html"] = cuerpo_html
-
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         "https://api.resend.com/emails",
@@ -106,14 +96,7 @@ def _enviar_con_resend(
         return False
 
 
-def _build_message(
-    destinatario: str,
-    asunto: str,
-    cuerpo_texto: str,
-    cuerpo_html: str | None,
-    from_addr: str,
-    from_name: str,
-) -> EmailMessage:
+def _build_message(destinatario, asunto, cuerpo_texto, cuerpo_html, from_addr, from_name):
     msg = EmailMessage()
     msg["Subject"] = asunto
     msg["From"] = f"{from_name} <{from_addr}>"
@@ -124,43 +107,27 @@ def _build_message(
     return msg
 
 
-def _enviar_con_smtp(
-    destinatario: str,
-    asunto: str,
-    cuerpo_texto: str,
-    cuerpo_html: str | None,
-) -> bool:
-    """
-    Envía por SMTP (Gmail).
-    - Preferido: 587 + STARTTLS
-    - Fallback: 465 + SSL
-    El correo se envía ÚNICAMENTE al destinatario (correo del admin en 2FA).
-    """
+def _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html) -> bool:
     host, port, user, password, from_addr, from_name = _smtp_config()
     if not user or not password:
         print("[EMAIL] SMTP no configurado: faltan SMTP_USER o SMTP_PASSWORD")
         return False
-
     if not from_addr:
         from_addr = user
-
     msg = _build_message(destinatario, asunto, cuerpo_texto, cuerpo_html, from_addr, from_name)
-
-    intentos: list[tuple[str, int, str]] = []
+    intentos = []
     if port == 465:
-        intentos.append(("ssl", 465, "SSL"))
-        intentos.append(("starttls", 587, "STARTTLS"))
+        intentos = [("ssl", 465, "SSL"), ("starttls", 587, "STARTTLS")]
     else:
-        intentos.append(("starttls", port or 587, "STARTTLS"))
+        intentos = [("starttls", port or 587, "STARTTLS")]
         if "gmail" in host.lower():
             intentos.append(("ssl", 465, "SSL"))
-
-    last_error: Exception | None = None
+    last_error = None
     for modo, p, etiqueta in intentos:
         try:
             if modo == "ssl":
-                context = ssl.create_default_context()
-                with smtplib.SMTP_SSL(host, p, timeout=30, context=context) as server:
+                ctx = ssl.create_default_context()
+                with smtplib.SMTP_SSL(host, p, timeout=30, context=ctx) as server:
                     server.ehlo()
                     server.login(user, password)
                     server.send_message(msg)
@@ -176,53 +143,27 @@ def _enviar_con_smtp(
         except Exception as e:
             last_error = e
             print(f"[EMAIL] ✗ SMTP ({etiqueta}:{p}) falló: {type(e).__name__}: {e}")
-
     if last_error:
-        print(
-            f"[EMAIL] SMTP agotó intentos para {destinatario}. "
-            f"Último error: {type(last_error).__name__}: {last_error}"
-        )
-        print(
-            "[EMAIL] Revisa en Render: App Password correcta, SMTP_USER completo, "
-            "y que las variables estén en el servicio del BACKEND (no del frontend)."
-        )
+        print(f"[EMAIL] SMTP falló para {destinatario}: {type(last_error).__name__}: {last_error}")
     return False
 
 
-def enviar_correo(
-    destinatario: str,
-    asunto: str,
-    cuerpo_texto: str,
-    cuerpo_html: str | None = None,
-) -> bool:
-    """
-    Envía correo SOLO al destinatario indicado (ej. correo del admin).
-    Orden: Resend (HTTPS) → SMTP Gmail.
-    """
+def enviar_correo(destinatario, asunto, cuerpo_texto, cuerpo_html=None) -> bool:
+    """Envía SOLO al destinatario indicado (admin, aprendiz, instructor, etc.)."""
     destinatario = (destinatario or "").strip().lower()
     if not destinatario:
         return False
-
     if _resend_configurado():
         if _enviar_con_resend(destinatario, asunto, cuerpo_texto, cuerpo_html):
             return True
-        print("[EMAIL] Resend falló; intentando SMTP si está configurado...")
-
+        print("[EMAIL] Resend falló; intentando SMTP...")
     if smtp_configurado():
-        if _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html):
-            return True
-    else:
-        if not _resend_configurado():
-            print(
-                "\n[EMAIL] Sin proveedor de correo configurado.\n"
-                "  En Render (servicio backend) agrega:\n"
-                "    SMTP_HOST=smtp.gmail.com\n"
-                "    SMTP_PORT=587\n"
-                "    SMTP_USER=tu_gmail@gmail.com\n"
-                "    SMTP_PASSWORD=app_password_16_caracteres\n"
-                "    SMTP_FROM=tu_gmail@gmail.com\n"
-                f"  No se envió correo a {destinatario}.\n"
-            )
+        return _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html)
+    if not _resend_configurado():
+        print(
+            "\n[EMAIL] Sin proveedor. Configura SMTP_USER + SMTP_PASSWORD "
+            f"(Gmail App Password). No se envió a {destinatario}.\n"
+        )
     return False
 
 
