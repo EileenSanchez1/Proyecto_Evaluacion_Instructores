@@ -138,18 +138,38 @@ class LoginService:
         return session.exec(select(Instructor).where(Instructor.correo == correo)).first()
 
     @staticmethod
-    def enviar_codigo_admin(correo: str) -> str:
-        """Genera y envía código de segundo factor para administrador."""
+    def enviar_codigo_admin(correo: str) -> tuple[str, bool]:
+        """
+        Genera y envía código de segundo factor para administrador.
+        Retorna (codigo, email_enviado).
+        Si el correo no se envía, el código se imprime en logs para recuperación.
+        """
         correo = (correo or "").strip().lower()
         codigo = generar_codigo_numerico(6)
         guardar_codigo(correo, codigo, tipo="admin", expiracion_minutos=10)
         log_codigo_debug("admin", correo, codigo)
+
+        email_ok = False
         if mail_codigo_admin:
             try:
-                ok = mail_codigo_admin(correo, codigo)
-                if not ok:
+                email_ok = bool(mail_codigo_admin(correo, codigo))
+                if not email_ok:
                     print("[EMAIL] No se pudo enviar código admin.")
             except Exception as e:
                 print(f"[EMAIL] Error admin: {type(e).__name__}")
-        return codigo
+                email_ok = False
+        else:
+            print("[EMAIL] email_service no disponible para código admin.")
+
+        if not email_ok:
+            # Visible en logs de Render / Docker cuando SMTP falla o no está configurado
+            print(
+                f"\n========== CODIGO ADMIN (SMTP falló o no configurado) ==========\n"
+                f"  Correo: {correo}\n"
+                f"  Código: {codigo}\n"
+                f"  Válido ~10 minutos. Úsalo en «Soy Admin».\n"
+                f"================================================================\n"
+            )
+
+        return codigo, email_ok
 
