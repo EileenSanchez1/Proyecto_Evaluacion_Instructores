@@ -157,6 +157,7 @@ body {
   justify-content: space-between;
   padding: 0 24px;
   z-index: 90;
+  gap: 8px;
 }
 
 .navbar-logo {
@@ -166,6 +167,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .navbar-logo i {
@@ -176,6 +178,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .navbar-user .user-avatar {
@@ -222,6 +226,10 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .navbar-user .btn-logout:hover {
@@ -273,13 +281,39 @@ body {
     display: block;
   }
 
-  /* Mejorar legibilidad del usuario en navbar móvil */
+  .navbar {
+    padding: 0 10px 0 8px;
+    height: 56px;
+  }
+
+  /* En móvil: ocultar nombre/rol, dejar avatar + botón compacto a la derecha */
   .navbar-user .user-info {
     display: none;
   }
 
-  .navbar {
-    padding: 0 12px;
+  .navbar-user {
+    gap: 8px;
+  }
+
+  .navbar-user .btn-logout {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  /* Ocultar el texto "Cerrar sesión" en pantallas muy pequeñas, dejar solo icono */
+  .navbar-user .btn-logout .logout-text {
+    display: none;
+  }
+
+  .navbar-logo span {
+    font-size: 13px;
+  }
+}
+
+/* Desde 480px hacia arriba en móvil, mostrar texto del botón */
+@media (min-width: 480px) and (max-width: 900px) {
+  .navbar-user .btn-logout .logout-text {
+    display: inline;
   }
 }
 
@@ -290,7 +324,7 @@ body {
   font-size: 22px;
   color: #1a1a1a;
   cursor: pointer;
-  margin-right: 8px;
+  margin-right: 4px;
   padding: 4px 8px;
   border-radius: 6px;
 }

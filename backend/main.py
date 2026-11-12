@@ -158,12 +158,12 @@ def _seed_roles_y_admin():
 
         admin_rol = session.exec(select(Rol).where(Rol.nombre == "Administrador")).first()
         if admin_rol:
-            admin = session.exec(select(Usuario).where(Usuario.correo == "admin@sena.edu.co")).first()
+            admin = session.exec(select(Usuario).where(Usuario.correo == "essg34682735@soy.sena.edu.co")).first()
             if not admin:
                 session.add(Usuario(
-                    nombre="Admin",
-                    apellido="Sistema",
-                    correo="admin@sena.edu.co",
+                    nombre="Eileen",
+                    apellido="Sanchez",
+                    correo="essg34682735@soy.sena.edu.co",
                     contrasena=password_hash.hash(_admin_initial_password()),
                     id_rol=admin_rol.id_rol,
                     activo=True
