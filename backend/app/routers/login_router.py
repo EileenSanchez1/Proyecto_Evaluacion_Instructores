@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.config.database import get_session
@@ -299,24 +300,42 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
 
     codigo, email_ok = LoginService.enviar_codigo_admin(correo)
 
-    # Si el correo falla (admin@sena.edu.co no es un buzón real), devolver el código en la respuesta
+    # Flujo profesional: el código SOLO va al correo del admin.
+    # No se muestra en pantalla ni se autocompleta.
+    # Emergencia: ALLOW_SHOW_ADMIN_CODE=true en el servidor (quitar después).
+    show_code = (
+        not email_ok
+        and (os.getenv("ALLOW_SHOW_ADMIN_CODE") or "").strip().lower()
+        in ("1", "true", "yes", "on")
+    )
+
+    if email_ok:
+        mensaje = (
+            "Se envió un código de verificación a tu correo. "
+            "Revisa bandeja de entrada y spam; es válido unos 10 minutos."
+        )
+    else:
+        mensaje = (
+            "No se pudo enviar el correo de verificación. "
+            "El administrador del sistema debe configurar el envío de correos (Resend o SMTP)."
+        )
+
     respuesta = {
-        "mensaje": (
-            "Se envió un código de verificación a tu correo. Ingrésalo para completar el acceso."
-            if email_ok
-            else "No se pudo enviar el correo. Usa el código temporal de abajo (válido ~10 min)."
-        ),
+        "mensaje": mensaje,
         "requiere_codigo": True,
         "correo": correo,
         "email_enviado": email_ok,
     }
-    if not email_ok:
+    if show_code:
         respuesta["codigo_temporal"] = codigo
+        respuesta["mensaje"] = (
+            "No se pudo enviar el correo. Código temporal (solo recuperación): " + codigo
+        )
         print(
-            f"\n========== CODIGO ADMIN ==========\n"
+            f"\n========== CODIGO ADMIN (ALLOW_SHOW_ADMIN_CODE) ==========\n"
             f"  Correo: {correo}\n"
             f"  Código: {codigo}\n"
-            f"==================================\n"
+            f"==========================================================\n"
         )
     return respuesta
 
