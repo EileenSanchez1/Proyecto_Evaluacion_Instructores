@@ -1,9 +1,17 @@
 """
-Envío de correos (Gmail SMTP / Resend).
+Envío de correos con remitente Gmail (evaluacion.sena.instructores@gmail.com).
 
-Prioridad: Resend si hay RESEND_API_KEY → si no, SMTP Gmail.
+Prioridad:
+  1) Google Apps Script (HTTPS)  → funciona en Render free, sale DESDE tu Gmail
+  2) SMTP Gmail                  → funciona en local / hosts que permitan SMTP
+  3) Resend (opcional)           → solo si configuras RESEND_API_KEY
 
-Variables Railway/Render (Environment):
+Variables de entorno:
+  # --- Recomendado en Render (remitente = tu Gmail) ---
+  GMAIL_SCRIPT_URL=https://script.google.com/macros/s/XXXX/exec
+  GMAIL_SCRIPT_SECRET=una_clave_secreta_tuya
+
+  # --- SMTP (local o hosting que no bloquee 587/465) ---
   SMTP_HOST=smtp.gmail.com
   SMTP_PORT=587
   SMTP_USER=evaluacion.sena.instructores@gmail.com
@@ -50,6 +58,63 @@ def smtp_configurado() -> bool:
 
 def _resend_configurado() -> bool:
     return bool((os.getenv("RESEND_API_KEY") or "").strip())
+
+
+def _gmail_script_configurado() -> bool:
+    return bool((os.getenv("GMAIL_SCRIPT_URL") or "").strip())
+
+
+def _enviar_con_gmail_script(
+    destinatario: str,
+    asunto: str,
+    cuerpo_texto: str,
+    cuerpo_html: str | None,
+) -> bool:
+    """
+    Llama a un Google Apps Script desplegado como Web App.
+    El script envía el correo con GmailApp → el FROM es tu cuenta Gmail.
+    Funciona en Render porque solo usa HTTPS (puerto 443).
+    """
+    url = (os.getenv("GMAIL_SCRIPT_URL") or "").strip()
+    secret = (os.getenv("GMAIL_SCRIPT_SECRET") or "").strip()
+    if not url:
+        return False
+
+    payload = {
+        "to": destinatario,
+        "subject": asunto,
+        "text": cuerpo_texto or "",
+        "html": cuerpo_html or "",
+        "secret": secret,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        # Apps Script suele redirigir; urlopen sigue redirects por defecto
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            if 200 <= resp.status < 300:
+                # El script responde JSON {"ok": true} o texto "ok"
+                low = body.strip().lower()
+                if "ok" in low or "true" in low or body.strip() == "":
+                    print(f"[EMAIL] ✓ Gmail Script → {destinatario} | {asunto}")
+                    return True
+                print(f"[EMAIL] ✗ Gmail Script respuesta: {body[:300]}")
+                return False
+            print(f"[EMAIL] ✗ Gmail Script status {resp.status}: {body[:300]}")
+            return False
+    except urllib.error.HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        print(f"[EMAIL] ✗ Gmail Script HTTP {e.code}: {err[:300]}")
+        return False
+    except Exception as e:
+        print(f"[EMAIL] ✗ Gmail Script error: {type(e).__name__}: {e}")
+        return False
 
 
 def _enviar_con_resend(
@@ -149,20 +214,36 @@ def _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html) -> bool:
 
 
 def enviar_correo(destinatario, asunto, cuerpo_texto, cuerpo_html=None) -> bool:
-    """Envía SOLO al destinatario indicado (admin, aprendiz, instructor, etc.)."""
+    """
+    Envía SOLO al destinatario indicado.
+    Prioridad: Gmail Apps Script (tu Gmail en Render) → SMTP → Resend.
+    """
     destinatario = (destinatario or "").strip().lower()
     if not destinatario:
         return False
+
+    # 1) Apps Script: sale desde tu Gmail y funciona en Render free
+    if _gmail_script_configurado():
+        if _enviar_con_gmail_script(destinatario, asunto, cuerpo_texto, cuerpo_html):
+            return True
+        print("[EMAIL] Gmail Script falló; intentando SMTP...")
+
+    # 2) SMTP directo (local / hosts que no bloqueen)
+    if smtp_configurado():
+        if _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html):
+            return True
+        print("[EMAIL] SMTP falló (en Render free suele estar bloqueado).")
+
+    # 3) Resend opcional
     if _resend_configurado():
         if _enviar_con_resend(destinatario, asunto, cuerpo_texto, cuerpo_html):
             return True
-        print("[EMAIL] Resend falló; intentando SMTP...")
-    if smtp_configurado():
-        return _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html)
-    if not _resend_configurado():
+
+    if not (_gmail_script_configurado() or smtp_configurado() or _resend_configurado()):
         print(
-            "\n[EMAIL] Sin proveedor. Configura SMTP_USER + SMTP_PASSWORD "
-            f"(Gmail App Password). No se envió a {destinatario}.\n"
+            "\n[EMAIL] Sin proveedor. En Render usa GMAIL_SCRIPT_URL "
+            "(Google Apps Script con tu Gmail). "
+            f"No se envió a {destinatario}.\n"
         )
     return False
 
