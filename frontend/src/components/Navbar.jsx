@@ -17,32 +17,49 @@ function Navbar() {
   };
 
   const abrirMenu = () => {
-    document.querySelector(".sidebar")?.classList.toggle("sidebar--open");
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.querySelector(".sidebar-overlay");
+    sidebar?.classList.toggle("sidebar--open");
+    overlay?.classList.toggle("visible");
+  };
+
+  const cerrarMenu = () => {
+    document.querySelector(".sidebar")?.classList.remove("sidebar--open");
+    document.querySelector(".sidebar-overlay")?.classList.remove("visible");
   };
 
   return (
-    <nav className="navbar">
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <button className="navbar-hamburger" onClick={abrirMenu} aria-label="Abrir menú">
-          <i className="bi bi-list"></i>
-        </button>
-        <div className="navbar-logo">
-          <i className="bi bi-mortarboard-fill"></i>
-          <span>SENA Evaluación</span>
+    <>
+      <nav className="navbar">
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            className="navbar-hamburger"
+            onClick={abrirMenu}
+            aria-label="Abrir menú"
+          >
+            <i className="bi bi-list"></i>
+          </button>
+          <div className="navbar-logo">
+            <i className="bi bi-mortarboard-fill"></i>
+            <span>SENA Evaluación</span>
+          </div>
         </div>
-      </div>
 
-      <div className="navbar-user">
-        <div className="user-avatar">{inicial}</div>
-        <div className="user-info">
-          <span className="user-name">{nombreCompleto}</span>
-          <span className="user-role">{usuario?.rol || "Aprendiz"}</span>
+        <div className="navbar-user">
+          <div className="user-avatar">{inicial}</div>
+          <div className="user-info">
+            <span className="user-name">{nombreCompleto}</span>
+            <span className="user-role">{usuario?.rol || "Aprendiz"}</span>
+          </div>
+          <button className="btn-logout" onClick={manejarLogout}>
+            <i className="bi bi-box-arrow-right"></i> Cerrar sesión
+          </button>
         </div>
-        <button className="btn-logout" onClick={manejarLogout}>
-          <i className="bi bi-box-arrow-right"></i> Cerrar sesión
-        </button>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Overlay para cerrar el menú en móvil al tocar fuera */}
+      <div className="sidebar-overlay" onClick={cerrarMenu}></div>
+    </>
   );
 }
 

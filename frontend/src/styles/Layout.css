@@ -94,6 +94,7 @@ body {
   color: rgba(255, 255, 255, 0.7);
   transition: background 0.15s, color 0.15s;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .nav-item i {
@@ -139,7 +140,7 @@ body {
   flex-direction: column;
   min-width: 0;
   margin-left: var(--sidebar-w);
-  overflow-x: hidden; /* evita que el contenido se meta debajo del sidebar al compartir pantalla / redimensionar */
+  overflow-x: hidden;
   width: calc(100% - var(--sidebar-w));
   max-width: 100%;
   box-sizing: border-box;
@@ -231,7 +232,7 @@ body {
 .main-content {
   flex: 1;
   min-height: calc(100vh - var(--topbar-h));
-  min-width: 0; /* evita que el contenido se desborde bajo la sidebar al redimensionar / pantalla compartida */
+  min-width: 0;
   overflow-x: auto;
   width: 100%;
   box-sizing: border-box;
@@ -242,6 +243,7 @@ body {
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
   }
 
   .sidebar.sidebar--open {
@@ -250,10 +252,34 @@ body {
 
   .layout-body {
     margin-left: 0;
+    width: 100%;
   }
 
   .navbar-hamburger {
     display: inline-flex !important;
+  }
+
+  /* Overlay oscuro detrás del menú (móvil) */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 99;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sidebar-overlay.visible {
+    display: block;
+  }
+
+  /* Mejorar legibilidad del usuario en navbar móvil */
+  .navbar-user .user-info {
+    display: none;
+  }
+
+  .navbar {
+    padding: 0 12px;
   }
 }
 
@@ -261,10 +287,16 @@ body {
   display: none;
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 22px;
   color: #1a1a1a;
   cursor: pointer;
-  margin-right: 10px;
+  margin-right: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.navbar-hamburger:hover {
+  background: #f3f4f6;
 }
 
 /* Badge de novedades nuevas (admin) */
