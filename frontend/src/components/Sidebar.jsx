@@ -37,7 +37,17 @@ function Sidebar() {
   }, [adminOCoordinador]);
 
   const badgeNovedades =
-    novedadesNuevas > 99 ? "99+" : novedadesNuevas > 0 ? String(novedadesNuevas) : null;
+    novedadesNuevas > 99
+      ? "99+"
+      : novedadesNuevas > 0
+        ? String(novedadesNuevas)
+        : null;
+
+  // Cierra el menú en móvil al elegir una opción
+  const cerrarMenu = () => {
+    document.querySelector(".sidebar")?.classList.remove("sidebar--open");
+    document.querySelector(".sidebar-overlay")?.classList.remove("visible");
+  };
 
   return (
     <aside className="sidebar">
@@ -53,6 +63,7 @@ function Sidebar() {
         <NavLink
           to="/"
           end
+          onClick={cerrarMenu}
           className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
         >
           <i className="bi bi-house"></i> Inicio
@@ -60,6 +71,7 @@ function Sidebar() {
 
         <NavLink
           to="/cambiar-contrasena"
+          onClick={cerrarMenu}
           className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
         >
           <i className="bi bi-key"></i> Cambiar contraseña
@@ -68,6 +80,7 @@ function Sidebar() {
         {instructor && (
           <NavLink
             to="/perfil-instructor"
+            onClick={cerrarMenu}
             className={({ isActive }) =>
               `nav-item ${isActive ? "active" : ""}`
             }
@@ -79,6 +92,7 @@ function Sidebar() {
         {!instructor && (
           <NavLink
             to="/instructores"
+            onClick={cerrarMenu}
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
             <i className="bi bi-people"></i> Instructores
@@ -89,6 +103,7 @@ function Sidebar() {
         {esAprendiz && (
           <NavLink
             to="/evaluaciones"
+            onClick={cerrarMenu}
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
             <i className="bi bi-clipboard-check"></i> Evaluaciones
@@ -98,6 +113,7 @@ function Sidebar() {
         {admin && (
           <NavLink
             to="/preguntas"
+            onClick={cerrarMenu}
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
             <i className="bi bi-journal-bookmark"></i> Preguntas
@@ -108,6 +124,7 @@ function Sidebar() {
           <>
             <NavLink
               to="/novedades"
+              onClick={cerrarMenu}
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
@@ -120,6 +137,7 @@ function Sidebar() {
 
             <NavLink
               to="/fichas"
+              onClick={cerrarMenu}
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
@@ -129,6 +147,7 @@ function Sidebar() {
 
             <NavLink
               to="/resultados-aprendizaje"
+              onClick={cerrarMenu}
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
@@ -138,6 +157,7 @@ function Sidebar() {
 
             <NavLink
               to="/periodos"
+              onClick={cerrarMenu}
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
@@ -148,6 +168,7 @@ function Sidebar() {
             {/* Antes: Historial. Ahora se muestra como Evaluaciones (misma lógica /historial) */}
             <NavLink
               to="/historial"
+              onClick={cerrarMenu}
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
@@ -157,6 +178,7 @@ function Sidebar() {
 
             <NavLink
               to="/reportes"
+              onClick={cerrarMenu}
               className={({ isActive }) =>
                 `nav-item ${isActive ? "active" : ""}`
               }
@@ -169,6 +191,7 @@ function Sidebar() {
         {admin && (
           <NavLink
             to="/administradores"
+            onClick={cerrarMenu}
             className={({ isActive }) =>
               `nav-item ${isActive ? "active" : ""}`
             }
@@ -181,6 +204,7 @@ function Sidebar() {
         {esAprendiz && (
           <NavLink
             to="/contacto"
+            onClick={cerrarMenu}
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
             <i className="bi bi-envelope"></i> Contacto / Novedad
