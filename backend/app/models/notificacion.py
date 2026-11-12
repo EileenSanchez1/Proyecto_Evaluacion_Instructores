@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlmodel import SQLModel, Field
@@ -35,7 +35,7 @@ class Notificacion(SQLModel, table=True):
     )
 
     fecha: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=lambda: datetime.now(timezone.utc),
         nullable=False
     )
 

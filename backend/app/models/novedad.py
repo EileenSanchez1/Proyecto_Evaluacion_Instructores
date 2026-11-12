@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field
 
@@ -12,4 +12,4 @@ class Novedad(SQLModel, table=True):
     ficha: str = Field(max_length=50, nullable=False)
     mensaje: str = Field(max_length=2000, nullable=False)
     leido: bool = Field(default=False, nullable=False)
-    fecha: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    fecha: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
