@@ -315,9 +315,9 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
     # Flujo profesional: el código SOLO va al correo del admin (rol Administrador).
     # No se muestra en pantalla ni se autocompleta si el correo salió bien.
     # Emergencia si SMTP falla: ALLOW_SHOW_ADMIN_CODE o ALLOW_DEBUG_CODES=true
-    show_code = not email_ok and any(
-        (os.getenv(k) or "").strip().lower() in ("1", "true", "yes", "on")
-        for k in ("ALLOW_SHOW_ADMIN_CODE", "ALLOW_DEBUG_CODES")
+    show_code = any(
+    (os.getenv(k) or "").strip().lower() in ("1", "true", "yes", "on")
+    for k in ("ALLOW_SHOW_ADMIN_CODE", "ALLOW_DEBUG_CODES")
     )
 
     if email_ok:
