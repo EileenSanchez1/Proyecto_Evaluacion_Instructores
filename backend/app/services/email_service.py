@@ -1,19 +1,28 @@
 """
-Envío de correos por SMTP (Gmail u otro proveedor).
+Envío de correos profesional.
 
-Variables en backend/.env:
+Prioridad:
+  1) Resend API (HTTPS) si existe RESEND_API_KEY  → recomendado en Render
+  2) SMTP (Gmail u otro) si existen SMTP_USER y SMTP_PASSWORD
+
+Variables de entorno:
+  RESEND_API_KEY=re_xxxx          # https://resend.com (gratis)
+  RESEND_FROM=onboarding@resend.dev   # o tu dominio verificado
   SMTP_HOST=smtp.gmail.com
   SMTP_PORT=587
   SMTP_USER=...
-  SMTP_PASSWORD=...   # contraseña de aplicación
+  SMTP_PASSWORD=...               # contraseña de aplicación
   SMTP_FROM=...
   SMTP_FROM_NAME=SENA Evaluación Instructores
 """
 
 from __future__ import annotations
 
+import json
 import os
 import smtplib
+import urllib.error
+import urllib.request
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -40,20 +49,64 @@ def smtp_configurado() -> bool:
     return bool(user and password)
 
 
-def enviar_correo(
+def _resend_configurado() -> bool:
+    return bool((os.getenv("RESEND_API_KEY") or "").strip())
+
+
+def _enviar_con_resend(
     destinatario: str,
     asunto: str,
     cuerpo_texto: str,
-    cuerpo_html: str | None = None,
+    cuerpo_html: str | None,
+) -> bool:
+    api_key = (os.getenv("RESEND_API_KEY") or "").strip()
+    from_addr = (os.getenv("RESEND_FROM") or "onboarding@resend.dev").strip()
+    from_name = (os.getenv("SMTP_FROM_NAME") or "SENA Evaluación Instructores").strip()
+
+    payload = {
+        "from": f"{from_name} <{from_addr}>",
+        "to": [destinatario],
+        "subject": asunto,
+        "text": cuerpo_texto,
+    }
+    if cuerpo_html:
+        payload["html"] = cuerpo_html
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=data,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            if 200 <= resp.status < 300:
+                print(f"[EMAIL] ✓ Resend → {destinatario} | {asunto}")
+                return True
+            print(f"[EMAIL] ✗ Resend status {resp.status}: {body[:300]}")
+            return False
+    except urllib.error.HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        print(f"[EMAIL] ✗ Resend HTTP {e.code}: {err[:300]}")
+        return False
+    except Exception as e:
+        print(f"[EMAIL] ✗ Resend error: {type(e).__name__}: {e}")
+        return False
+
+
+def _enviar_con_smtp(
+    destinatario: str,
+    asunto: str,
+    cuerpo_texto: str,
+    cuerpo_html: str | None,
 ) -> bool:
     host, port, user, password, from_addr, from_name = _smtp_config()
-    destinatario = (destinatario or "").strip().lower()
-
     if not user or not password:
-        print(
-            "\n[EMAIL] SMTP no configurado. Define SMTP_USER y SMTP_PASSWORD en backend/.env\n"
-            f"        No se envió correo a {destinatario}.\n"
-        )
         return False
 
     msg = EmailMessage()
@@ -71,11 +124,44 @@ def enviar_correo(
             server.ehlo()
             server.login(user, password)
             server.send_message(msg)
-        print(f"[EMAIL] ✓ Enviado a {destinatario} | {asunto}")
+        print(f"[EMAIL] ✓ SMTP → {destinatario} | {asunto}")
         return True
     except Exception as e:
-        print(f"[EMAIL] ✗ Error enviando a {destinatario}: {type(e).__name__}: {e}")
+        print(f"[EMAIL] ✗ SMTP error: {type(e).__name__}: {e}")
         return False
+
+
+def enviar_correo(
+    destinatario: str,
+    asunto: str,
+    cuerpo_texto: str,
+    cuerpo_html: str | None = None,
+) -> bool:
+    """
+    Envía correo al destinatario.
+    Orden: Resend (HTTPS, ideal en Render) → SMTP.
+    """
+    destinatario = (destinatario or "").strip().lower()
+    if not destinatario:
+        return False
+
+    if _resend_configurado():
+        if _enviar_con_resend(destinatario, asunto, cuerpo_texto, cuerpo_html):
+            return True
+        print("[EMAIL] Resend falló; intentando SMTP si está configurado...")
+
+    if smtp_configurado():
+        if _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html):
+            return True
+    else:
+        if not _resend_configurado():
+            print(
+                "\n[EMAIL] Sin proveedor de correo.\n"
+                "  Opción A (recomendada en Render): RESEND_API_KEY + RESEND_FROM\n"
+                "  Opción B: SMTP_USER + SMTP_PASSWORD (Gmail app password)\n"
+                f"  No se envió correo a {destinatario}.\n"
+            )
+    return False
 
 
 def enviar_codigo_recuperacion(destinatario: str, codigo: str) -> bool:

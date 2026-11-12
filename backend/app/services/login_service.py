@@ -162,14 +162,25 @@ class LoginService:
             print("[EMAIL] email_service no disponible para código admin.")
 
         if not email_ok:
-            # Visible en logs de Render / Docker cuando SMTP falla o no está configurado
-            print(
-                f"\n========== CODIGO ADMIN (SMTP falló o no configurado) ==========\n"
-                f"  Correo: {correo}\n"
-                f"  Código: {codigo}\n"
-                f"  Válido ~10 minutos. Úsalo en «Soy Admin».\n"
-                f"================================================================\n"
+            # Por seguridad el código NO se imprime en logs de producción.
+            # Solo si ALLOW_SHOW_ADMIN_CODE=true (recuperación de emergencia).
+            import os
+            show = (os.getenv("ALLOW_SHOW_ADMIN_CODE") or "").strip().lower() in (
+                "1", "true", "yes", "on"
             )
+            if show:
+                print(
+                    f"\n========== CODIGO ADMIN (ALLOW_SHOW_ADMIN_CODE) ==========\n"
+                    f"  Correo: {correo}\n"
+                    f"  Código: {codigo}\n"
+                    f"==========================================================\n"
+                )
+            else:
+                print(
+                    "[EMAIL] Código admin generado pero no enviado. "
+                    "Configura RESEND_API_KEY o SMTP. "
+                    "No se imprime el valor por seguridad."
+                )
 
         return codigo, email_ok
 
