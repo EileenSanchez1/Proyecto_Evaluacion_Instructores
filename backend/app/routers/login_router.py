@@ -299,16 +299,12 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
 
     codigo, email_ok = LoginService.enviar_codigo_admin(correo)
 
-    # Si el correo no se envió (SMTP no configurado o falló), devolvemos el
-    # código una sola vez en la respuesta para que puedas entrar sin consola.
+    # Si el correo falla (admin@sena.edu.co no es un buzón real), devolver el código en la respuesta
     respuesta = {
         "mensaje": (
             "Se envió un código de verificación a tu correo. Ingrésalo para completar el acceso."
             if email_ok
-            else (
-                "No se pudo enviar el correo. Usa el código temporal que aparece abajo "
-                "(también está en los logs del backend)."
-            )
+            else "No se pudo enviar el correo. Usa el código temporal de abajo (válido ~10 min)."
         ),
         "requiere_codigo": True,
         "correo": correo,
@@ -316,6 +312,12 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
     }
     if not email_ok:
         respuesta["codigo_temporal"] = codigo
+        print(
+            f"\n========== CODIGO ADMIN ==========\n"
+            f"  Correo: {correo}\n"
+            f"  Código: {codigo}\n"
+            f"==================================\n"
+        )
     return respuesta
 
 
