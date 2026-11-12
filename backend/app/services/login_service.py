@@ -50,7 +50,12 @@ class LoginService:
 
     @staticmethod
     def validar_login(session: Session, correo: str, contrasena: str):
+        correo = (correo or "").strip().lower()
         usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
+        if not usuario:
+            usuario = session.exec(
+                select(Usuario).where(Usuario.correo.ilike(correo))
+            ).first()
         if not usuario:
             return None, "Correo o contraseña incorrectos"
         if not usuario.activo:
@@ -61,7 +66,11 @@ class LoginService:
 
     @staticmethod
     def buscar_por_correo(session: Session, correo: str):
-        return session.exec(select(Usuario).where(Usuario.correo == correo)).first()
+        correo = (correo or "").strip().lower()
+        u = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
+        if u:
+            return u
+        return session.exec(select(Usuario).where(Usuario.correo.ilike(correo))).first()
 
     @staticmethod
     def restablecer_password(session: Session, usuario: Usuario, nueva_contrasena: str):

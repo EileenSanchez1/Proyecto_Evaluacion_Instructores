@@ -88,12 +88,24 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
 # =========================
 @router.post("/recuperar", response_model=dict)
 def solicitar_recuperacion(datos: SolicitarRecuperacionRequest, session: Session = Depends(get_session)):
-    correo = datos.correo.strip().lower()
-    usuario = LoginService.buscar_por_correo(session, correo)
-    if usuario:
-        LoginService.enviar_codigo_recuperacion(usuario.correo.strip().lower())
+    """
+    Recuperación para CUALQUIER rol (Admin, Instructor, Aprendiz, Coordinador).
+    Siempre responde 200. El código se envía por Gmail SMTP al correo del usuario.
+    """
+    correo = (datos.correo or "").strip().lower()
+    try:
+        usuario = LoginService.buscar_por_correo(session, correo)
+        if usuario and getattr(usuario, "activo", True):
+            LoginService.enviar_codigo_recuperacion(usuario.correo.strip().lower())
+        else:
+            print(f"[RECUPERAR] Correo no registrado o inactivo: {correo}")
+    except Exception as e:
+        print(f"[RECUPERAR] Error interno: {type(e).__name__}: {e}")
     return {
-        "mensaje": "Si el correo está registrado, recibirás un código de verificación en unos minutos. Revisa tu bandeja de entrada y spam."
+        "mensaje": (
+            "Si el correo está registrado, recibirás un código de verificación "
+            "en unos minutos. Revisa tu bandeja de entrada y spam."
+        )
     }
 
 @router.post("/verificar-codigo", response_model=dict)

@@ -40,12 +40,27 @@ function RecuperarContrasena() {
     }
     try {
       setCargando(true);
-      await solicitarRecuperacion(correo.trim());
+      await solicitarRecuperacion(correo.trim().toLowerCase());
       setPaso(2);
-      setMensaje("Si el correo está registrado, recibirás un código. Revisa tu bandeja (o la consola del backend en desarrollo).");
+      setMensaje(
+        "Si el correo está registrado, recibirás un código. Revisa bandeja de entrada y spam."
+      );
     } catch (error) {
       setEsError(true);
-      setMensaje(error.response?.data?.detail || "Error al solicitar recuperación.");
+      if (!error.response) {
+        setMensaje(
+          "No se pudo contactar al servidor. Revisa VITE_API_URL en el frontend y CORS_ORIGINS en el backend."
+        );
+      } else {
+        const d = error.response?.data?.detail;
+        setMensaje(
+          typeof d === "string"
+            ? d
+            : Array.isArray(d)
+              ? d.map((e) => e.msg || JSON.stringify(e)).join(" ")
+              : "Error al solicitar recuperación."
+        );
+      }
     } finally {
       setCargando(false);
     }
