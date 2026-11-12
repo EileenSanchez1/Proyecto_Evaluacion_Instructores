@@ -203,7 +203,15 @@ function Login() {
         contrasena,
       });
       setPasoAdmin(2);
-      setMensaje(res.mensaje || "Se envió un código a tu correo. Ingrésalo para continuar.");
+      if (res.codigo_temporal) {
+        // SMTP falló o no está configurado: el backend devuelve el código una vez
+        setMensaje(
+          `${res.mensaje || "No se pudo enviar el correo."} Código temporal: ${res.codigo_temporal}`
+        );
+        setCodigo(String(res.codigo_temporal));
+      } else {
+        setMensaje(res.mensaje || "Se envió un código a tu correo. Ingrésalo para continuar.");
+      }
     } catch (err) {
       setEsError(true);
       setMensaje(err.response?.data?.detail || "Credenciales incorrectas o no eres administrador.");

@@ -297,12 +297,26 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
             detail="Esta cuenta no tiene rol de administrador.",
         )
 
-    LoginService.enviar_codigo_admin(correo)
-    return {
-        "mensaje": "Se envió un código de verificación a tu correo. Ingrésalo para completar el acceso.",
+    codigo, email_ok = LoginService.enviar_codigo_admin(correo)
+
+    # Si el correo no se envió (SMTP no configurado o falló), devolvemos el
+    # código una sola vez en la respuesta para que puedas entrar sin consola.
+    respuesta = {
+        "mensaje": (
+            "Se envió un código de verificación a tu correo. Ingrésalo para completar el acceso."
+            if email_ok
+            else (
+                "No se pudo enviar el correo. Usa el código temporal que aparece abajo "
+                "(también está en los logs del backend)."
+            )
+        ),
         "requiere_codigo": True,
         "correo": correo,
+        "email_enviado": email_ok,
     }
+    if not email_ok:
+        respuesta["codigo_temporal"] = codigo
+    return respuesta
 
 
 @router.post("/admin/verificar", response_model=LoginResponse)
