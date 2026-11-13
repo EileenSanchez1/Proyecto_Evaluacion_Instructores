@@ -214,7 +214,7 @@ function Administradores() {
               <input
                 type="email"
                 className="form-control form-control-sm"
-                placeholder="juanhernandez@sena.edu.co"
+                placeholder="nombreapellido@sena.edu.co"
                 value={form.correo}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, correo: e.target.value }))
@@ -229,7 +229,7 @@ function Administradores() {
               <input
                 type="text"
                 className="form-control form-control-sm"
-                placeholder="Juan"
+                placeholder="Nombre"
                 value={form.nombre}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, nombre: e.target.value }))
@@ -243,7 +243,7 @@ function Administradores() {
               <input
                 type="text"
                 className="form-control form-control-sm"
-                placeholder="Hernández"
+                placeholder="Apellido"
                 value={form.apellido}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, apellido: e.target.value }))
