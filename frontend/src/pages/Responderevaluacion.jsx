@@ -115,12 +115,11 @@ function ResponderEvaluacion() {
         observaciones: null,
       }));
 
+      // /respuestas/bulk ya marca la evaluación como "Evaluado" por defecto.
+      // Solo enviamos la observación general si el aprendiz escribió algo.
       await crearRespuestasBulk(respuestasPayload);
-      // Observación general separada (única observación permitida)
       if (gen) {
-        await actualizarEvaluacion(Number(id), { observacion_general: gen, estado: "Evaluado" });
-      } else {
-        await actualizarEstadoEvaluacion(Number(id), "Evaluado");
+        await actualizarEvaluacion(Number(id), { observacion_general: gen });
       }
 
       navigate("/evaluaciones");

@@ -129,12 +129,19 @@ class EvaluacionService:
         if not db:
             return None
         estado_actual = (db.estado or "").strip().lower()
-        if estado_actual in ("completada", "finalizada", "enviada", "respondida", "evaluado"):
-            # Solo permitir cambiar observación u otros campos no de estado si se requiere;
-            # por seguridad, bloquear edición completa de evaluaciones ya cerradas.
-            raise ValueError(
-                "No se puede modificar una evaluación ya completada."
-            )
+        cerrados = ("completada", "finalizada", "enviada", "respondida", "evaluado")
+        if estado_actual in cerrados:
+            # Evaluación ya cerrada: solo se permite actualizar la observación general
+            # (el bulk de respuestas marca Evaluado antes de guardar la observación).
+            data = evaluacion_update.model_dump(exclude_unset=True)
+            claves = set(data.keys())
+            if not claves.issubset({"observacion_general"}):
+                raise ValueError(
+                    "No se puede modificar una evaluación ya completada."
+                )
+            # No permitir reabrir ni cambiar estado desde este camino
+            data.pop("estado", None)
+            evaluacion_update = EvaluacionUpdate(**data)
         return EvaluacionRepository.actualizar(session, evaluacion_id, evaluacion_update)
 
     @staticmethod
