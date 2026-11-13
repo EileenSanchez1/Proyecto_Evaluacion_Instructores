@@ -390,8 +390,7 @@ function Administradores() {
         <strong>Cómo transferir el admin cuando alguien se va:</strong> el
         administrador actual invita el correo del nuevo (ej.{" "}
         <code>nombreapellido@sena.edu.co</code>), verifica que pueda entrar y
-        luego desactiva la cuenta anterior. Nadie
-        necesita editar la base de datos.
+        luego desactiva la cuenta anterior.
       </p>
     </div>
   );
