@@ -8,7 +8,8 @@ import {
 } from "../utils/sesion";
 import { listarFichasPorInstructor } from "../services/Fichainstructorservice";
 import { resolverPeriodoOperativoAprendiz } from "../utils/periodoAprendiz";
-import { listarEvaluaciones } from "../services/Evaluacionservice";
+import { esEvaluacionCerrada } from "../utils/evaluacionEstado";
+import { listarEvaluaciones, listarEvaluacionesPorAprendiz } from "../services/Evaluacionservice";
 import { listarInstructores, obtenerInstructor } from "../services/instructorService";
 import { listarAprendices } from "../services/Aprendizservice";
 import { listarFichas } from "../services/FichaServices";
@@ -135,8 +136,11 @@ function Home() {
             setPeriodoCerrado(!!contexto.sinPeriodoActivo);
           }
 
+          const idAprendiz = usuario?.id_aprendiz;
           const [evals, preguntas] = await Promise.all([
-            listarEvaluaciones().catch(() => []),
+            idAprendiz
+              ? listarEvaluacionesPorAprendiz(idAprendiz).catch(() => [])
+              : Promise.resolve([]),
             listarPreguntasActivas().catch(() => []),
           ]);
 
@@ -178,7 +182,7 @@ function Home() {
     };
   }, [esAdminCoord, esInstructorUser, usuario]);
 
-  const evaluacionesRealizadas = misEvaluaciones.filter((e) => e.estado === "Evaluado").length;
+  const evaluacionesRealizadas = misEvaluaciones.filter((e) => esEvaluacionCerrada(e.estado)).length;
   const progresoEvaluacion =
     instructoresAsignados.length > 0
       ? Math.round((evaluacionesRealizadas / instructoresAsignados.length) * 100)
@@ -187,7 +191,9 @@ function Home() {
   const instructoresPendientes = instructoresAsignados.filter(
     (inst) =>
       !misEvaluaciones.some(
-        (e) => e.id_instructor === inst.id_instructor && e.estado === "Evaluado"
+        (e) =>
+          Number(e.id_instructor) === Number(inst.id_instructor) &&
+          esEvaluacionCerrada(e.estado)
       )
   );
 

@@ -77,7 +77,21 @@ def buscar_evaluacion(
 def listar_por_aprendiz(
     id_aprendiz: int,
     session: Session = Depends(get_session),
+    usuario: Usuario = Depends(get_current_user),
 ):
+    """Aprendiz solo puede listar las suyas; admin/coord pueden listar cualquiera."""
+    if usuario.rol and usuario.rol.nombre == "Aprendiz":
+        from app.models.aprendiz import Aprendiz
+        from sqlmodel import select
+
+        aprendiz = session.exec(
+            select(Aprendiz).where(Aprendiz.id_usuario == usuario.id_usuario)
+        ).first()
+        if not aprendiz or aprendiz.id_aprendiz != id_aprendiz:
+            raise HTTPException(
+                status_code=403,
+                detail="Solo puedes consultar tus propias evaluaciones.",
+            )
     return EvaluacionService.listar_por_aprendiz(session, id_aprendiz)
 
 
