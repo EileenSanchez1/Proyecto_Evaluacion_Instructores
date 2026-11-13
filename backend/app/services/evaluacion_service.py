@@ -20,18 +20,23 @@ class EvaluacionService:
         """
         Regla de negocio crítica:
         - El aprendiz solo puede evaluar instructores asignados (activos)
-          a su misma ficha y periodo.
+          a su misma ficha en el periodo de evaluación (periodo operativo activo).
+        - El id_periodo del aprendiz es de registro y puede diferir del periodo
+          activo; no se exige coincidencia exacta.
         - Evita evaluaciones fuera de contexto (otra ficha / periodo cerrado).
         """
         aprendiz = AprendizRepository.buscar(session, id_aprendiz)
         if not aprendiz:
             raise ValueError("El aprendiz no existe.")
 
-        if getattr(aprendiz, "id_periodo", None) != id_periodo:
+        if not getattr(aprendiz, "id_ficha", None):
             raise ValueError(
-                "El periodo de la evaluación no coincide con el periodo del aprendiz."
+                "El aprendiz no tiene ficha de formación asignada. Contacta al coordinador."
             )
 
+        # El id_periodo del aprendiz es el de registro/matrícula y puede quedar
+        # desfasado respecto al periodo operativo activo. La validación real es:
+        # instructor activo en la misma ficha del aprendiz para el periodo de evaluación.
         asignacion = FichaInstructorRepository.buscar_asignacion(
             session,
             id_ficha=aprendiz.id_ficha,
@@ -41,7 +46,7 @@ class EvaluacionService:
         )
         if not asignacion:
             raise ValueError(
-                "El instructor no está asignado (activo) a la ficha y periodo del aprendiz. "
+                "El instructor no está asignado (activo) a la ficha del aprendiz en este periodo. "
                 "No se puede iniciar ni registrar esta evaluación."
             )
 
