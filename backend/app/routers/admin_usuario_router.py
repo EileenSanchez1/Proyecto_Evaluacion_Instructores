@@ -5,7 +5,6 @@ Solo el rol Administrador puede:
 - Listar administradores
 - Invitar / promover a Administrador por correo
 - Desactivar un administrador
-- Degradar a Coordinador
 
 Regla de seguridad: siempre debe quedar al menos un Administrador activo.
 """
@@ -277,40 +276,3 @@ def reactivar_administrador(
     }
 
 
-@router.post(
-    "/{id_usuario}/degradar-coordinador",
-    dependencies=[Depends(require_roles("Administrador"))],
-)
-def degradar_a_coordinador(
-    id_usuario: int,
-    session: Session = Depends(get_session),
-    actual: Usuario = Depends(get_current_user),
-):
-    """
-    Quita el rol Administrador y deja al usuario como Coordinador.
-    Útil cuando el coordinador anterior sigue en el centro pero ya no debe ser admin.
-    """
-    usuario = session.get(Usuario, id_usuario)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-    if not _es_admin(usuario):
-        raise HTTPException(status_code=400, detail="El usuario no es administrador.")
-
-    if usuario.activo and _contar_admins_activos(session, excluir_id=id_usuario) < 1:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "No se puede degradar: debe quedar al menos un administrador activo. "
-                "Promueve primero a la persona que asumirá el rol."
-            ),
-        )
-
-    rol_coord = _rol_por_nombre(session, "Coordinador")
-    usuario.id_rol = rol_coord.id_rol
-    session.add(usuario)
-    session.commit()
-    session.refresh(usuario)
-    return {
-        "mensaje": f"{usuario.correo} ahora es Coordinador (ya no es Administrador).",
-        "usuario": _usuario_a_dict(usuario),
-    }
