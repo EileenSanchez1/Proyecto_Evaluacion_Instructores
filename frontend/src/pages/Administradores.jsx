@@ -123,8 +123,7 @@ function Administradores() {
             <i className="bi bi-shield-lock"></i> Gestión de Administradores
           </h1>
           <p className="subtitulo">
-            Transfiere el rol de administrador sin tocar la base de datos ni el
-            código. Siempre debe quedar al menos un administrador activo.
+            Transfiere el rol de administrador. Siempre debe quedar al menos un administrador activo.
           </p>
         </div>
       </div>
