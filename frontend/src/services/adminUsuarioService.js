@@ -27,7 +27,4 @@ export const reactivarAdministrador = async (idUsuario) => {
   return res.data;
 };
 
-export const degradarACoordinador = async (idUsuario) => {
-  const res = await api.post(`${API}/${idUsuario}/degradar-coordinador`);
-  return res.data;
-};
+

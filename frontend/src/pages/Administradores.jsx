@@ -4,7 +4,6 @@ import {
   promoverAdministrador,
   desactivarAdministrador,
   reactivarAdministrador,
-  degradarACoordinador,
 } from "../services/adminUsuarioService";
 import { obtenerUsuarioSesion } from "../utils/sesion";
 import "../styles/Instructores.css";
@@ -115,24 +114,6 @@ function Administradores() {
     }
   };
 
-  const onDegradar = async (admin) => {
-    limpiarMensajes();
-    if (
-      !window.confirm(
-        `¿Quitar el rol de Administrador a ${admin.correo} y dejarlo como Coordinador?\n\n` +
-          "Podrá seguir gestionando fichas e instructores, pero ya no podrá administrar roles."
-      )
-    ) {
-      return;
-    }
-    try {
-      const res = await degradarACoordinador(admin.id_usuario);
-      setExito(res.mensaje || "Usuario degradado a Coordinador.");
-      await cargar();
-    } catch (err) {
-      setError(err.response?.data?.detail || "No se pudo degradar.");
-    }
-  };
 
   return (
     <div className="pagina-instructores">
@@ -378,14 +359,6 @@ function Administradores() {
                             >
                               Desactivar
                             </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => onDegradar(a)}
-                              title="Dejar como Coordinador"
-                            >
-                              → Coordinador
-                            </button>
                           </>
                         ) : (
                           <button
@@ -416,8 +389,8 @@ function Administradores() {
       >
         <strong>Cómo transferir el admin cuando alguien se va:</strong> el
         administrador actual invita el correo del nuevo (ej.{" "}
-        <code>juanhernandez@sena.edu.co</code>), verifica que pueda entrar y
-        luego desactiva o degrada a Coordinador la cuenta anterior. Nadie
+        <code>nombreapellido@sena.edu.co</code>), verifica que pueda entrar y
+        luego desactiva la cuenta anterior. Nadie
         necesita editar la base de datos.
       </p>
     </div>
