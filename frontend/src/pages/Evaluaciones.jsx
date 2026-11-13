@@ -6,7 +6,7 @@ import {
   listarFichasPorInstructor,
 } from "../services/Fichainstructorservice";
 import { listarInstructores, obtenerInstructor } from "../services/instructorService";
-import { iniciarEvaluacion, listarEvaluaciones } from "../services/Evaluacionservice";
+import { iniciarEvaluacion, listarEvaluaciones, listarEvaluacionesPorAprendiz } from "../services/Evaluacionservice";
 import { listarPreguntasActivas } from "../services/Preguntaservice";
 import { listarFichas } from "../services/FichaServices";
 import {
@@ -162,8 +162,11 @@ function Evaluaciones() {
           );
           const fichaInstructores = contexto.asignaciones || [];
 
+          const idAprendiz = usuario?.id_aprendiz;
           const [evals, p] = await Promise.all([
-            listarEvaluaciones().catch(() => []),
+            idAprendiz
+              ? listarEvaluacionesPorAprendiz(idAprendiz).catch(() => [])
+              : Promise.resolve([]),
             listarPreguntasActivas().catch(() => []),
           ]);
 
@@ -215,12 +218,25 @@ function Evaluaciones() {
     };
   }, [esAdminOCoord, esInstructorUser, usuario?.id_instructor, usuario?.id_ficha, usuario?.id_periodo, usuario?.id_aprendiz, periodoIdInst]);
 
-  const obtenerEstadoInstructor = (idInstructor) => {
-    const ev = evaluaciones.find(
-      (e) =>
-        e.id_instructor === idInstructor &&
-        e.id_aprendiz === usuario?.id_aprendiz
-    );
+  const obtenerEstadoInstructor = (idInstructor, idPeriodoAsignacion = null) => {
+    const idA = usuario?.id_aprendiz;
+    // Preferir evaluación del mismo periodo de la asignación (trimestre actual)
+    let ev = null;
+    if (idPeriodoAsignacion != null) {
+      ev = evaluaciones.find(
+        (e) =>
+          Number(e.id_instructor) === Number(idInstructor) &&
+          Number(e.id_aprendiz) === Number(idA) &&
+          Number(e.id_periodo) === Number(idPeriodoAsignacion)
+      );
+    }
+    if (!ev) {
+      ev = evaluaciones.find(
+        (e) =>
+          Number(e.id_instructor) === Number(idInstructor) &&
+          Number(e.id_aprendiz) === Number(idA)
+      );
+    }
     return {
       estado: ev?.estado || "Pendiente",
       id_evaluacion: ev?.id_evaluacion,
@@ -506,7 +522,8 @@ function Evaluaciones() {
             <div className="grid-evaluaciones">
               {instructores.map((inst) => {
                 const { estado, id_evaluacion } = obtenerEstadoInstructor(
-                  inst.id_instructor
+                  inst.id_instructor,
+                  inst.id_periodo
                 );
                 const yaEvaluado = esEvaluacionCerrada(estado);
 

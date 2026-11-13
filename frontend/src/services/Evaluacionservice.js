@@ -7,6 +7,12 @@ export const listarEvaluaciones = async () => {
   return response.data;
 };
 
+/** Evaluaciones del aprendiz (endpoint permitido para rol Aprendiz). */
+export const listarEvaluacionesPorAprendiz = async (idAprendiz) => {
+  const response = await api.get(`${API_URL}/aprendiz/${idAprendiz}`);
+  return response.data;
+};
+
 export const obtenerEvaluacion = async (id) => {
   const response = await api.get(`${API_URL}/${id}`);
   return response.data;
