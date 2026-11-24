@@ -36,7 +36,9 @@ class PeriodoRepository:
         return session.exec(statement).all()
 
     @staticmethod
-    def actualizar(session: Session, periodo_id: int, periodo_update: PeriodoUpdate) -> Optional[Periodo]:
+    def actualizar(
+        session: Session, periodo_id: int, periodo_update: PeriodoUpdate
+    ) -> Optional[Periodo]:
         db_periodo = session.get(Periodo, periodo_id)
         if not db_periodo:
             return None

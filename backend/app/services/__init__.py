@@ -5,3 +5,13 @@ from app.services.pregunta_service import PreguntaService
 from app.services.evaluacion_service import EvaluacionService
 from app.services.respuesta_service import RespuestaService
 from app.services.ficha_instructor_service import FichaInstructorService
+
+__all__ = [
+    "FichaService",
+    "AprendizService",
+    "InstructorService",
+    "PreguntaService",
+    "EvaluacionService",
+    "RespuestaService",
+    "FichaInstructorService",
+]

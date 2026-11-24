@@ -96,106 +96,96 @@ def _extraer_numero_ficha_metadato(texto: str) -> str | None:
     return m.group(1) if m else None
 
 
+def _es_fila_cabecera(texto: str) -> bool:
+    """True si el texto (en minúsculas) parece la fila de títulos de columnas."""
+    return (
+        ("nombre" in texto and ("apellido" in texto or "correo" in texto))
+        or "tipo de documento" in texto
+        or "correo electrónico" in texto
+        or "correo electronico" in texto
+    )
+
+
+def _indice_cabecera(textos: list[str]) -> int:
+    """Posición de la fila de títulos (0 si no se encuentra)."""
+    return next((i for i, t in enumerate(textos) if _es_fila_cabecera(t.lower())), 0)
+
+
+def _buscar_ficha_meta(textos) -> str | None:
+    """Primer número de ficha encontrado en los textos de los metadatos."""
+    for texto in textos:
+        num = _extraer_numero_ficha_metadato(texto)
+        if num:
+            return num
+    return None
+
+
+def _texto(valor) -> str:
+    return str(valor).strip() if valor is not None else ""
+
+
+def _fila_vacia(row) -> bool:
+    return not row or all(_texto(c) == "" for c in row)
+
+
+def _con_ficha(normalizada: dict[str, str], ficha_meta: str | None) -> dict[str, str]:
+    if ficha_meta and not normalizada.get("numero_ficha"):
+        normalizada["numero_ficha"] = ficha_meta
+    return normalizada
+
+
+def _ficha_meta_en_celdas(rows: list[list[Any]]) -> str | None:
+    return _buscar_ficha_meta(str(cell) for row in rows for cell in row if cell is not None)
+
+
+def _texto_fila(row) -> str:
+    return " ".join(_texto(c).lower() for c in row)
+
+
+def _normalizar_celdas(headers: list[str], row) -> dict[str, str]:
+    return {key: _texto(cell) for key, cell in zip(headers, row) if key}
+
+
 def _filas_desde_matriz(
     rows: list[list[Any]], ficha_meta: str | None = None
 ) -> list[dict[str, str]]:
     """Convierte matriz de celdas (lista de filas) en filas normalizadas."""
     if not rows:
         return []
-
     if ficha_meta is None:
-        for row in rows[:15]:
-            for cell in row:
-                if cell is None:
-                    continue
-                num = _extraer_numero_ficha_metadato(str(cell))
-                if num:
-                    ficha_meta = num
-                    break
-            if ficha_meta:
-                break
-
-    idx_header = 0
-    for i, row in enumerate(rows[:40]):
-        textos = [str(c).strip().lower() if c is not None else "" for c in row]
-        joined = " ".join(textos)
-        if (
-            ("nombre" in joined and ("apellido" in joined or "correo" in joined))
-            or "tipo de documento" in joined
-            or "correo electrónico" in joined
-            or "correo electronico" in joined
-        ):
-            idx_header = i
-            break
-
-    headers = [
-        _normalizar_cabecera(str(h) if h is not None else "")
-        for h in rows[idx_header]
+        ficha_meta = _ficha_meta_en_celdas(rows[:15])
+    idx_header = _indice_cabecera([_texto_fila(row) for row in rows[:40]])
+    headers = [_normalizar_cabecera(_texto(h)) for h in rows[idx_header]]
+    return [
+        _con_ficha(_normalizar_celdas(headers, row), ficha_meta)
+        for row in rows[idx_header + 1:]
+        if not _fila_vacia(row)
     ]
 
-    filas: list[dict[str, str]] = []
-    for row in rows[idx_header + 1 :]:
-        if not row or all(c is None or str(c).strip() == "" for c in row):
-            continue
-        normalizada: dict[str, str] = {}
-        for i, cell in enumerate(row):
-            if i >= len(headers):
-                break
-            key = headers[i]
-            if not key:
-                continue
-            normalizada[key] = str(cell).strip() if cell is not None else ""
-        if ficha_meta and not normalizada.get("numero_ficha"):
-            normalizada["numero_ficha"] = ficha_meta
-        filas.append(normalizada)
-    return filas
+
+def _decodificar(contenido: bytes | str) -> str:
+    if isinstance(contenido, str):
+        return contenido
+    if contenido.startswith(b"\xef\xbb\xbf"):
+        contenido = contenido[3:]
+    return contenido.decode("utf-8", errors="replace")
+
+
+def _normalizar_dict(row: dict) -> dict[str, str]:
+    return {_normalizar_cabecera(k): (v or "").strip() for k, v in row.items() if k is not None}
 
 
 def parsear_csv(contenido: bytes | str) -> list[dict[str, str]]:
-    if isinstance(contenido, bytes):
-        if contenido.startswith(b"\xef\xbb\xbf"):
-            contenido = contenido[3:]
-        texto = contenido.decode("utf-8", errors="replace")
-    else:
-        texto = contenido
-
-    lineas = texto.splitlines()
-    ficha_meta: str | None = None
-    for linea in lineas[:15]:
-        num = _extraer_numero_ficha_metadato(linea)
-        if num:
-            ficha_meta = num
-            break
-
-    idx_header = 0
-    for i, linea in enumerate(lineas[:30]):
-        low = linea.lower()
-        if (
-            ("nombre" in low and ("apellido" in low or "correo" in low))
-            or "tipo de documento" in low
-            or "correo electrónico" in low
-            or "correo electronico" in low
-        ):
-            idx_header = i
-            break
+    lineas = _decodificar(contenido).splitlines()
+    ficha_meta = _buscar_ficha_meta(lineas[:15])
+    idx_header = _indice_cabecera(lineas[:30])
 
     texto_util = "\n".join(lineas[idx_header:])
     primera = texto_util.splitlines()[0] if texto_util.strip() else ""
     delimiter = ";" if primera.count(";") > primera.count(",") else ","
 
     reader = csv.DictReader(io.StringIO(texto_util), delimiter=delimiter)
-    filas: list[dict[str, str]] = []
-    for row in reader:
-        normalizada: dict[str, str] = {}
-        for k, v in row.items():
-            if k is None:
-                continue
-            key = _normalizar_cabecera(k)
-            normalizada[key] = (v or "").strip()
-        if ficha_meta and not normalizada.get("numero_ficha"):
-            normalizada["numero_ficha"] = ficha_meta
-        filas.append(normalizada)
-    return filas
+    return [_con_ficha(_normalizar_dict(row), ficha_meta) for row in reader]
 
 
 def parsear_xlsx_bytes(contenido: bytes) -> list[dict[str, str]]:
@@ -213,6 +203,19 @@ def _es_html(contenido: bytes) -> bool:
     return head.startswith(b"<html") or head.startswith(b"<!doctype") or b"<table" in head
 
 
+def _elegir_tabla(tablas):
+    """Tabla con columnas de nombre/correo/documento o, si no hay, la de más filas."""
+    for t in tablas:
+        cols = " ".join(str(c).lower() for c in t.columns)
+        if "nombre" in cols or "correo" in cols or "documento" in cols:
+            return t
+    return max(tablas, key=lambda t: len(t))
+
+
+def _sin_nan(valor):
+    return None if (isinstance(valor, float) and str(valor) == "nan") else valor
+
+
 def parsear_html_xls(contenido: bytes) -> list[dict[str, str]]:
     """Muchos reportes SENA se exportan como HTML con extensión .xls."""
     try:
@@ -227,21 +230,11 @@ def parsear_html_xls(contenido: bytes) -> list[dict[str, str]]:
     tablas = pd.read_html(io.StringIO(texto))
     if not tablas:
         raise ValueError("No se encontraron tablas en el archivo HTML/.xls.")
-
-    # Elegir la tabla con más filas / que tenga columnas de nombre/correo
-    mejor = None
-    for t in tablas:
-        cols = " ".join(str(c).lower() for c in t.columns)
-        if "nombre" in cols or "correo" in cols or "documento" in cols:
-            mejor = t
-            break
-    if mejor is None:
-        mejor = max(tablas, key=lambda t: len(t))
+    mejor = _elegir_tabla(tablas)
 
     # A veces la primera fila de datos es la cabecera real
     rows: list[list[Any]] = [list(mejor.columns)]
-    for _, series in mejor.iterrows():
-        rows.append([None if (isinstance(v, float) and str(v) == "nan") else v for v in series.tolist()])
+    rows += [[_sin_nan(v) for v in series.tolist()] for _, series in mejor.iterrows()]
     return _filas_desde_matriz(rows, ficha_meta=ficha_meta)
 
 
@@ -300,6 +293,34 @@ def _convertir_xls_a_xlsx(contenido: bytes) -> bytes:
             return f.read()
 
 
+EXTENSIONES_EXCEL = (".xlsx", ".xls", ".xlsb")
+
+
+def _leer_con_respaldo_html(contenido: bytes, lector, mensaje=None):
+    """Ejecuta `lector`; si falla y el archivo es HTML, lo lee como HTML.
+    Si no, lanza RuntimeError(mensaje(e)) o el error original si no hay mensaje."""
+    try:
+        return lector()
+    except Exception as e:
+        if _es_html(contenido):
+            return parsear_html_xls(contenido)
+        if mensaje is None:
+            raise
+        raise RuntimeError(mensaje(e)) from e
+
+
+def _mensaje_xlsx(e: Exception) -> str:
+    return f"No se pudo leer el Excel (.xlsx): {type(e).__name__}: {e}"
+
+
+def _mensaje_xls(e: Exception) -> str:
+    return (
+        "No se pudo leer el archivo .xls. "
+        "Ábrelo en Excel y guárdalo como «Libro de Excel (.xlsx)» e inténtalo de nuevo. "
+        f"Detalle: {type(e).__name__}: {e}"
+    )
+
+
 def parsear_excel(contenido: bytes, filename: str = "") -> list[dict[str, str]]:
     """
     Lee .xlsx (openpyxl), .xls HTML (pandas) o .xls binario (LibreOffice → xlsx).
@@ -312,49 +333,138 @@ def parsear_excel(contenido: bytes, filename: str = "") -> list[dict[str, str]]:
 
     # 2) .xlsx real
     if nombre.endswith(".xlsx") or contenido[:2] == b"PK":
-        try:
-            return parsear_xlsx_bytes(contenido)
-        except Exception as e:
-            # Si falla y parece HTML mal detectado
-            if _es_html(contenido):
-                return parsear_html_xls(contenido)
-            raise RuntimeError(
-                f"No se pudo leer el Excel (.xlsx): {type(e).__name__}: {e}"
-            ) from e
+        return _leer_con_respaldo_html(
+            contenido, lambda: parsear_xlsx_bytes(contenido), _mensaje_xlsx
+        )
 
     # 3) .xls antiguo (BIFF) → convertir con LibreOffice
-    if nombre.endswith(".xls") or nombre.endswith(".xlsb"):
-        try:
-            xlsx_bytes = _convertir_xls_a_xlsx(contenido)
-            return parsear_xlsx_bytes(xlsx_bytes)
-        except Exception as e:
-            # Último intento: HTML
-            if _es_html(contenido):
-                return parsear_html_xls(contenido)
-            raise RuntimeError(
-                "No se pudo leer el archivo .xls. "
-                "Ábrelo en Excel y guárdalo como «Libro de Excel (.xlsx)» e inténtalo de nuevo. "
-                f"Detalle: {type(e).__name__}: {e}"
-            ) from e
+    if nombre.endswith((".xls", ".xlsb")):
+        return _leer_con_respaldo_html(
+            contenido, lambda: parsear_xlsx_bytes(_convertir_xls_a_xlsx(contenido)), _mensaje_xls
+        )
 
     # 4) Intento genérico openpyxl
-    try:
-        return parsear_xlsx_bytes(contenido)
-    except Exception:
-        if _es_html(contenido):
-            return parsear_html_xls(contenido)
-        raise
+    return _leer_con_respaldo_html(contenido, lambda: parsear_xlsx_bytes(contenido))
 
 
 def parsear_archivo(contenido: bytes, filename: str) -> list[dict[str, str]]:
-    nombre = (filename or "").lower()
-    if (
-        nombre.endswith(".xlsx")
-        or nombre.endswith(".xls")
-        or nombre.endswith(".xlsb")
-    ):
+    if (filename or "").lower().endswith(EXTENSIONES_EXCEL):
         return parsear_excel(contenido, filename)
     return parsear_csv(contenido)
+
+
+MSG_FALTAN_CAMPOS = "Faltan campos obligatorios (Nombre, Apellidos, Correo Electrónico)."
+MSG_SIN_FICHA = (
+    "No se encontró número de ficha. "
+    "El Excel debe traer «Ficha de Caracterización: NNNNNN» "
+    "o la columna numero_ficha."
+)
+
+
+def _limpio(fila: dict[str, str], *claves: str) -> str:
+    """Primer valor no vacío de las claves indicadas, sin espacios."""
+    return next((fila.get(k) for k in claves if fila.get(k)), "").strip()
+
+
+def _datos_fila(fila: dict[str, str]) -> dict[str, str]:
+    return {
+        "nombre": _limpio(fila, "nombre"),
+        "apellido": _limpio(fila, "apellido"),
+        "correo": _limpio(fila, "correo").lower(),
+        "numero_ficha": _limpio(fila, "numero_ficha", "id_ficha"),
+        "id_periodo": _limpio(fila, "id_periodo"),
+    }
+
+
+def _buscar_ficha(session: Session, fichas: dict, numero_ficha: str):
+    """Ficha por número; si no existe, intenta por id."""
+    ficha = fichas.get(numero_ficha)
+    if ficha:
+        return ficha
+    try:
+        return session.get(Ficha, int(numero_ficha))
+    except ValueError:
+        return None
+
+
+class _Carga:
+    """Acumula el resultado de procesar cada fila del archivo."""
+
+    def __init__(self, session: Session, fichas: dict, ficha_fija, id_periodo_default):
+        self.session = session
+        self.fichas = fichas
+        self.ficha_fija = ficha_fija
+        self.id_periodo_default = id_periodo_default
+        self.creados: list[dict[str, Any]] = []
+        self.errores: list[dict[str, Any]] = []
+        self.omitidos: list[dict[str, Any]] = []
+
+    def _error(self, i: int, correo: str, mensaje: str) -> None:
+        self.errores.append({"fila": i, "correo": correo, "error": mensaje})
+
+    def _ficha(self, d: dict[str, str]):
+        """(ficha, mensaje_error)"""
+        if self.ficha_fija:
+            return self.ficha_fija, None
+        numero = d["numero_ficha"]
+        if not numero:
+            return None, MSG_SIN_FICHA
+        ficha = _buscar_ficha(self.session, self.fichas, numero)
+        if not ficha:
+            return None, f"Ficha '{numero}' no existe. Créala antes de cargar aprendices."
+        return ficha, None
+
+    def _periodo(self, d: dict[str, str]):
+        """(id_periodo, mensaje_error)"""
+        if not d["id_periodo"]:
+            return self.id_periodo_default, None
+        try:
+            return int(d["id_periodo"]), None
+        except ValueError:
+            return None, f"id_periodo inválido: {d['id_periodo']}"
+
+    def procesar(self, i: int, fila: dict[str, str], enviar_correo: bool) -> None:
+        d = _datos_fila(fila)
+        campos = (d["nombre"], d["apellido"], d["correo"])
+        if not any(campos):
+            return
+        if not all(campos):
+            self._error(i, d["correo"] or "(sin correo)", MSG_FALTAN_CAMPOS)
+            return
+        ficha, error = self._ficha(d)
+        if error is None:
+            id_periodo, error = self._periodo(d)
+        if error is not None:
+            self._error(i, d["correo"], error)
+            return
+        self._crear(i, d, ficha, id_periodo, enviar_correo)
+
+    def _crear(self, i: int, d: dict, ficha, id_periodo, enviar_correo: bool) -> None:
+        correo = d["correo"]
+        try:
+            data = AprendizCreate(
+                nombre=d["nombre"],
+                apellido=d["apellido"],
+                correo=correo,
+                id_ficha=ficha.id_ficha,
+                id_periodo=id_periodo,
+                enviar_correo=enviar_correo,
+            )
+            aprendiz = AprendizService.crear(self.session, data)
+            self.creados.append({
+                "fila": i,
+                "correo": correo,
+                "id_aprendiz": aprendiz.id_aprendiz,
+                "numero_ficha": ficha.numero_ficha,
+            })
+        except ValueError as e:
+            msg = str(e)
+            if "Ya existe" in msg:
+                self.omitidos.append({"fila": i, "correo": correo, "motivo": msg})
+            else:
+                self._error(i, correo, msg)
+        except Exception as e:
+            self._error(i, correo, f"{type(e).__name__}: {e}")
 
 
 def cargar_desde_filas(
@@ -371,126 +481,23 @@ def cargar_desde_filas(
     """
     fichas = {f.numero_ficha: f for f in session.exec(select(Ficha)).all()}
     ficha_fija = session.get(Ficha, id_ficha_forzada) if id_ficha_forzada else None
-
-    creados = []
-    errores = []
-    omitidos = []
-
+    carga = _Carga(session, fichas, ficha_fija, id_periodo_default)
     for i, fila in enumerate(filas, start=2):
-        nombre = (fila.get("nombre") or "").strip()
-        apellido = (fila.get("apellido") or "").strip()
-        correo = (fila.get("correo") or "").strip().lower()
-        numero_ficha = (
-            fila.get("numero_ficha")
-            or fila.get("id_ficha")
-            or ""
-        ).strip()
-        id_periodo_raw = (fila.get("id_periodo") or "").strip()
+        carga.procesar(i, fila, enviar_correo)
 
-        if not nombre and not apellido and not correo:
-            continue
-
-        if not nombre or not apellido or not correo:
-            errores.append({
-                "fila": i,
-                "correo": correo or "(sin correo)",
-                "error": "Faltan campos obligatorios (Nombre, Apellidos, Correo Electrónico).",
-            })
-            continue
-
-        if ficha_fija:
-            ficha = ficha_fija
-        else:
-            if not numero_ficha:
-                errores.append({
-                    "fila": i,
-                    "correo": correo,
-                    "error": (
-                        "No se encontró número de ficha. "
-                        "El Excel debe traer «Ficha de Caracterización: NNNNNN» "
-                        "o la columna numero_ficha."
-                    ),
-                })
-                continue
-            ficha = fichas.get(numero_ficha)
-            if not ficha:
-                try:
-                    id_f = int(numero_ficha)
-                    ficha = session.get(Ficha, id_f)
-                except ValueError:
-                    ficha = None
-            if not ficha:
-                errores.append({
-                    "fila": i,
-                    "correo": correo,
-                    "error": (
-                        f"Ficha '{numero_ficha}' no existe. "
-                        "Créala antes de cargar aprendices."
-                    ),
-                })
-                continue
-
-        id_periodo = id_periodo_default
-        if id_periodo_raw:
-            try:
-                id_periodo = int(id_periodo_raw)
-            except ValueError:
-                errores.append({
-                    "fila": i,
-                    "correo": correo,
-                    "error": f"id_periodo inválido: {id_periodo_raw}",
-                })
-                continue
-
-        try:
-            data = AprendizCreate(
-                nombre=nombre,
-                apellido=apellido,
-                correo=correo,
-                id_ficha=ficha.id_ficha,
-                id_periodo=id_periodo,
-                enviar_correo=enviar_correo,
-            )
-            aprendiz = AprendizService.crear(session, data)
-            creados.append({
-                "fila": i,
-                "correo": correo,
-                "id_aprendiz": aprendiz.id_aprendiz,
-                "numero_ficha": ficha.numero_ficha,
-            })
-        except ValueError as e:
-            msg = str(e)
-            if "Ya existe" in msg:
-                omitidos.append({
-                    "fila": i,
-                    "correo": correo,
-                    "motivo": msg,
-                })
-            else:
-                errores.append({
-                    "fila": i,
-                    "correo": correo,
-                    "error": msg,
-                })
-        except Exception as e:
-            errores.append({
-                "fila": i,
-                "correo": correo,
-                "error": f"{type(e).__name__}: {e}",
-            })
-
+    correos = "Se enviaron correos con usuario y contraseña." if enviar_correo \
+        else "No se enviaron correos."
     return {
         "total_filas": len(filas),
-        "creados": len(creados),
-        "omitidos": len(omitidos),
-        "errores": len(errores),
-        "detalle_creados": creados,
-        "detalle_omitidos": omitidos,
-        "detalle_errores": errores,
+        "creados": len(carga.creados),
+        "omitidos": len(carga.omitidos),
+        "errores": len(carga.errores),
+        "detalle_creados": carga.creados,
+        "detalle_omitidos": carga.omitidos,
+        "detalle_errores": carga.errores,
         "mensaje": (
-            f"Proceso terminado: {len(creados)} creados, "
-            f"{len(omitidos)} omitidos (ya existían), "
-            f"{len(errores)} con error. "
-            f"{'Se enviaron correos con usuario y contraseña.' if enviar_correo else 'No se enviaron correos.'}"
+            f"Proceso terminado: {len(carga.creados)} creados, "
+            f"{len(carga.omitidos)} omitidos (ya existían), "
+            f"{len(carga.errores)} con error. {correos}"
         ),
     }

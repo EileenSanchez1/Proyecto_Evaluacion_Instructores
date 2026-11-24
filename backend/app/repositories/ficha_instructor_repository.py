@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from app.models.ficha_instructor import FichaInstructor
 from app.schemas.ficha_instructor import FichaInstructorCreate, FichaInstructorUpdate
 
+
 class FichaInstructorRepository:
     @staticmethod
     def crear(session: Session, data: FichaInstructorCreate) -> FichaInstructor:

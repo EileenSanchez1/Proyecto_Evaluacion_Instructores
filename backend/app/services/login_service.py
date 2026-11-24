@@ -3,7 +3,6 @@ from sqlmodel import Session, select
 from pwdlib import PasswordHash
 
 from app.models.usuario import Usuario
-from app.models.rol import Rol
 from app.models.instructor import Instructor
 from app.config.security import log_codigo_debug, generar_codigo_numerico, guardar_codigo
 try:
@@ -19,12 +18,15 @@ except Exception:
 
 password_hash = PasswordHash.recommended()
 
+
 class LoginService:
 
     # Marcador: el instructor aún no ha definido su contraseña real
     PASSWORD_PENDIENTE_MARKER = "__PENDIENTE_CREAR_PASSWORD__"
 
-    PATRON_SEGURO = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]).{8,}$')
+    PATRON_SEGURO = re.compile(
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]).{8,}$'
+    )
 
     @staticmethod
     def hash_password(contrasena: str) -> str:
@@ -116,7 +118,6 @@ class LoginService:
             print("[EMAIL] email_service no disponible.")
         return codigo
 
-
     @staticmethod
     def instructor_necesita_crear_password(session: Session, correo: str) -> bool:
         """True si el instructor existe pero aún no ha creado su contraseña."""
@@ -192,4 +193,3 @@ class LoginService:
                 )
 
         return codigo, email_ok
-

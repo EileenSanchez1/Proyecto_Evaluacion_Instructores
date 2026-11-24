@@ -1,7 +1,13 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Index, Column, String
+from sqlalchemy import Index
+
+if TYPE_CHECKING:
+    from app.models.aprendiz import Aprendiz
+    from app.models.instructor import Instructor
+    from app.models.periodo import Periodo
+    from app.models.respuesta import Respuesta
 
 
 class Evaluacion(SQLModel, table=True):

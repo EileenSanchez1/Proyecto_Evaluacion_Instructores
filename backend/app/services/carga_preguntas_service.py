@@ -29,6 +29,103 @@ def _celda(v) -> str:
     return str(v).strip()
 
 
+# Códigos de pregunta del formato SENA (1.1, 2.4, 3.2, etc.)
+CODIGO_RE = re.compile(r"^(\d+)(?:\.(\d+))?$")
+# Textos de títulos / encabezados del formato oficial que no son preguntas
+TITULOS_XLSX = (
+    "servicio nacional",
+    "evaluacion de instructores",
+    "nombre instructor",
+    "cordial saludo",
+    "proposito de evaluar",
+    "afirmaciones",
+    "cumplimiento, conocimiento",
+    "metodologia de formacion",
+    "evaluacion aplicada",
+    "clima organizacional",
+)
+CABECERAS_CSV = ("orden", "descripcion", "pregunta", "codigo", "afirmacion", "texto")
+
+
+def _sin_espacios(texto: str) -> str:
+    return texto.replace(" ", "")
+
+
+def _es_codigo(texto: str) -> bool:
+    return bool(CODIGO_RE.match(_sin_espacios(texto)))
+
+
+def _contiene(celdas: list[str], palabras: tuple) -> bool:
+    unidos = " ".join(celdas).lower()
+    return any(x in unidos for x in palabras)
+
+
+def _orden_desde_codigo(codigo: str, orden_auto: int) -> int:
+    """1.1 -> 11, 2.4 -> 24, 3 -> 3; si no es código, el orden secuencial."""
+    m = CODIGO_RE.match(_sin_espacios(codigo or ""))
+    if not m:
+        return orden_auto
+    mayor = int(m.group(1))
+    menor = int(m.group(2) or 0)
+    return mayor * 10 + menor if menor else mayor
+
+
+def _numerar(filas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Ordena por orden y reasigna un orden secuencial limpio 1..n."""
+    filas.sort(key=lambda x: x["orden"])
+    for i, f in enumerate(filas, 1):
+        f["orden"] = i
+    return filas
+
+
+# ── Excel ────────────────────────────────────────────────────────────────────
+
+def _codigo_en_fila(celdas: list[str]) -> tuple[str, str]:
+    """Primer código de pregunta de la fila y el resto de la fila como texto."""
+    for i, c in enumerate(celdas):
+        if c and _es_codigo(c):
+            resto = [x for j, x in enumerate(celdas) if j != i and x]
+            return _sin_espacios(c), " ".join(resto).strip()
+    return "", ""
+
+
+def _codigo_alternativo(celdas: list[str], orden_auto: int) -> tuple[str, str]:
+    """Primera columna número + segunda texto, o una fila con solo texto largo."""
+    primera = celdas[0]
+    if primera and len(celdas) > 1 and celdas[1]:
+        if _es_codigo(primera) or primera.isdigit():
+            return _sin_espacios(primera), celdas[1]
+        return "", ""
+    # Fila con solo texto largo (sin SI/NO headers)
+    if len(primera) > 25 and "si" not in primera.lower()[:5]:
+        return str(orden_auto), primera
+    return "", ""
+
+
+def _texto_valido(texto: str) -> bool:
+    # Mínimo 15 caracteres y evitar columnas SI/NO sueltas
+    return len(texto) >= 15 and texto.upper() not in ("SI", "NO", "SÍ")
+
+
+def _fila_xlsx(row, orden_auto: int) -> dict[str, Any] | None:
+    celdas = [_celda(c) for c in row or ()]
+    if not any(celdas):
+        return None
+    # Título de sección (sin código de pregunta): se omite
+    if _contiene(celdas, TITULOS_XLSX) and not _es_codigo(celdas[0]):
+        return None
+    codigo, texto = _codigo_en_fila(celdas)
+    if not codigo:
+        codigo, texto = _codigo_alternativo(celdas, orden_auto)
+    if not _texto_valido(texto):
+        return None
+    return {
+        "orden": _orden_desde_codigo(codigo, orden_auto),
+        "descripcion": texto,
+        "codigo": codigo,
+    }
+
+
 def parsear_xlsx_preguntas(contenido: bytes) -> list[dict[str, Any]]:
     try:
         from openpyxl import load_workbook
@@ -38,91 +135,51 @@ def parsear_xlsx_preguntas(contenido: bytes) -> list[dict[str, Any]]:
         ) from e
 
     wb = load_workbook(io.BytesIO(contenido), read_only=True, data_only=True)
-    ws = wb.active
     filas: list[dict[str, Any]] = []
-    orden_auto = 1
-
-    # Patrones de códigos de pregunta del formato SENA (1.1, 2.4, 3.2, etc.)
-    codigo_re = re.compile(r"^(\d+)(?:\.(\d+))?$")
-
-    for row in ws.iter_rows(values_only=True):
-        if not row:
-            continue
-        celdas = [_celda(c) for c in row]
-        if not any(celdas):
-            continue
-
-        # Saltar títulos / encabezados
-        unidos = " ".join(celdas).lower()
-        if any(
-            x in unidos
-            for x in (
-                "servicio nacional",
-                "evaluacion de instructores",
-                "nombre instructor",
-                "cordial saludo",
-                "proposito de evaluar",
-                "afirmaciones",
-                "cumplimiento, conocimiento",
-                "metodologia de formacion",
-                "evaluacion aplicada",
-                "clima organizacional",
-            )
-        ):
-            # Si la fila es solo un título de sección (sin código de pregunta), omitir
-            if not codigo_re.match(celdas[0].replace(" ", "")):
-                continue
-
-        # Buscar código en primera columna no vacía
-        codigo = ""
-        texto = ""
-        for i, c in enumerate(celdas):
-            if not c:
-                continue
-            limpio = c.replace(" ", "")
-            if codigo_re.match(limpio) and not texto:
-                codigo = limpio
-                # texto = resto de la fila
-                resto = [x for j, x in enumerate(celdas) if j != i and x]
-                texto = " ".join(resto).strip()
-                break
-
-        if not codigo:
-            # Intentar: primera col número, segunda texto
-            if celdas[0] and len(celdas) > 1 and celdas[1]:
-                if codigo_re.match(celdas[0].replace(" ", "")) or celdas[0].isdigit():
-                    codigo = celdas[0].replace(" ", "")
-                    texto = celdas[1]
-            # O fila con solo texto largo (sin SI/NO headers)
-            elif len(celdas[0]) > 25 and "si" not in celdas[0].lower()[:5]:
-                texto = celdas[0]
-                codigo = str(orden_auto)
-
-        if not texto or len(texto) < 15:
-            continue
-        # Evitar columnas SI/NO sueltas
-        if texto.upper() in ("SI", "NO", "SÍ"):
-            continue
-
-        # Orden numérico a partir del código (1.1 -> 11, 2.4 -> 24) o secuencial
-        m = codigo_re.match(codigo.replace(" ", ""))
-        if m:
-            mayor = int(m.group(1))
-            menor = int(m.group(2) or 0)
-            orden = mayor * 10 + menor if menor else mayor
-        else:
-            orden = orden_auto
-
-        filas.append({"orden": orden, "descripcion": texto, "codigo": codigo})
-        orden_auto += 1
-
+    for row in wb.active.iter_rows(values_only=True):
+        fila = _fila_xlsx(row, len(filas) + 1)
+        if fila:
+            filas.append(fila)
     wb.close()
-    # Reordenar por orden
-    filas.sort(key=lambda x: x["orden"])
-    # Reasignar orden secuencial limpio 1..n
-    for i, f in enumerate(filas, 1):
-        f["orden"] = i
-    return filas
+    return _numerar(filas)
+
+
+# ── CSV ──────────────────────────────────────────────────────────────────────
+
+def _delimitador(texto: str) -> str:
+    """Separador tab, punto y coma o coma según la primera línea."""
+    primera = texto.splitlines()[0] if texto.strip() else ""
+    for delim in ("\t", ";"):
+        if delim in primera:
+            return delim
+    return ","
+
+
+def _codigo_texto_csv(celdas: list[str]) -> tuple[str, str]:
+    codigo = texto = ""
+    for c in celdas:
+        if not c:
+            continue
+        if not codigo and _es_codigo(c):
+            codigo = c
+            continue
+        if len(c) >= 10:
+            texto = c
+            break
+    if not texto and len(celdas) >= 2:
+        texto = celdas[1] if len(celdas[1]) >= 5 else celdas[-1]
+    return codigo, texto
+
+
+def _fila_csv(celdas: list[str], orden_auto: int) -> dict[str, Any] | None:
+    codigo, texto = _codigo_texto_csv(celdas)
+    if len(texto) < 10:
+        return None
+    return {
+        "orden": _orden_desde_codigo(codigo, orden_auto),
+        "descripcion": texto,
+        "codigo": codigo,
+    }
 
 
 def parsear_csv_preguntas(contenido: bytes) -> list[dict[str, Any]]:
@@ -133,65 +190,22 @@ def parsear_csv_preguntas(contenido: bytes) -> list[dict[str, Any]]:
     import csv
 
     texto = contenido.decode("utf-8-sig", errors="replace")
-    # Detectar separador
-    primera = texto.splitlines()[0] if texto.strip() else ""
-    if "\t" in primera:
-        delim = "\t"
-    elif ";" in primera:
-        delim = ";"
-    else:
-        delim = ","
-
-    reader = csv.reader(io.StringIO(texto), delimiter=delim)
+    reader = csv.reader(io.StringIO(texto), delimiter=_delimitador(texto))
     filas: list[dict[str, Any]] = []
-    orden_auto = 1
-    codigo_re = re.compile(r"^(\d+)(?:\.(\d+))?$")
-    header_seen = False
-
+    primera_fila = True
     for row in reader:
-        if not row:
-            continue
         celdas = [c.strip() for c in row]
         if not any(celdas):
             continue
-        unidos = " ".join(celdas).lower()
-        if any(
-            x in unidos
-            for x in ("orden", "descripcion", "pregunta", "codigo", "afirmacion", "texto")
-        ) and not header_seen:
-            header_seen = True
+        # Solo la primera fila con datos puede ser el encabezado
+        es_cabecera = primera_fila and _contiene(celdas, CABECERAS_CSV)
+        primera_fila = False
+        if es_cabecera:
             continue
-        header_seen = True
-
-        codigo = ""
-        texto_p = ""
-        for i, c in enumerate(celdas):
-            if not c:
-                continue
-            if not codigo and codigo_re.match(c.replace(" ", "")):
-                codigo = c
-                continue
-            if len(c) >= 10:
-                texto_p = c
-                break
-        if not texto_p and len(celdas) >= 2:
-            texto_p = celdas[1] if len(celdas[1]) >= 5 else (celdas[-1] if celdas else "")
-        if not texto_p or len(texto_p) < 10:
-            continue
-        m = codigo_re.match((codigo or "").replace(" ", ""))
-        if m:
-            mayor = int(m.group(1))
-            menor = int(m.group(2) or 0)
-            orden = mayor * 10 + menor if menor else mayor
-        else:
-            orden = orden_auto
-        filas.append({"orden": orden, "descripcion": texto_p, "codigo": codigo})
-        orden_auto += 1
-
-    filas.sort(key=lambda x: x["orden"])
-    for i, f in enumerate(filas, 1):
-        f["orden"] = i
-    return filas
+        fila = _fila_csv(celdas, len(filas) + 1)
+        if fila:
+            filas.append(fila)
+    return _numerar(filas)
 
 
 def cargar_preguntas_desde_filas(
@@ -230,7 +244,10 @@ def cargar_preguntas_desde_filas(
 
     session.commit()
     return {
-        "mensaje": f"Preguntas desde Excel: {creadas} creadas, {actualizadas} actualizadas, {omitidas} omitidas.",
+        "mensaje": (
+            f"Preguntas desde Excel: {creadas} creadas, {actualizadas} actualizadas, {omitidas} "
+            "omitidas."
+        ),
         "creadas": creadas,
         "actualizadas": actualizadas,
         "omitidas": omitidas,

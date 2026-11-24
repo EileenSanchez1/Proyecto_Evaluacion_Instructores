@@ -5,77 +5,159 @@ from app.models.instructor import Instructor
 from app.models.usuario import Usuario
 from app.models.rol import Rol
 from app.models.instructor_resultado_aprendizaje import InstructorResultadoAprendizaje
-from app.models.ficha_instructor import FichaInstructor
-from app.models.respuesta import Respuesta
-from app.models.evaluacion import Evaluacion
-from app.models.horario import Horario
 from app.schemas.instructor import InstructorCreate, InstructorUpdate
 from app.services.login_service import LoginService
-from app.services.email_service import enviar_credenciales_instructor
-import secrets
-import string
+from app.services.instructor_credenciales_service import (
+    enviar_credenciales_nuevo,
+    generar_password_temporal,
+    reenviar_credenciales_instructores,
+)
 
 
-def _generar_password_temporal(longitud: int = 10) -> str:
-    """Contraseña temporal legible (letras + dígitos + un símbolo)."""
-    simbolos = "!@#$%&*"
-    alfabeto = string.ascii_letters + string.digits
-    partes = [
-        secrets.choice(string.ascii_uppercase),
-        secrets.choice(string.ascii_lowercase),
-        secrets.choice(string.digits),
-        secrets.choice(simbolos),
-    ]
-    partes += [secrets.choice(alfabeto) for _ in range(max(0, longitud - 4))]
-    secrets.SystemRandom().shuffle(partes)
-    return "".join(partes)
+MSG_CORREO_INSTITUCIONAL = "El correo del instructor debe ser institucional (@sena.edu.co)."
+
+
+def _normalizar_planta(valor: Optional[str]) -> Optional[str]:
+    """Normaliza valores comunes del Excel: PLANTA, CONTRATO o el texto (máx. 20)."""
+    planta = (valor or "").strip().upper()
+    if not planta:
+        return None
+    if "PLANTA" in planta:
+        return "PLANTA"
+    if "CONTRAT" in planta:
+        return "CONTRATO"
+    return planta[:20]
+
+
+def _planta_actualizada(valor: str) -> Optional[str]:
+    pc = valor.strip().upper()
+    if "PLANTA" in pc:
+        return "PLANTA"
+    if "CONTRAT" in pc:
+        return "CONTRATO"
+    return pc or None
+
+
+def _validar_correo_nuevo(session: Session, correo: str) -> None:
+    if not correo.endswith("@sena.edu.co"):
+        raise ValueError(MSG_CORREO_INSTITUCIONAL)
+    if session.exec(select(Instructor).where(Instructor.correo == correo)).first():
+        raise ValueError("Ya existe un instructor con ese correo.")
+    if session.exec(select(Usuario).where(Usuario.correo == correo)).first():
+        raise ValueError("Ya existe un usuario con ese correo.")
+
+
+def _rol_instructor(session: Session) -> Rol:
+    rol = session.exec(select(Rol).where(Rol.nombre == "Instructor")).first()
+    if not rol:
+        raise ValueError("El rol 'Instructor' no existe. Ejecuta seed_roles.py primero.")
+    return rol
+
+
+def _agregar_resultados(session: Session, id_instructor: int, ids_ra) -> None:
+    for id_ra in ids_ra:
+        session.add(
+            InstructorResultadoAprendizaje(id_instructor=id_instructor, id_resultado=id_ra)
+        )
+
+
+def _validar_correo_actualizado(session: Session, correo: str, instructor_id: int) -> str:
+    correo = correo.strip().lower()
+    if not correo.endswith("@sena.edu.co"):
+        raise ValueError(MSG_CORREO_INSTITUCIONAL)
+    otro = session.exec(
+        select(Instructor).where(
+            Instructor.correo == correo,
+            Instructor.id_instructor != instructor_id,
+        )
+    ).first()
+    if otro:
+        raise ValueError("Ya existe otro instructor con ese correo.")
+    return correo
+
+
+def _aplicar_cambios(session: Session, instructor, upd: InstructorUpdate) -> None:
+    """Copia al instructor los campos que vienen en la actualización."""
+    for campo in ("nombre", "apellido"):
+        valor = getattr(upd, campo)
+        if valor is not None:
+            setattr(instructor, campo, valor.strip())
+    if upd.correo is not None:
+        instructor.correo = _validar_correo_actualizado(
+            session, upd.correo, instructor.id_instructor
+        )
+    if upd.telefono is not None:
+        instructor.telefono = upd.telefono.strip()
+    if upd.foto is not None:
+        instructor.foto = upd.foto
+    if upd.planta_contrato is not None:
+        instructor.planta_contrato = _planta_actualizada(upd.planta_contrato)
+
+
+def _sincronizar_usuario(session: Session, instructor, upd: InstructorUpdate) -> None:
+    """Mantiene nombre, apellido y correo del usuario igual al del instructor."""
+    usuario = session.get(Usuario, instructor.id_usuario) if instructor.id_usuario else None
+    if not usuario:
+        return
+    for campo in ("nombre", "apellido", "correo"):
+        if getattr(upd, campo) is not None:
+            setattr(usuario, campo, getattr(instructor, campo))
+    session.add(usuario)
+
+
+def _ids_resultados(upd: InstructorUpdate):
+    """Lista de resultados de aprendizaje a asignar (None = no cambiar)."""
+    if upd.resultados_aprendizaje is None and upd.competencias is not None:
+        return upd.competencias
+    return upd.resultados_aprendizaje
+
+
+def _ids_unicos(ids) -> list[int]:
+    """Enteros válidos sin repetir, en el mismo orden."""
+    unicos: list[int] = []
+    for id_ra in ids:
+        try:
+            rid = int(id_ra)
+        except (TypeError, ValueError):
+            continue
+        if rid not in unicos:
+            unicos.append(rid)
+    return unicos
+
+
+def _reemplazar_resultados(session: Session, instructor_id: int, ids) -> None:
+    existentes = session.exec(
+        select(InstructorResultadoAprendizaje).where(
+            InstructorResultadoAprendizaje.id_instructor == instructor_id
+        )
+    ).all()
+    for e in existentes:
+        session.delete(e)
+    session.flush()
+    _agregar_resultados(session, instructor_id, _ids_unicos(ids))
 
 
 class InstructorService:
     @staticmethod
-    def crear(session: Session, instructor: InstructorCreate, enviar_correo: bool = True) -> Instructor:
+    def crear(
+        session: Session, instructor: InstructorCreate, enviar_correo: bool = True
+    ) -> Instructor:
         correo = instructor.correo.strip().lower()
-
-        if not correo.endswith("@sena.edu.co"):
-            raise ValueError(
-                "El correo del instructor debe ser institucional (@sena.edu.co)."
-            )
-
-        if session.exec(select(Instructor).where(Instructor.correo == correo)).first():
-            raise ValueError("Ya existe un instructor con ese correo.")
-        if session.exec(select(Usuario).where(Usuario.correo == correo)).first():
-            raise ValueError("Ya existe un usuario con ese correo.")
-
-        rol = session.exec(select(Rol).where(Rol.nombre == "Instructor")).first()
-        if not rol:
-            raise ValueError(
-                "El rol 'Instructor' no existe. Ejecuta seed_roles.py primero."
-            )
+        _validar_correo_nuevo(session, correo)
+        rol = _rol_instructor(session)
 
         # Contraseña temporal (igual que aprendices) — se envía por correo
-        password_plana = _generar_password_temporal()
-        pwd = LoginService.hash_password(password_plana)
-
+        password_plana = generar_password_temporal()
         usuario = Usuario(
             nombre=instructor.nombre.strip(),
             apellido=instructor.apellido.strip(),
             correo=correo,
-            contrasena=pwd,
+            contrasena=LoginService.hash_password(password_plana),
             id_rol=rol.id_rol,
             activo=True,
         )
         session.add(usuario)
         session.flush()
-
-        planta = (instructor.planta_contrato or "").strip().upper() or None
-        if planta and planta not in ("PLANTA", "CONTRATO"):
-            # Normalizar valores comunes del Excel
-            if "PLANTA" in planta:
-                planta = "PLANTA"
-            elif "CONTRAT" in planta:
-                planta = "CONTRATO"
-            else:
-                planta = planta[:20]
 
         db = Instructor(
             nombre=instructor.nombre.strip(),
@@ -83,40 +165,20 @@ class InstructorService:
             correo=correo,
             telefono=instructor.telefono.strip(),
             foto=instructor.foto,
-            planta_contrato=planta,
+            planta_contrato=_normalizar_planta(instructor.planta_contrato),
             id_usuario=usuario.id_usuario,
         )
         session.add(db)
         session.flush()
 
         ids_ra = instructor.resultados_aprendizaje or instructor.competencias or []
-        for id_ra in ids_ra:
-            session.add(
-                InstructorResultadoAprendizaje(
-                    id_instructor=db.id_instructor,
-                    id_resultado=id_ra,
-                )
-            )
-
+        _agregar_resultados(session, db.id_instructor, ids_ra)
         session.commit()
         session.refresh(db)
 
         # Enviar credenciales por correo (opcional; en carga masiva va en False)
         if enviar_correo:
-            try:
-                ok = enviar_credenciales_instructor(
-                    destinatario=correo,
-                    nombre=f"{db.nombre} {db.apellido}",
-                    usuario=correo,
-                    contrasena=password_plana,
-                )
-                if ok:
-                    usuario.credenciales_enviadas = True
-                    session.add(usuario)
-                    session.commit()
-            except Exception as e:
-                print(f"[EMAIL] No se pudo enviar credenciales a {correo}: {e}")
-
+            enviar_credenciales_nuevo(session, usuario, db, password_plana)
         return db
 
     @staticmethod
@@ -186,79 +248,11 @@ class InstructorService:
         if not instructor:
             return None
 
-        if instructor_update.nombre is not None:
-            instructor.nombre = instructor_update.nombre.strip()
-        if instructor_update.apellido is not None:
-            instructor.apellido = instructor_update.apellido.strip()
-        if instructor_update.correo is not None:
-            correo = instructor_update.correo.strip().lower()
-            if not correo.endswith("@sena.edu.co"):
-                raise ValueError(
-                    "El correo del instructor debe ser institucional (@sena.edu.co)."
-                )
-            otro = session.exec(
-                select(Instructor).where(
-                    Instructor.correo == correo,
-                    Instructor.id_instructor != instructor_id,
-                )
-            ).first()
-            if otro:
-                raise ValueError("Ya existe otro instructor con ese correo.")
-            instructor.correo = correo
-        if instructor_update.telefono is not None:
-            instructor.telefono = instructor_update.telefono.strip()
-        if instructor_update.foto is not None:
-            instructor.foto = instructor_update.foto
-        if instructor_update.planta_contrato is not None:
-            pc = instructor_update.planta_contrato.strip().upper()
-            if "PLANTA" in pc:
-                pc = "PLANTA"
-            elif "CONTRAT" in pc:
-                pc = "CONTRATO"
-            instructor.planta_contrato = pc or None
-
-        if instructor.id_usuario:
-            usuario = session.get(Usuario, instructor.id_usuario)
-            if usuario:
-                if instructor_update.nombre is not None:
-                    usuario.nombre = instructor.nombre
-                if instructor_update.apellido is not None:
-                    usuario.apellido = instructor.apellido
-                if instructor_update.correo is not None:
-                    usuario.correo = instructor.correo
-                session.add(usuario)
-
-        ids_ra_update = instructor_update.resultados_aprendizaje
-        if ids_ra_update is None and instructor_update.competencias is not None:
-            ids_ra_update = instructor_update.competencias
-        if ids_ra_update is not None:
-            existentes = session.exec(
-                select(InstructorResultadoAprendizaje).where(
-                    InstructorResultadoAprendizaje.id_instructor == instructor_id
-                )
-            ).all()
-            for e in existentes:
-                session.delete(e)
-            session.flush()
-
-            ids_unicos = []
-            vistos = set()
-            for id_ra in ids_ra_update:
-                try:
-                    rid = int(id_ra)
-                except (TypeError, ValueError):
-                    continue
-                if rid not in vistos:
-                    vistos.add(rid)
-                    ids_unicos.append(rid)
-
-            for id_ra in ids_unicos:
-                session.add(
-                    InstructorResultadoAprendizaje(
-                        id_instructor=instructor_id,
-                        id_resultado=id_ra,
-                    )
-                )
+        _aplicar_cambios(session, instructor, instructor_update)
+        _sincronizar_usuario(session, instructor, instructor_update)
+        ids_ra = _ids_resultados(instructor_update)
+        if ids_ra is not None:
+            _reemplazar_resultados(session, instructor_id, ids_ra)
 
         session.add(instructor)
         try:
@@ -352,71 +346,6 @@ class InstructorService:
         - solo_pendientes: solo quienes no tienen credenciales_enviadas
         - id_instructor: si se indica, solo ese (siempre envía, aunque ya tenga flag)
         """
-        from app.models.instructor import Instructor
-
-        if id_instructor is not None:
-            items = [session.get(Instructor, int(id_instructor))]
-            items = [i for i in items if i is not None]
-            if not items:
-                raise ValueError("Instructor no encontrado.")
-        else:
-            items = list(session.exec(select(Instructor)).all())
-
-        enviados, omitidos, errores = [], [], []
-        for inst in items:
-            usuario = None
-            activo = True
-            ya = False
-            if inst.id_usuario:
-                usuario = session.get(Usuario, inst.id_usuario)
-                if usuario is not None:
-                    activo = bool(usuario.activo)
-                    ya = bool(getattr(usuario, "credenciales_enviadas", False))
-            if solo_activos and not activo:
-                omitidos.append({"correo": inst.correo, "motivo": "Inactivo"})
-                continue
-            if id_instructor is None and solo_pendientes and ya:
-                omitidos.append({"correo": inst.correo, "motivo": "Ya recibió credenciales"})
-                continue
-
-            password_plana = _generar_password_temporal()
-            pwd = LoginService.hash_password(password_plana)
-            if usuario:
-                usuario.contrasena = pwd
-                if inst.correo and usuario.correo != inst.correo:
-                    usuario.correo = inst.correo
-                session.add(usuario)
-            session.commit()
-
-            try:
-                ok = enviar_credenciales_instructor(
-                    destinatario=inst.correo,
-                    nombre=f"{inst.nombre} {inst.apellido}",
-                    usuario=inst.correo,
-                    contrasena=password_plana,
-                )
-            except Exception as e:
-                ok = False
-                print(f"[EMAIL] instructor {inst.correo}: {e}")
-            if ok:
-                enviados.append(inst.correo)
-                if usuario:
-                    usuario.credenciales_enviadas = True
-                    session.add(usuario)
-                    session.commit()
-            else:
-                errores.append({"correo": inst.correo, "error": "SMTP falló"})
-
-        return {
-            "enviados": len(enviados),
-            "omitidos": len(omitidos),
-            "errores": len(errores),
-            "detalle_enviados": enviados,
-            "detalle_omitidos": omitidos,
-            "detalle_errores": errores,
-            "mensaje": (
-                f"Correos enviados: {len(enviados)}. "
-                f"Omitidos: {len(omitidos)}. Fallidos: {len(errores)}."
-            ),
-        }
-
+        return reenviar_credenciales_instructores(
+            session, solo_activos, solo_pendientes, id_instructor
+        )

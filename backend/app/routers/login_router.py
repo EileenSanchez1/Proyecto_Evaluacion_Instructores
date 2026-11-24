@@ -4,22 +4,21 @@ from sqlmodel import Session, select
 from app.config.database import get_session
 from app.config.security import (
     crear_access_token, verificar_codigo, limpiar_codigo,
-    crear_token_recuperacion, verificar_token_recuperacion
 )
 from app.schemas.login import (
     LoginRequest, LoginResponse, SolicitarRecuperacionRequest,
     VerificarCodigoRequest, RestablecerPasswordRequest,
-    LoginInstructorRequest, VerificarCodigoInstructorRequest,
+    LoginInstructorRequest,
     InstructorCorreoRequest, InstructorCrearPasswordRequest,
     CambiarPasswordRequest,
 )
 from app.services.login_service import LoginService
 from app.models.aprendiz import Aprendiz
 from app.models.usuario import Usuario
-from app.models.rol import Rol
 from app.config.auth_dependencies import get_current_user
 
 router = APIRouter(prefix="/login", tags=["Login"])
+
 
 def _usuario_a_dict(usuario):
     return {
@@ -30,6 +29,7 @@ def _usuario_a_dict(usuario):
         "rol": usuario.rol.nombre,
         "foto": usuario.foto
     }
+
 
 @router.post("/", response_model=LoginResponse)
 def login(datos: LoginRequest, session: Session = Depends(get_session)):
@@ -83,11 +83,14 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
 
     return LoginResponse(access_token=token, token_type="bearer", usuario=usuario_data)
 
+
 # =========================
 # RECUPERACIÓN POR CÓDIGO
 # =========================
 @router.post("/recuperar", response_model=dict)
-def solicitar_recuperacion(datos: SolicitarRecuperacionRequest, session: Session = Depends(get_session)):
+def solicitar_recuperacion(
+    datos: SolicitarRecuperacionRequest, session: Session = Depends(get_session)
+):
     """
     Recuperación para CUALQUIER rol (Admin, Instructor, Aprendiz, Coordinador).
     Siempre responde 200. El código se envía por Gmail SMTP al correo del usuario.
@@ -108,6 +111,7 @@ def solicitar_recuperacion(datos: SolicitarRecuperacionRequest, session: Session
         )
     }
 
+
 @router.post("/verificar-codigo", response_model=dict)
 def verificar_codigo_recuperacion(datos: VerificarCodigoRequest):
     # Solo valida; NO consume el código (se consume al restablecer)
@@ -116,8 +120,11 @@ def verificar_codigo_recuperacion(datos: VerificarCodigoRequest):
         raise HTTPException(status_code=400, detail="Código inválido o expirado.")
     return {"mensaje": "Código verificado correctamente.", "valido": True}
 
+
 @router.post("/restablecer", response_model=dict)
-def restablecer_password(datos: RestablecerPasswordRequest, session: Session = Depends(get_session)):
+def restablecer_password(
+    datos: RestablecerPasswordRequest, session: Session = Depends(get_session)
+):
     es_segura, msg = LoginService.validar_contrasena_segura(datos.nueva_contrasena)
     if not es_segura:
         raise HTTPException(status_code=400, detail=f"La contraseña no es segura: {msg}")
@@ -173,7 +180,10 @@ def _exigir_usuario_instructor(session: Session, correo: str):
     if not instructor:
         raise HTTPException(
             status_code=404,
-            detail="No hay un instructor registrado con ese correo. Si eres aprendiz o admin, usa tu acceso correspondiente.",
+            detail=(
+                "No hay un instructor registrado con ese correo. Si eres aprendiz o admin, usa tu "
+                "acceso correspondiente."
+            ),
         )
 
     usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
@@ -184,14 +194,18 @@ def _exigir_usuario_instructor(session: Session, correo: str):
     if nombre_rol != "Instructor":
         raise HTTPException(
             status_code=403,
-            detail="Esta cuenta no tiene rol de instructor. Usa el acceso que corresponde a tu rol.",
+            detail=(
+                "Esta cuenta no tiene rol de instructor. Usa el acceso que corresponde a tu rol."
+            ),
         )
 
     # Coherencia: el usuario del instructor debe coincidir
     if instructor.id_usuario and instructor.id_usuario != usuario.id_usuario:
         raise HTTPException(
             status_code=403,
-            detail="La cuenta de instructor no está vinculada correctamente. Contacta a coordinación.",
+            detail=(
+                "La cuenta de instructor no está vinculada correctamente. Contacta a coordinación."
+            ),
         )
 
     return instructor, usuario
@@ -202,14 +216,19 @@ def instructor_iniciar(datos: InstructorCorreoRequest, session: Session = Depend
     """Portal INSTRUCTOR: solo correo; detecta primer acceso o login normal."""
     correo = datos.correo.strip().lower()
     if not correo.endswith("@sena.edu.co"):
-        raise HTTPException(status_code=400, detail="El correo debe ser institucional (@sena.edu.co).")
+        raise HTTPException(
+            status_code=400, detail="El correo debe ser institucional (@sena.edu.co)."
+        )
 
     _exigir_usuario_instructor(session, correo)
 
     if LoginService.instructor_necesita_crear_password(session, correo):
         LoginService.enviar_codigo_instructor(correo)
         return {
-            "mensaje": "Primer acceso: se envió un código a tu correo institucional. Revisa bandeja de entrada y spam. Luego crea tu contraseña.",
+            "mensaje": (
+                "Primer acceso: se envió un código a tu correo institucional. Revisa bandeja de "
+                "entrada y spam. Luego crea tu contraseña."
+            ),
             "requiere_crear_password": True,
             "email_enviado": True,
         }
@@ -221,7 +240,9 @@ def instructor_iniciar(datos: InstructorCorreoRequest, session: Session = Depend
 
 
 @router.post("/instructor/crear-password", response_model=LoginResponse)
-def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Session = Depends(get_session)):
+def instructor_crear_password(
+    datos: InstructorCrearPasswordRequest, session: Session = Depends(get_session)
+):
     """Portal INSTRUCTOR — primer acceso: código + nueva contraseña."""
     correo = datos.correo.strip().lower()
     if not correo.endswith("@sena.edu.co"):
@@ -235,7 +256,9 @@ def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Se
     if not LoginService.instructor_necesita_crear_password(session, correo):
         raise HTTPException(status_code=400, detail="Esta cuenta ya tiene contraseña.")
 
-    usuario, mensaje = LoginService.establecer_password_instructor(session, correo, datos.nueva_contrasena)
+    usuario, mensaje = LoginService.establecer_password_instructor(
+        session, correo, datos.nueva_contrasena
+    )
     if not usuario:
         raise HTTPException(status_code=400, detail=mensaje)
 
@@ -246,7 +269,9 @@ def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Se
     if nombre_rol != "Instructor":
         raise HTTPException(status_code=403, detail="Esta cuenta no tiene rol de instructor.")
 
-    token = crear_access_token(id_usuario=usuario.id_usuario, correo=usuario.correo, rol="Instructor")
+    token = crear_access_token(
+        id_usuario=usuario.id_usuario, correo=usuario.correo, rol="Instructor"
+    )
     usuario_data = _usuario_a_dict(usuario)
     usuario_data["id_instructor"] = instructor.id_instructor
     if instructor.foto:
@@ -256,21 +281,29 @@ def instructor_crear_password(datos: InstructorCrearPasswordRequest, session: Se
 
 
 @router.post("/instructor", response_model=LoginResponse)
-def login_instructor_directo(datos: LoginInstructorRequest, session: Session = Depends(get_session)):
+def login_instructor_directo(
+    datos: LoginInstructorRequest, session: Session = Depends(get_session)
+):
     """Portal INSTRUCTOR — login normal: correo + contraseña."""
     correo = datos.correo.strip().lower()
     if not correo.endswith("@sena.edu.co"):
-        raise HTTPException(status_code=400, detail="El correo debe ser institucional (@sena.edu.co).")
+        raise HTTPException(
+            status_code=400, detail="El correo debe ser institucional (@sena.edu.co)."
+        )
 
     instructor, usuario = _exigir_usuario_instructor(session, correo)
 
     if LoginService.instructor_necesita_crear_password(session, correo):
-        raise HTTPException(status_code=400, detail="Debes crear tu contraseña primero (primer acceso).")
+        raise HTTPException(
+            status_code=400, detail="Debes crear tu contraseña primero (primer acceso)."
+        )
 
     if not LoginService.verificar_password(datos.contrasena, usuario.contrasena):
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos.")
 
-    token = crear_access_token(id_usuario=usuario.id_usuario, correo=usuario.correo, rol="Instructor")
+    token = crear_access_token(
+        id_usuario=usuario.id_usuario, correo=usuario.correo, rol="Instructor"
+    )
     usuario_data = _usuario_a_dict(usuario)
     usuario_data["id_instructor"] = instructor.id_instructor
     if instructor.foto:
@@ -282,6 +315,38 @@ def login_instructor_directo(datos: LoginInstructorRequest, session: Session = D
 # =========================
 # ADMIN: segundo factor por código al Gmail
 # =========================
+MSG_ROL_NO_ADMIN = {
+    "Instructor": "Esta cuenta es de instructor. Usa el acceso «Soy instructor».",
+    "Aprendiz": "Esta cuenta es de aprendiz. Usa el acceso «Soy aprendiz».",
+}
+MSG_CODIGO_ENVIADO = (
+    "Se envió un código de verificación a tu correo. "
+    "Revisa bandeja de entrada y spam; es válido unos 10 minutos."
+)
+MSG_CODIGO_NO_ENVIADO = (
+    "No se pudo enviar el correo de verificación. "
+    "Revisa SMTP en Render (Gmail App Password) o configura Resend."
+)
+
+
+def _exigir_rol_admin(usuario) -> None:
+    nombre_rol = (usuario.rol.nombre if usuario.rol else "") or ""
+    if nombre_rol in ("Administrador", "Admin"):
+        return
+    raise HTTPException(
+        status_code=403,
+        detail=MSG_ROL_NO_ADMIN.get(nombre_rol, "Esta cuenta no tiene rol de administrador."),
+    )
+
+
+def _codigo_emergencia_permitido() -> bool:
+    """Emergencia si SMTP falla: ALLOW_SHOW_ADMIN_CODE o ALLOW_DEBUG_CODES=true."""
+    return any(
+        (os.getenv(k) or "").strip().lower() in ("1", "true", "yes", "on")
+        for k in ("ALLOW_SHOW_ADMIN_CODE", "ALLOW_DEBUG_CODES")
+    )
+
+
 @router.post("/admin/iniciar")
 def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
     """
@@ -293,51 +358,17 @@ def admin_iniciar(datos: LoginRequest, session: Session = Depends(get_session)):
     if usuario is None:
         raise HTTPException(status_code=401, detail=mensaje)
 
-    nombre_rol = (usuario.rol.nombre if usuario.rol else "") or ""
-    if nombre_rol not in ("Administrador", "Admin"):
-        if nombre_rol == "Instructor":
-            raise HTTPException(
-                status_code=403,
-                detail="Esta cuenta es de instructor. Usa el acceso «Soy instructor».",
-            )
-        if nombre_rol == "Aprendiz":
-            raise HTTPException(
-                status_code=403,
-                detail="Esta cuenta es de aprendiz. Usa el acceso «Soy aprendiz».",
-            )
-        raise HTTPException(
-            status_code=403,
-            detail="Esta cuenta no tiene rol de administrador.",
-        )
-
+    _exigir_rol_admin(usuario)
     codigo, email_ok = LoginService.enviar_codigo_admin(correo)
-
     # Flujo profesional: el código SOLO va al correo del admin (rol Administrador).
     # No se muestra en pantalla ni se autocompleta si el correo salió bien.
-    # Emergencia si SMTP falla: ALLOW_SHOW_ADMIN_CODE o ALLOW_DEBUG_CODES=true
-    show_code = not email_ok and any(
-        (os.getenv(k) or "").strip().lower() in ("1", "true", "yes", "on")
-        for k in ("ALLOW_SHOW_ADMIN_CODE", "ALLOW_DEBUG_CODES")
-    )
-
-    if email_ok:
-        mensaje = (
-            "Se envió un código de verificación a tu correo. "
-            "Revisa bandeja de entrada y spam; es válido unos 10 minutos."
-        )
-    else:
-        mensaje = (
-            "No se pudo enviar el correo de verificación. "
-            "Revisa SMTP en Render (Gmail App Password) o configura Resend."
-        )
-
     respuesta = {
-        "mensaje": mensaje,
+        "mensaje": MSG_CODIGO_ENVIADO if email_ok else MSG_CODIGO_NO_ENVIADO,
         "requiere_codigo": True,
         "correo": correo,
         "email_enviado": email_ok,
     }
-    if show_code:
+    if not email_ok and _codigo_emergencia_permitido():
         respuesta["codigo_temporal"] = codigo
         respuesta["mensaje"] = (
             "No se pudo enviar el correo. Código temporal (solo recuperación): " + codigo

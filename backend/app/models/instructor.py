@@ -1,5 +1,12 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from app.models.evaluacion import Evaluacion
+    from app.models.ficha_instructor import FichaInstructor
+    from app.models.horario import Horario
+    from app.models.instructor_resultado_aprendizaje import InstructorResultadoAprendizaje
+    from app.models.respuesta import Respuesta
 
 
 class Instructor(SQLModel, table=True):

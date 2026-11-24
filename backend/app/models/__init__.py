@@ -19,3 +19,24 @@ from app.models.novedad import Novedad
 # (por si algún script antiguo aún importa Competencia)
 Competencia = ResultadoAprendizaje
 InstructorCompetencia = InstructorResultadoAprendizaje
+
+__all__ = [
+    "Usuario",
+    "Rol",
+    "Aprendiz",
+    "Instructor",
+    "Ficha",
+    "ResultadoAprendizaje",
+    "Periodo",
+    "Pregunta",
+    "Evaluacion",
+    "Respuesta",
+    "FichaInstructor",
+    "InstructorResultadoAprendizaje",
+    "Horario",
+    "Auditoria",
+    "Notificacion",
+    "Novedad",
+    "Competencia",
+    "InstructorCompetencia",
+]

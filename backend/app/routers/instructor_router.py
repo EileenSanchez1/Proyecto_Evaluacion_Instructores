@@ -4,7 +4,6 @@ from typing import List, Optional
 import os
 import shutil
 import json
-import uuid
 import time
 
 from app.config.database import get_session
@@ -12,8 +11,6 @@ from app.config.auth_dependencies import require_roles
 from app.schemas.instructor import InstructorCreate, InstructorRead, InstructorUpdate
 from app.services.instructor_service import InstructorService
 from app.services.carga_instructores_service import parsear_archivo, cargar_desde_filas
-from app.services.email_service import enviar_invitacion_instructor
-from app.models.usuario import Usuario
 
 router = APIRouter(prefix="/instructores", tags=["Instructores"])
 
@@ -79,7 +76,6 @@ async def crear_instructor(
         return InstructorService.to_read(session, inst)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 
 @router.post(
@@ -267,4 +263,3 @@ def reenviar_correos_instructores(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-

@@ -55,7 +55,8 @@ class EvaluacionService:
             raise ValueError("El periodo no existe.")
         estado = str(getattr(periodo, "estado", "") or "").lower()
         if estado and estado not in ("activo", "abierto", "en curso"):
-            # Permite si el periodo no tiene estado estricto; bloquea solo si está claramente cerrado
+            # Permite si el periodo no tiene estado estricto; bloquea solo si está claramente
+            # cerrado
             if estado in ("cerrado", "inactivo", "finalizado", "cerrada"):
                 raise ValueError(
                     "No se pueden crear evaluaciones en un periodo cerrado o inactivo."
@@ -153,7 +154,13 @@ class EvaluacionService:
             return None
         estado_actual = (db.estado or "").strip().lower()
         nuevo = (estado or "").strip()
-        if estado_actual in ("completada", "finalizada", "enviada", "respondida", "evaluado") and nuevo.lower() not in (
+        if estado_actual in (
+            "completada",
+            "finalizada",
+            "enviada",
+            "respondida",
+            "evaluado",
+        ) and nuevo.lower() not in (
             "completada",
             "finalizada",
             "enviada",

@@ -38,7 +38,9 @@ class PeriodoService:
         return [p for p in todos if str(getattr(p, "estado", "")).lower() != "activo"]
 
     @staticmethod
-    def actualizar(session: Session, periodo_id: int, periodo_update: PeriodoUpdate) -> Optional[Periodo]:
+    def actualizar(
+        session: Session, periodo_id: int, periodo_update: PeriodoUpdate
+    ) -> Optional[Periodo]:
         periodo = PeriodoRepository.buscar(session, periodo_id)
         if not periodo:
             return None

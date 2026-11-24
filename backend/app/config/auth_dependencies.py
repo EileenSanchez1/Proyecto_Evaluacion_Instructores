@@ -6,7 +6,6 @@ from sqlalchemy.orm import selectinload
 from app.config.database import get_session
 from app.config.security import decodificar_token
 from app.models.usuario import Usuario
-from app.models.rol import Rol
 
 bearer_scheme = HTTPBearer()
 
