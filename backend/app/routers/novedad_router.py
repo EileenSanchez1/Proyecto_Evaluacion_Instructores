@@ -4,7 +4,7 @@ from typing import List
 from app.config.database import get_session
 from app.config.auth_dependencies import require_roles
 from app.models.novedad import Novedad
-from app.schemas.novedad import NovedadCreate, NovedadRead, NovedadUpdate
+from app.schemas.novedad import NovedadCreate, NovedadRead
 from app.services.email_service import enviar_novedad_resuelta
 
 router = APIRouter(prefix="/novedades", tags=["Novedades"])

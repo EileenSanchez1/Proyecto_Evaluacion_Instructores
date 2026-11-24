@@ -27,10 +27,15 @@ def main():
         usuarios = session.exec(q).all()
 
         if correo_filtro:
-            usuarios = [u for u in usuarios if u.correo == correo_filtro or correo_filtro in u.correo]
+            usuarios = [
+                u for u in usuarios if u.correo == correo_filtro or correo_filtro in u.correo
+            ]
 
         if not usuarios:
-            print("No se encontraron instructores" + (f" con '{correo_filtro}'" if correo_filtro else ""))
+            print(
+                "No se encontraron instructores"
+                + (f" con '{correo_filtro}'" if correo_filtro else "")
+            )
             return
 
         for u in usuarios:

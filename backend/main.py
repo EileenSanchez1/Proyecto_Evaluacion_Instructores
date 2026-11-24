@@ -27,16 +27,12 @@ def ensure_extra_columns():
     from app.config.database import engine
     try:
         with engine.begin() as conn:
-            conn.execute(text(
-                "ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS observacion_general VARCHAR(1000)"
-            ))
-            # Horario: enlace a Resultado de Aprendizaje + ambiente
-            conn.execute(text(
-                "ALTER TABLE horarios ADD COLUMN IF NOT EXISTS id_resultado INTEGER"
-            ))
-            conn.execute(text(
-                "ALTER TABLE horarios ADD COLUMN IF NOT EXISTS ambiente VARCHAR(80)"
-            ))
+            conn.execute(
+                text(
+                    "ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS observacion_general "
+                    "VARCHAR(1000)"
+                )
+            )
             # Asignación ficha-instructor: RA que dicta en esa ficha/periodo
             conn.execute(text(
                 "ALTER TABLE ficha_instructor ADD COLUMN IF NOT EXISTS id_resultado INTEGER"
@@ -70,13 +66,16 @@ def ensure_extra_columns():
             # Índices de rendimiento (idempotentes en PostgreSQL)
             for stmt in (
                 "CREATE INDEX IF NOT EXISTS ix_evaluaciones_aprendiz ON evaluaciones (id_aprendiz)",
-                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_instructor ON evaluaciones (id_instructor)",
+                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_instructor ON evaluaciones "
+                "(id_instructor)",
                 "CREATE INDEX IF NOT EXISTS ix_evaluaciones_periodo ON evaluaciones (id_periodo)",
                 "CREATE INDEX IF NOT EXISTS ix_evaluaciones_estado ON evaluaciones (estado)",
-                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_aip ON evaluaciones (id_aprendiz, id_instructor, id_periodo)",
+                "CREATE INDEX IF NOT EXISTS ix_evaluaciones_aip ON evaluaciones (id_aprendiz, "
+                "id_instructor, id_periodo)",
                 "CREATE INDEX IF NOT EXISTS ix_respuestas_evaluacion ON respuestas (id_evaluacion)",
                 "CREATE INDEX IF NOT EXISTS ix_respuestas_instructor ON respuestas (id_instructor)",
-                "CREATE INDEX IF NOT EXISTS ix_ficha_instructor_activo ON ficha_instructor (id_ficha, id_periodo, activo)",
+                "CREATE INDEX IF NOT EXISTS ix_ficha_instructor_activo ON ficha_instructor "
+                "(id_ficha, id_periodo, activo)",
             ):
                 try:
                     conn.execute(text(stmt))
@@ -84,7 +83,6 @@ def ensure_extra_columns():
                     pass
     except Exception as e:
         print(f"[schema] Aviso ensure_extra_columns: {e}")
-
 
 
 def _admin_initial_password() -> str:
@@ -99,6 +97,7 @@ def _admin_initial_password() -> str:
             "para crear el usuario admin inicial."
         )
     return "Admin123!"
+
 
 app = FastAPI(
     title="Sistema de Evaluación de Instructores",
@@ -136,6 +135,7 @@ app.add_middleware(
 )
 print(f"[CORS] origins={allow_origins}")
 
+
 # =========================
 # STARTUP - Auto seed roles + admin
 # =========================
@@ -144,6 +144,7 @@ def startup():
     create_db_and_tables()
     ensure_extra_columns()
     _seed_roles_y_admin()
+
 
 def _seed_roles_y_admin():
     from sqlmodel import Session, select
@@ -205,6 +206,7 @@ def _seed_roles_y_admin():
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "evaluacion-instructores", "version": "1.0.0"}
+
 
 # =========================
 # Routers

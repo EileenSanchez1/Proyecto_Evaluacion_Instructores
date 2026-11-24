@@ -2,7 +2,8 @@ import os
 from dotenv import load_dotenv
 from sqlmodel import SQLModel, Session, create_engine
 
-from app.models import *
+# Importa el paquete de modelos para registrar todas las tablas en SQLModel.metadata
+import app.models  # noqa: F401
 
 load_dotenv()
 

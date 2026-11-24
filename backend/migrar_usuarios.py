@@ -9,7 +9,6 @@ Migra los Aprendiz e Instructor existentes hacia la tabla Usuario.
   (HU-004) en cuanto esté listo.
 """
 
-import secrets
 
 from sqlmodel import Session, select
 from pwdlib import PasswordHash

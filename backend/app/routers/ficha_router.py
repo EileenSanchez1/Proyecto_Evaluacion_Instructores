@@ -9,6 +9,7 @@ from app.services.ficha_service import FichaService
 
 router = APIRouter(prefix="/fichas", tags=["Fichas"])
 
+
 # GET público: cualquiera puede ver las fichas (necesario para el registro de aprendices)
 @router.get("/", response_model=List[FichaRead])
 def listar_fichas(
@@ -18,6 +19,7 @@ def listar_fichas(
 ):
     return FichaService.listar(session, offset, limit)
 
+
 @router.get("/{ficha_id}", response_model=FichaRead)
 def buscar_ficha(ficha_id: int, session: Session = Depends(get_session)):
     ficha = FichaService.buscar(session, ficha_id)
@@ -25,15 +27,26 @@ def buscar_ficha(ficha_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Ficha no encontrada")
     return ficha
 
+
 # POST/PUT/DELETE protegidos: solo admin/coordinador
-@router.post("/", response_model=FichaRead, status_code=201, dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
+@router.post(
+    "/",
+    response_model=FichaRead,
+    status_code=201,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
 def crear_ficha(ficha: FichaCreate, session: Session = Depends(get_session)):
     try:
         return FichaService.crear(session, ficha)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.put("/{ficha_id}", response_model=FichaRead, dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
+
+@router.put(
+    "/{ficha_id}",
+    response_model=FichaRead,
+    dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
+)
 def actualizar_ficha(ficha_id: int, ficha: FichaUpdate, session: Session = Depends(get_session)):
     try:
         actualizada = FichaService.actualizar(session, ficha_id, ficha)
@@ -42,6 +55,7 @@ def actualizar_ficha(ficha_id: int, ficha: FichaUpdate, session: Session = Depen
     if not actualizada:
         raise HTTPException(status_code=404, detail="Ficha no encontrada")
     return actualizada
+
 
 @router.delete("/{ficha_id}", dependencies=[Depends(require_roles("Administrador", "Coordinador"))])
 def eliminar_ficha(ficha_id: int, session: Session = Depends(get_session)):

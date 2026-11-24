@@ -136,4 +136,3 @@ def desactivar_periodo(
     if not periodo:
         raise HTTPException(status_code=404, detail="Periodo no encontrado")
     return periodo
-

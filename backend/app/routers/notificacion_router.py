@@ -64,7 +64,7 @@ def contar_no_leidas(
 ):
     statement = select(Notificacion).where(
         (Notificacion.id_usuario == usuario.id_usuario) &
-        (Notificacion.leida == False)
+        (Notificacion.leida.is_(False))
     )
 
     count = len(session.exec(statement).all())

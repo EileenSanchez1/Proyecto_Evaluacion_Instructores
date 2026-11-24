@@ -98,16 +98,7 @@ def _enviar_con_gmail_script(
         # Apps Script suele redirigir; urlopen sigue redirects por defecto
         with urllib.request.urlopen(req, timeout=45) as resp:
             body = resp.read().decode("utf-8", errors="replace")
-            if 200 <= resp.status < 300:
-                # El script responde JSON {"ok": true} o texto "ok"
-                low = body.strip().lower()
-                if "ok" in low or "true" in low or body.strip() == "":
-                    print(f"[EMAIL] ✓ Gmail Script → {destinatario} | {asunto}")
-                    return True
-                print(f"[EMAIL] ✗ Gmail Script respuesta: {body[:300]}")
-                return False
-            print(f"[EMAIL] ✗ Gmail Script status {resp.status}: {body[:300]}")
-            return False
+            return _respuesta_script_ok(resp.status, body, destinatario, asunto)
     except urllib.error.HTTPError as e:
         err = e.read().decode("utf-8", errors="replace")
         print(f"[EMAIL] ✗ Gmail Script HTTP {e.code}: {err[:300]}")
@@ -115,6 +106,19 @@ def _enviar_con_gmail_script(
     except Exception as e:
         print(f"[EMAIL] ✗ Gmail Script error: {type(e).__name__}: {e}")
         return False
+
+
+def _respuesta_script_ok(status: int, body: str, destinatario: str, asunto: str) -> bool:
+    """El script responde JSON {"ok": true}, texto "ok" o vacío cuando sale bien."""
+    if not 200 <= status < 300:
+        print(f"[EMAIL] ✗ Gmail Script status {status}: {body[:300]}")
+        return False
+    low = body.strip().lower()
+    if "ok" in low or "true" in low or low == "":
+        print(f"[EMAIL] ✓ Gmail Script → {destinatario} | {asunto}")
+        return True
+    print(f"[EMAIL] ✗ Gmail Script respuesta: {body[:300]}")
+    return False
 
 
 def _enviar_con_resend(
@@ -172,37 +176,44 @@ def _build_message(destinatario, asunto, cuerpo_texto, cuerpo_html, from_addr, f
     return msg
 
 
+def _intentos_smtp(host: str, port: int) -> list[tuple[str, int, str]]:
+    """Modos de conexión a probar: (modo, puerto, etiqueta)."""
+    if port == 465:
+        return [("ssl", 465, "SSL"), ("starttls", 587, "STARTTLS")]
+    intentos = [("starttls", port or 587, "STARTTLS")]
+    if "gmail" in host.lower():
+        intentos.append(("ssl", 465, "SSL"))
+    return intentos
+
+
+def _enviar_smtp_una_vez(modo: str, host: str, puerto: int, user: str, password: str, msg):
+    if modo == "ssl":
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(host, puerto, timeout=30, context=ctx) as server:
+            server.ehlo()
+            server.login(user, password)
+            server.send_message(msg)
+        return
+    with smtplib.SMTP(host, puerto, timeout=30) as server:
+        server.ehlo()
+        server.starttls(context=ssl.create_default_context())
+        server.ehlo()
+        server.login(user, password)
+        server.send_message(msg)
+
+
 def _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html) -> bool:
     host, port, user, password, from_addr, from_name = _smtp_config()
     if not user or not password:
         print("[EMAIL] SMTP no configurado: faltan SMTP_USER o SMTP_PASSWORD")
         return False
-    if not from_addr:
-        from_addr = user
-    msg = _build_message(destinatario, asunto, cuerpo_texto, cuerpo_html, from_addr, from_name)
-    intentos = []
-    if port == 465:
-        intentos = [("ssl", 465, "SSL"), ("starttls", 587, "STARTTLS")]
-    else:
-        intentos = [("starttls", port or 587, "STARTTLS")]
-        if "gmail" in host.lower():
-            intentos.append(("ssl", 465, "SSL"))
+    msg = _build_message(
+        destinatario, asunto, cuerpo_texto, cuerpo_html, from_addr or user, from_name
+    )
     last_error = None
-    for modo, p, etiqueta in intentos:
+    for modo, p, etiqueta in _intentos_smtp(host, port):
         try:
-            if modo == "ssl":
-                ctx = ssl.create_default_context()
-                with smtplib.SMTP_SSL(host, p, timeout=30, context=ctx) as server:
-                    server.ehlo()
-                    server.login(user, password)
-                    server.send_message(msg)
-            else:
-                with smtplib.SMTP(host, p, timeout=30) as server:
-                    server.ehlo()
-                    server.starttls(context=ssl.create_default_context())
-                    server.ehlo()
-                    server.login(user, password)
-                    server.send_message(msg)
+            _enviar_smtp_una_vez(modo, host, p, user, password, msg)
             print(f"[EMAIL] ✓ SMTP ({etiqueta}:{p}) → {destinatario} | {asunto}")
             return True
         except Exception as e:
@@ -211,6 +222,20 @@ def _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html) -> bool:
     if last_error:
         print(f"[EMAIL] SMTP falló para {destinatario}: {type(last_error).__name__}: {last_error}")
     return False
+
+
+def _proveedores() -> list:
+    """(¿configurado?, función de envío, aviso si falla) en orden de prioridad."""
+    return [
+        # 1) Apps Script: sale desde tu Gmail y funciona en Render free
+        (_gmail_script_configurado, _enviar_con_gmail_script,
+         "[EMAIL] Gmail Script falló; intentando SMTP..."),
+        # 2) SMTP directo (local / hosts que no bloqueen)
+        (smtp_configurado, _enviar_con_smtp,
+         "[EMAIL] SMTP falló (en Render free suele estar bloqueado)."),
+        # 3) Resend opcional
+        (_resend_configurado, _enviar_con_resend, None),
+    ]
 
 
 def enviar_correo(destinatario, asunto, cuerpo_texto, cuerpo_html=None) -> bool:
@@ -222,24 +247,16 @@ def enviar_correo(destinatario, asunto, cuerpo_texto, cuerpo_html=None) -> bool:
     if not destinatario:
         return False
 
-    # 1) Apps Script: sale desde tu Gmail y funciona en Render free
-    if _gmail_script_configurado():
-        if _enviar_con_gmail_script(destinatario, asunto, cuerpo_texto, cuerpo_html):
+    proveedores = _proveedores()
+    for configurado, enviar, aviso in proveedores:
+        if not configurado():
+            continue
+        if enviar(destinatario, asunto, cuerpo_texto, cuerpo_html):
             return True
-        print("[EMAIL] Gmail Script falló; intentando SMTP...")
+        if aviso:
+            print(aviso)
 
-    # 2) SMTP directo (local / hosts que no bloqueen)
-    if smtp_configurado():
-        if _enviar_con_smtp(destinatario, asunto, cuerpo_texto, cuerpo_html):
-            return True
-        print("[EMAIL] SMTP falló (en Render free suele estar bloqueado).")
-
-    # 3) Resend opcional
-    if _resend_configurado():
-        if _enviar_con_resend(destinatario, asunto, cuerpo_texto, cuerpo_html):
-            return True
-
-    if not (_gmail_script_configurado() or smtp_configurado() or _resend_configurado()):
+    if not any(configurado() for configurado, _, _ in proveedores):
         print(
             "\n[EMAIL] Sin proveedor. En Render usa GMAIL_SCRIPT_URL "
             "(Google Apps Script con tu Gmail). "
@@ -268,7 +285,8 @@ def enviar_codigo_recuperacion(destinatario: str, codigo: str) -> bool:
          background:#f3f4f6;padding:14px 20px;border-radius:10px;text-align:center;">
         {codigo}
       </p>
-      <p style="color:#6b7280;font-size:13px;">Válido por 15 minutos. Si no solicitaste este cambio, ignora este mensaje.</p>
+      <p style="color:#6b7280;font-size:13px;">Válido por 15 minutos. Si no solicitaste este cambio,
+      ignora este mensaje.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
       <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
     </div>
@@ -327,7 +345,6 @@ def enviar_credenciales_aprendiz(
     return enviar_correo(destinatario, asunto, texto, html)
 
 
-
 def enviar_credenciales_instructor(
     destinatario: str,
     nombre: str,
@@ -346,7 +363,8 @@ def enviar_credenciales_instructor(
         f"  Usuario (correo): {usuario}\n"
         f"  Contraseña temporal: {contrasena}\n\n"
         f"Ingresa con la opción «Soy Instructor» y usa el correo y la contraseña temporal.\n"
-        f"Te recomendamos cambiar la contraseña después del primer ingreso y actualizar tu foto de perfil.\n\n"
+        "Te recomendamos cambiar la contraseña después del primer ingreso y actualizar tu foto "
+        "de perfil.\n\n"
         f"— SENA · Evaluación de Instructores\n"
     )
     html = f"""
@@ -363,8 +381,10 @@ def enviar_credenciales_instructor(
         </p>
       </div>
       <p style="color:#6b7280;font-size:13px;margin-top:14px;">
-        Ingresa con la opción <strong>«Soy Instructor»</strong> usando el correo y la contraseña temporal.
-        Te recomendamos cambiar la contraseña después del primer ingreso y actualizar tu foto de perfil.
+        Ingresa con la opción <strong>«Soy Instructor»</strong> usando el correo y la contraseña
+        temporal.
+        Te recomendamos cambiar la contraseña después del primer ingreso y actualizar tu foto de
+        perfil.
       </p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
       <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
@@ -388,12 +408,14 @@ def enviar_codigo_instructor(destinatario: str, codigo: str) -> bool:
     html = f"""
     <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
       <h2 style="color:#39a900;margin:0 0 12px;">Primer acceso — Instructor</h2>
-      <p>Para completar tu acceso como <strong>instructor</strong> y crear tu contraseña, usa este código:</p>
+      <p>Para completar tu acceso como <strong>instructor</strong> y crear tu contraseña, usa este
+      código:</p>
       <p style="font-size:28px;font-weight:700;letter-spacing:6px;color:#1f2937;
          background:#f3f4f6;padding:14px 20px;border-radius:10px;text-align:center;">
         {codigo}
       </p>
-      <p style="color:#6b7280;font-size:13px;">Válido por 15 minutos. Revisa también la bandeja de spam.</p>
+      <p style="color:#6b7280;font-size:13px;">Válido por 15 minutos. Revisa también la bandeja de
+      spam.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
       <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
     </div>
@@ -423,14 +445,23 @@ def enviar_novedad_resuelta(
         "en la plataforma.\n\n"
         "— SENA · Evaluación de Instructores\n"
     )
+    bloque_mensaje = ""
+    if preview:
+        bloque_mensaje = (
+            "<p style='background:#f3f4f6;padding:12px;border-radius:8px;"
+            "font-size:13px;color:#374151;'><strong>Tu mensaje:</strong><br/>"
+            + preview.replace(chr(10), "<br/>")
+            + "</p>"
+        )
     html = f"""
     <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
       <h2 style="color:#39a900;margin:0 0 12px;">Novedad atendida</h2>
       <p>Hola <strong>{nombre}</strong>,</p>
       <p>Tu novedad o mensaje enviado al administrador
       <strong>ya fue revisada y marcada como solucionada</strong>.</p>
-      {"<p style='background:#f3f4f6;padding:12px;border-radius:8px;font-size:13px;color:#374151;'><strong>Tu mensaje:</strong><br/>" + preview.replace(chr(10), '<br/>') + "</p>" if preview else ""}
-      <p style="color:#6b7280;font-size:13px;">Si aún necesitas ayuda, envía una nueva novedad desde <strong>Contacto</strong> en la plataforma.</p>
+      {bloque_mensaje}
+      <p style="color:#6b7280;font-size:13px;">Si aún necesitas ayuda, envía una nueva novedad desde
+      <strong>Contacto</strong> en la plataforma.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
       <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
     </div>
@@ -447,7 +478,8 @@ def enviar_invitacion_instructor(
     asunto = "Bienvenido — Completa tu acceso como instructor SENA"
     texto = (
         f"Hola {nombre},\n\n"
-        f"Has sido registrado como instructor en el Sistema de Evaluación de Instructores del SENA.\n\n"
+        "Has sido registrado como instructor en el Sistema de Evaluación de Instructores del "
+        "SENA.\n\n"
         f"Tu correo de acceso es: {destinatario}\n\n"
         f"Para ingresar por primera vez:\n"
         f"1. Ve a la opción «Soy instructor» en la plataforma.\n"
@@ -455,14 +487,16 @@ def enviar_invitacion_instructor(
         f"3. Crea tu contraseña segura.\n"
         f"4. Actualiza tu foto de perfil.\n\n"
         f"Tienes un plazo de {plazo_horas} horas para completar el acceso y subir tu foto. "
-        f"Si no lo haces, se podrá generar un plan de mejora o llamado de atención con el coordinador.\n\n"
+        "Si no lo haces, se podrá generar un plan de mejora o llamado de atención con el "
+        "coordinador.\n\n"
         f"— SENA · Evaluación de Instructores\n"
     )
     html = f"""
     <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
       <h2 style="color:#39a900;margin:0 0 12px;">Bienvenido al sistema</h2>
       <p>Hola <strong>{nombre}</strong>,</p>
-      <p>Has sido registrado como <strong>instructor</strong> en el Sistema de Evaluación de Instructores del SENA.</p>
+      <p>Has sido registrado como <strong>instructor</strong> en el Sistema de Evaluación de
+      Instructores del SENA.</p>
       <p><strong>Correo de acceso:</strong> {destinatario}</p>
       <p>Para ingresar por primera vez:</p>
       <ol>
@@ -472,7 +506,8 @@ def enviar_invitacion_instructor(
         <li>Actualiza tu foto de perfil.</li>
       </ol>
       <p style="background:#fef3c7;padding:12px;border-radius:8px;color:#92400e;">
-        <strong>Plazo:</strong> tienes <strong>{plazo_horas} horas</strong> para completar el acceso y subir tu foto.
+        <strong>Plazo:</strong> tienes <strong>{plazo_horas} horas</strong> para completar el acceso
+        y subir tu foto.
         Si no lo haces, se podrá generar un plan de mejora o llamado de atención con el coordinador.
       </p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
@@ -536,7 +571,8 @@ def enviar_codigo_admin(destinatario: str, codigo: str) -> bool:
          background:#f3f4f6;padding:14px 20px;border-radius:10px;text-align:center;">
         {codigo}
       </p>
-      <p style="color:#6b7280;font-size:13px;">Válido por 10 minutos. Si no solicitaste este acceso, ignora el mensaje.</p>
+      <p style="color:#6b7280;font-size:13px;">Válido por 10 minutos. Si no solicitaste este acceso,
+      ignora el mensaje.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
       <p style="color:#9ca3af;font-size:12px;">SENA · Evaluación de Instructores</p>
     </div>

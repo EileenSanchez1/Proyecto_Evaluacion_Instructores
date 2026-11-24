@@ -1,15 +1,13 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import SQLModel, Field, Relationship
 
+if TYPE_CHECKING:
+   
+    from app.models.instructor_resultado_aprendizaje import InstructorResultadoAprendizaje
+
 
 class ResultadoAprendizaje(SQLModel, table=True):
-    """Resultado de Aprendizaje (RA) — reemplaza Competencia.
-
-    Ejemplo del horario SENA:
-      codigo: 220501-04
-      nombre: CODIFICAR EL SOFTWARE DE ACUERDO CON EL DISEÑO ESTABLECIDO.
-    """
     __tablename__ = "resultados_aprendizaje"
 
     id_resultado: Optional[int] = Field(
@@ -45,9 +43,6 @@ class ResultadoAprendizaje(SQLModel, table=True):
         back_populates="resultado_aprendizaje"
     )
 
-    horarios: list["Horario"] = Relationship(
-        back_populates="resultado_aprendizaje"
-    )
 
     def __repr__(self):
         return f"<ResultadoAprendizaje {self.codigo or ''} {self.nombre}>"

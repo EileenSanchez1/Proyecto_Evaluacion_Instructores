@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlmodel import Session
-from typing import List, Optional
+from typing import Optional
 
 from app.config.database import get_session
 from app.config.auth_dependencies import require_roles
@@ -34,6 +34,18 @@ def crear_aprendiz(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+EXTENSIONES_CARGA = (".csv", ".txt", ".tsv", ".xlsx", ".xls")
+TIPOS_CARGA = ("csv", "text", "spreadsheet", "excel")
+
+
+def _formato_permitido(filename: Optional[str], content_type: Optional[str]) -> bool:
+    """Acepta Excel/CSV/TXT por extensión o por tipo de contenido."""
+    if (filename or "").lower().endswith(EXTENSIONES_CARGA):
+        return True
+    tipo = content_type or ""
+    return any(t in tipo for t in TIPOS_CARGA)
+
+
 @router.post(
     "/carga-masiva",
     dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
@@ -58,18 +70,7 @@ async def carga_masiva_aprendices(
     Por cada fila: crea usuario+aprendiz, genera contraseña temporal
     y envía correo si enviar_correo=true.
     """
-    nombre = (archivo.filename or "").lower()
-    if not (
-        nombre.endswith(".csv")
-        or nombre.endswith(".txt")
-        or nombre.endswith(".tsv")
-        or nombre.endswith(".xlsx")
-        or nombre.endswith(".xls")
-        or "csv" in (archivo.content_type or "")
-        or "text" in (archivo.content_type or "")
-        or "spreadsheet" in (archivo.content_type or "")
-        or "excel" in (archivo.content_type or "")
-    ):
+    if not _formato_permitido(archivo.filename, archivo.content_type):
         raise HTTPException(
             status_code=400,
             detail="Sube un Excel (.xlsx) del Reporte de Aprendices o un CSV/TXT.",
@@ -122,8 +123,6 @@ def listar_por_ficha(id_ficha: int, session: Session = Depends(get_session)):
     return [AprendizService.to_read(session, a) for a in items]
 
 
-
-
 @router.post(
     "/por-ficha/{id_ficha}/reenviar-correos",
     dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
@@ -148,6 +147,7 @@ def reenviar_correos_ficha(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.get(
     "/{aprendiz_id}",

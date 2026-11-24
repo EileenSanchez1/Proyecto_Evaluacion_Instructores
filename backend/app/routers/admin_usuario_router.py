@@ -130,40 +130,73 @@ def promover_administrador(
 
     rol_admin = _rol_por_nombre(session, "Administrador")
     usuario = session.exec(select(Usuario).where(Usuario.correo == correo)).first()
-
-    password_temporal = None
-    creado = False
-
     if usuario:
-        if _es_admin(usuario) and usuario.activo:
-            return {
-                "mensaje": "Este usuario ya es administrador activo.",
-                "creado": False,
-                "promovido": False,
-                "usuario": _usuario_a_dict(usuario),
-                "password_temporal": None,
-            }
-        usuario.id_rol = rol_admin.id_rol
-        usuario.activo = True
-        if datos.nombre and datos.nombre.strip():
-            usuario.nombre = datos.nombre.strip()
-        if datos.apellido and datos.apellido.strip():
-            usuario.apellido = datos.apellido.strip()
-        session.add(usuario)
-        session.commit()
-        session.refresh(usuario)
-        return {
-            "mensaje": (
-                f"Usuario {correo} promovido a Administrador. "
-                "Puede iniciar sesión con su contraseña actual en la pestaña Soy Admin."
-            ),
-            "creado": False,
-            "promovido": True,
-            "usuario": _usuario_a_dict(usuario),
-            "password_temporal": None,
-        }
+        return _promover_existente(session, usuario, datos, rol_admin, correo)
+    return _crear_administrador(session, datos, rol_admin, correo)
 
-    # Crear nuevo administrador
+
+def _respuesta_promover(mensaje: str, usuario: Usuario, creado=False, promovido=False,
+                        password_temporal=None) -> dict:
+    return {
+        "mensaje": mensaje,
+        "creado": creado,
+        "promovido": promovido,
+        "usuario": _usuario_a_dict(usuario),
+        "password_temporal": password_temporal,
+    }
+
+
+def _promover_existente(
+    session: Session, usuario: Usuario, datos: PromoverAdminRequest, rol_admin: Rol, correo: str
+) -> dict:
+    """Cambia el rol del usuario a Administrador y lo reactiva."""
+    if _es_admin(usuario) and usuario.activo:
+        return _respuesta_promover("Este usuario ya es administrador activo.", usuario)
+    usuario.id_rol = rol_admin.id_rol
+    usuario.activo = True
+    for campo in ("nombre", "apellido"):
+        valor = (getattr(datos, campo) or "").strip()
+        if valor:
+            setattr(usuario, campo, valor)
+    session.add(usuario)
+    session.commit()
+    session.refresh(usuario)
+    return _respuesta_promover(
+        f"Usuario {correo} promovido a Administrador. "
+        "Puede iniciar sesión con su contraseña actual en la pestaña Soy Admin.",
+        usuario,
+        promovido=True,
+    )
+
+
+def _notificar_nuevo_admin(correo: str, nombre: str, password_temporal: str) -> None:
+    """Intenta notificar por correo (no bloquea si falla)."""
+    try:
+        from app.services.email_service import enviar_correo
+
+        enviar_correo(
+            correo,
+            "Acceso de Administrador — Evaluación de Instructores SENA",
+            (
+                f"Hola {nombre},\n\n"
+                "Se te asignó el rol de Administrador en el sistema de Evaluación de "
+                "Instructores.\n\n"
+                f"Correo: {correo}\n"
+                f"Contraseña temporal: {password_temporal}\n\n"
+                "Ingresa en la pestaña «Soy Admin», usa esta contraseña y el código que "
+                "recibirás por correo.\n"
+                "Te recomendamos cambiar la contraseña después del primer acceso.\n\n"
+                "— Sistema SENA Evaluación de Instructores\n"
+            ),
+        )
+    except Exception as e:
+        print(f"[ADMIN] No se pudo enviar correo de invitación: {e}")
+
+
+def _crear_administrador(
+    session: Session, datos: PromoverAdminRequest, rol_admin: Rol, correo: str
+) -> dict:
+    """Crea el usuario administrador con una contraseña temporal (se devuelve una sola vez)."""
     nombre = (datos.nombre or "").strip() or "Administrador"
     apellido = (datos.apellido or "").strip() or "Sistema"
     password_temporal = _generar_password_temporal()
@@ -178,41 +211,17 @@ def promover_administrador(
     session.add(usuario)
     session.commit()
     session.refresh(usuario)
-    creado = True
 
-    # Intentar notificar por correo (no bloquea si falla)
-    try:
-        from app.services.email_service import enviar_correo
-
-        enviar_correo(
-            correo,
-            "Acceso de Administrador — Evaluación de Instructores SENA",
-            (
-                f"Hola {nombre},\n\n"
-                "Se te asignó el rol de Administrador en el sistema de Evaluación de Instructores.\n\n"
-                f"Correo: {correo}\n"
-                f"Contraseña temporal: {password_temporal}\n\n"
-                "Ingresa en la pestaña «Soy Admin», usa esta contraseña y el código que recibirás por correo.\n"
-                "Te recomendamos cambiar la contraseña después del primer acceso.\n\n"
-                "— Sistema SENA Evaluación de Instructores\n"
-            ),
-        )
-    except Exception as e:
-        print(f"[ADMIN] No se pudo enviar correo de invitación: {e}")
-
+    _notificar_nuevo_admin(correo, nombre, password_temporal)
     print(f"[ADMIN] Nuevo admin creado: {correo} (contraseña temporal no se registra en logs)")
-
-    return {
-        "mensaje": (
-            f"Administrador creado: {correo}. "
-            "Guarda la contraseña temporal; solo se muestra una vez. "
-            "También se intentó enviar por correo."
-        ),
-        "creado": creado,
-        "promovido": False,
-        "usuario": _usuario_a_dict(usuario),
-        "password_temporal": password_temporal,
-    }
+    return _respuesta_promover(
+        f"Administrador creado: {correo}. "
+        "Guarda la contraseña temporal; solo se muestra una vez. "
+        "También se intentó enviar por correo.",
+        usuario,
+        creado=True,
+        password_temporal=password_temporal,
+    )
 
 
 @router.post(
@@ -231,7 +240,10 @@ def desactivar_administrador(
     if not _es_admin(usuario):
         raise HTTPException(status_code=400, detail="El usuario no es administrador.")
     if not usuario.activo:
-        return {"mensaje": "El administrador ya estaba inactivo.", "usuario": _usuario_a_dict(usuario)}
+        return {
+            "mensaje": "El administrador ya estaba inactivo.",
+            "usuario": _usuario_a_dict(usuario),
+        }
 
     if _contar_admins_activos(session, excluir_id=id_usuario) < 1:
         raise HTTPException(
@@ -274,5 +286,3 @@ def reactivar_administrador(
         "mensaje": f"Administrador {usuario.correo} reactivado.",
         "usuario": _usuario_a_dict(usuario),
     }
-
-

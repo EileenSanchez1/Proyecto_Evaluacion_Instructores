@@ -5,15 +5,14 @@ Uso (desde carpeta backend, con venv activo y DB configurada):
   python seed_preguntas_oficiales.py
   python seed_preguntas_oficiales.py --reemplazar
 """
+import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 from sqlmodel import Session, select
+
 from app.config.database import engine
 from app.models.pregunta import Pregunta
-import json
 
 
 def main(reemplazar: bool = False):
@@ -43,7 +42,10 @@ def main(reemplazar: bool = False):
             session.add(Pregunta(descripcion=desc, orden=orden, estado=True))
             creadas += 1
         session.commit()
-        print(f"OK: {creadas} creadas, {omitidas} omitidas/actualizadas. Total oficiales: {len(oficiales)}")
+        print(
+            f"OK: {creadas} creadas, {omitidas} omitidas/actualizadas. Total oficiales: "
+            f"{len(oficiales)}"
+        )
 
 
 if __name__ == "__main__":

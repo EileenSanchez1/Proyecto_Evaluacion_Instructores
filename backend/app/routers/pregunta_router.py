@@ -131,12 +131,15 @@ def eliminar_pregunta(
         "mensaje": "Pregunta eliminada correctamente"
     }
 
+
 @router.post(
     "/cargar-oficiales",
     dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
 )
 def cargar_preguntas_oficiales(
-    reemplazar: bool = Query(False, description="Si true, desactiva las preguntas actuales y carga las oficiales"),
+    reemplazar: bool = Query(
+        False, description="Si true, desactiva las preguntas actuales y carga las oficiales"
+    ),
     session: Session = Depends(get_session),
 ):
     """
@@ -195,6 +198,30 @@ def cargar_preguntas_oficiales(
     }
 
 
+EXTENSIONES_EXCEL = (".xlsx", ".xls")
+EXTENSIONES_CSV = (".csv", ".txt", ".tsv")
+
+
+def _leer_preguntas(contenido: bytes, es_csv: bool) -> list:
+    """Parsea el archivo; error 500 si falta una librería, 400 si el archivo no se puede leer."""
+    from app.services.carga_preguntas_service import (
+        parsear_csv_preguntas,
+        parsear_xlsx_preguntas,
+    )
+
+    try:
+        if es_csv:
+            return parsear_csv_preguntas(contenido)
+        return parsear_xlsx_preguntas(contenido)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se pudo leer el archivo: {type(e).__name__}: {e}",
+        )
+
+
 @router.post(
     "/carga-excel",
     dependencies=[Depends(require_roles("Administrador", "Coordinador"))],
@@ -212,36 +239,21 @@ async def cargar_preguntas_excel(
     (Evaluación de instructores en aula). Solo se toman las filas de preguntas.
     """
     nombre = (archivo.filename or "").lower()
-    es_excel = nombre.endswith(".xlsx") or nombre.endswith(".xls")
-    es_csv = nombre.endswith(".csv") or nombre.endswith(".txt") or nombre.endswith(".tsv")
-    if not (es_excel or es_csv):
+    if not nombre.endswith(EXTENSIONES_EXCEL + EXTENSIONES_CSV):
         raise HTTPException(
             status_code=400,
-            detail="Sube un archivo Excel (.xlsx) o CSV (.csv) del formato de evaluación de instructores.",
+            detail=(
+                "Sube un archivo Excel (.xlsx) o CSV (.csv) del formato de evaluación de "
+                "instructores."
+            ),
         )
     contenido = await archivo.read()
     if not contenido:
         raise HTTPException(status_code=400, detail="El archivo está vacío.")
 
-    from app.services.carga_preguntas_service import (
-        parsear_xlsx_preguntas,
-        parsear_csv_preguntas,
-        cargar_preguntas_desde_filas,
-    )
+    from app.services.carga_preguntas_service import cargar_preguntas_desde_filas
 
-    try:
-        if es_csv:
-            filas = parsear_csv_preguntas(contenido)
-        else:
-            filas = parsear_xlsx_preguntas(contenido)
-    except RuntimeError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No se pudo leer el archivo: {type(e).__name__}: {e}",
-        )
-
+    filas = _leer_preguntas(contenido, nombre.endswith(EXTENSIONES_CSV))
     if not filas:
         raise HTTPException(
             status_code=400,

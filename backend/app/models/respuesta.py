@@ -1,6 +1,11 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Index
+
+if TYPE_CHECKING:
+    from app.models.evaluacion import Evaluacion
+    from app.models.instructor import Instructor
+    from app.models.pregunta import Pregunta
 
 
 class Respuesta(SQLModel, table=True):

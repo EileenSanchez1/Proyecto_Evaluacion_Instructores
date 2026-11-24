@@ -5,3 +5,13 @@ from app.repositories.pregunta_repository import PreguntaRepository
 from app.repositories.evaluacion_repository import EvaluacionRepository
 from app.repositories.respuesta_repository import RespuestaRepository
 from app.repositories.ficha_instructor_repository import FichaInstructorRepository
+
+__all__ = [
+    "FichaRepository",
+    "AprendizRepository",
+    "InstructorRepository",
+    "PreguntaRepository",
+    "EvaluacionRepository",
+    "RespuestaRepository",
+    "FichaInstructorRepository",
+]

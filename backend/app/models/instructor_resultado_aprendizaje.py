@@ -1,7 +1,11 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import UniqueConstraint
+
+if TYPE_CHECKING:
+    from app.models.instructor import Instructor
+    from app.models.resultado_aprendizaje import ResultadoAprendizaje
 
 
 class InstructorResultadoAprendizaje(SQLModel, table=True):

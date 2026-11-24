@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from app.models.aprendiz import Aprendiz
 from app.schemas.aprendiz import AprendizCreate, AprendizUpdate
 
+
 class AprendizRepository:
     @staticmethod
     def crear(session: Session, aprendiz: AprendizCreate) -> Aprendiz:
@@ -29,16 +30,21 @@ class AprendizRepository:
         return session.exec(select(Aprendiz).where(Aprendiz.id_ficha == id_ficha)).all()
 
     @staticmethod
-    def listar_por_ficha_y_periodo(session: Session, id_ficha: int, id_periodo: int) -> List[Aprendiz]:
+    def listar_por_ficha_y_periodo(
+        session: Session, id_ficha: int, id_periodo: int
+    ) -> List[Aprendiz]:
         return session.exec(select(Aprendiz).where(
             Aprendiz.id_ficha == id_ficha,
             Aprendiz.id_periodo == id_periodo
         )).all()
 
     @staticmethod
-    def actualizar(session: Session, aprendiz_id: int, aprendiz_update: AprendizUpdate) -> Optional[Aprendiz]:
+    def actualizar(
+        session: Session, aprendiz_id: int, aprendiz_update: AprendizUpdate
+    ) -> Optional[Aprendiz]:
         db = session.get(Aprendiz, aprendiz_id)
-        if not db: return None
+        if not db:
+            return None
         for k, v in aprendiz_update.model_dump(exclude_unset=True).items():
             setattr(db, k, v)
         session.add(db)
@@ -49,7 +55,8 @@ class AprendizRepository:
     @staticmethod
     def eliminar(session: Session, aprendiz_id: int) -> bool:
         db = session.get(Aprendiz, aprendiz_id)
-        if not db: return False
+        if not db:
+            return False
         session.delete(db)
         session.commit()
         return True

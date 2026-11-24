@@ -20,8 +20,14 @@ def _mensaje_mejora(promedio: float) -> str:
     if promedio >= 4.0:
         return "Desempeño excelente (predominio de «Siempre»). Continúa así."
     if promedio >= 2.5:
-        return "Desempeño regular. Reforzar los criterios con más respuestas «Algunas veces» o «Nunca»."
-    return "Desempeño a mejorar (predominio de «Nunca» o «Algunas veces»). Se recomienda plan de mejora."
+        return (
+            "Desempeño regular. Reforzar los criterios con más respuestas «Algunas veces» o "
+            "«Nunca»."
+        )
+    return (
+        "Desempeño a mejorar (predominio de «Nunca» o «Algunas veces»). Se recomienda plan de "
+        "mejora."
+    )
 
 
 def _agregar_conteos(respuestas: List[Respuesta]) -> Dict[str, Any]:

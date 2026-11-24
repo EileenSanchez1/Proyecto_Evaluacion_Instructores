@@ -57,7 +57,7 @@ class PreguntaRepository:
 
         statement = (
             select(Pregunta)
-            .where(Pregunta.estado == True)
+            .where(Pregunta.estado.is_(True))
             .order_by(Pregunta.orden)
         )
 

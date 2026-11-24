@@ -3,6 +3,7 @@ from app.models.novedad import Novedad
 from app.schemas.novedad import NovedadCreate
 from typing import List
 
+
 class NovedadService:
     @staticmethod
     def crear(session: Session, datos: NovedadCreate) -> Novedad:

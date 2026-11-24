@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from app.models.rol import Rol
 
 
 class Usuario(SQLModel, table=True):

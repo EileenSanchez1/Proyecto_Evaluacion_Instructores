@@ -1,12 +1,21 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import UniqueConstraint, Column, Boolean
+
+if TYPE_CHECKING:
+    from app.models.ficha import Ficha
+    from app.models.instructor import Instructor
+    from app.models.periodo import Periodo
+    from app.models.resultado_aprendizaje import ResultadoAprendizaje
+
 
 class FichaInstructor(SQLModel, table=True):
     __tablename__ = "ficha_instructor"
 
     __table_args__ = (
-        UniqueConstraint("id_ficha", "id_instructor", "id_periodo", name="uq_ficha_instructor_periodo"),
+        UniqueConstraint(
+            "id_ficha", "id_instructor", "id_periodo", name="uq_ficha_instructor_periodo"
+        ),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -21,7 +30,9 @@ class FichaInstructor(SQLModel, table=True):
         index=True,
     )
     # Soft-delete: False = desactivado de esta ficha/periodo (no se muestra a aprendices)
-    activo: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default="true"))
+    activo: bool = Field(
+        default=True, sa_column=Column(Boolean, nullable=False, server_default="true")
+    )
 
     ficha: "Ficha" = Relationship(back_populates="ficha_instructores")
     instructor: "Instructor" = Relationship(back_populates="ficha_instructores")

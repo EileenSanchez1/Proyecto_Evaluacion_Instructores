@@ -8,6 +8,60 @@ from app.repositories.instructor_repository import InstructorRepository
 from app.repositories.periodo_repository import PeriodoRepository
 
 
+def _valor(nuevo, actual):
+    """El valor nuevo si viene en la actualización; si no, el actual."""
+    return nuevo if nuevo is not None else actual
+
+
+def _validar_existencia(session: Session, id_ficha: int, id_instructor: int, id_periodo: int):
+    if not FichaRepository.buscar(session, id_ficha):
+        raise ValueError("La ficha no existe.")
+    if not InstructorRepository.buscar(session, id_instructor):
+        raise ValueError("El instructor no existe.")
+    if not PeriodoRepository.buscar(session, id_periodo):
+        raise ValueError("El periodo no existe.")
+
+
+def _validar_ra_libre(session: Session, id_ficha, id_periodo, id_resultado, relacion_id: int):
+    """Un mismo RA no puede estar en dos instructores de la misma ficha+periodo."""
+    if id_resultado is None:
+        return
+    otro_con_ra = FichaInstructorRepository.buscar_por_resultado(
+        session,
+        id_ficha,
+        id_periodo,
+        id_resultado,
+        solo_activos=True,
+        excluir_relacion_id=relacion_id,
+    )
+    if otro_con_ra is not None:
+        raise ValueError(
+            "Ese resultado de aprendizaje ya está asignado a otro instructor "
+            "en esta ficha y periodo. Cada RA solo puede asignarse a un instructor."
+        )
+
+
+def _validar_sin_duplicado(session: Session, id_ficha, id_instructor, id_periodo, relacion_id):
+    """Conflicto solo con OTRA asignación ACTIVA del mismo triple."""
+    ex = FichaInstructorRepository.buscar_asignacion(
+        session, id_ficha, id_instructor, id_periodo, solo_activos=True
+    )
+    if ex is not None and int(ex.id) != relacion_id:
+        raise ValueError(
+            "El instructor ya está asignado a esta ficha en el periodo seleccionado."
+        )
+
+
+def _desactivada_en_destino(session: Session, id_ficha, id_instructor, id_periodo, relacion_id):
+    """Otra fila DESACTIVADA con el mismo triple (el unique también incluye desactivadas)."""
+    otra = FichaInstructorRepository.buscar_asignacion_cualquier(
+        session, id_ficha, id_instructor, id_periodo
+    )
+    if otra is None or int(otra.id) == relacion_id or getattr(otra, "activo", True):
+        return None
+    return otra
+
+
 class FichaInstructorService:
     @staticmethod
     def crear(session: Session, ficha_instructor: FichaInstructorCreate) -> FichaInstructor:
@@ -92,85 +146,32 @@ class FichaInstructorService:
     def actualizar(
         session: Session, relacion_id: int, update: FichaInstructorUpdate
     ) -> Optional[FichaInstructor]:
-        relacion = FichaInstructorRepository.buscar(session, int(relacion_id))
+        relacion_id = int(relacion_id)
+        relacion = FichaInstructorRepository.buscar(session, relacion_id)
         if not relacion:
             return None
 
-        id_ficha = update.id_ficha if update.id_ficha is not None else relacion.id_ficha
-        id_instructor = (
-            update.id_instructor
-            if update.id_instructor is not None
-            else relacion.id_instructor
-        )
-        id_periodo = (
-            update.id_periodo if update.id_periodo is not None else relacion.id_periodo
-        )
+        id_ficha = _valor(update.id_ficha, relacion.id_ficha)
+        id_instructor = _valor(update.id_instructor, relacion.id_instructor)
+        id_periodo = _valor(update.id_periodo, relacion.id_periodo)
+        id_resultado = _valor(update.id_resultado, relacion.id_resultado)
 
-        if not FichaRepository.buscar(session, id_ficha):
-            raise ValueError("La ficha no existe.")
-        if not InstructorRepository.buscar(session, id_instructor):
-            raise ValueError("El instructor no existe.")
-        periodo = PeriodoRepository.buscar(session, id_periodo)
-        if not periodo:
-            raise ValueError("El periodo no existe.")
+        _validar_existencia(session, id_ficha, id_instructor, id_periodo)
+        _validar_ra_libre(session, id_ficha, id_periodo, id_resultado, relacion_id)
+        _validar_sin_duplicado(session, id_ficha, id_instructor, id_periodo, relacion_id)
 
-        id_resultado = (
-            update.id_resultado
-            if update.id_resultado is not None
-            else relacion.id_resultado
+        otra = _desactivada_en_destino(session, id_ficha, id_instructor, id_periodo, relacion_id)
+        if otra is None:
+            return FichaInstructorRepository.actualizar(session, relacion_id, update)
+
+        # Hay una desactivada en el destino: se reactiva con el RA nuevo y se desactiva la actual
+        FichaInstructorRepository.actualizar(
+            session,
+            otra.id,
+            FichaInstructorUpdate(id_resultado=id_resultado, activo=True),
         )
-        if id_resultado is not None:
-            otro_con_ra = FichaInstructorRepository.buscar_por_resultado(
-                session,
-                id_ficha,
-                id_periodo,
-                id_resultado,
-                solo_activos=True,
-                excluir_relacion_id=int(relacion_id),
-            )
-            if otro_con_ra is not None:
-                raise ValueError(
-                    "Ese resultado de aprendizaje ya está asignado a otro instructor "
-                    "en esta ficha y periodo. Cada RA solo puede asignarse a un instructor."
-                )
-
-        # Conflicto solo con OTRA asignación ACTIVA del mismo triple
-        ex = FichaInstructorRepository.buscar_asignacion(
-            session, id_ficha, id_instructor, id_periodo, solo_activos=True
-        )
-        if ex is not None and int(ex.id) != int(relacion_id):
-            raise ValueError(
-                "El instructor ya está asignado a esta ficha en el periodo seleccionado."
-            )
-
-        # Si el periodo/RA cambian y hay una fila desactivada en el destino, no choca por unique
-        # (unique incluye desactivadas). Si existe desactivada con el nuevo triple y no es esta, error de unique.
-        otra_cualquiera = FichaInstructorRepository.buscar_asignacion_cualquier(
-            session, id_ficha, id_instructor, id_periodo
-        )
-        if (
-            otra_cualquiera is not None
-            and int(otra_cualquiera.id) != int(relacion_id)
-            and not getattr(otra_cualquiera, "activo", True)
-        ):
-            # Hay una desactivada en el periodo destino: reactivarla con el RA nuevo y desactivar la actual
-            FichaInstructorRepository.actualizar(
-                session,
-                otra_cualquiera.id,
-                FichaInstructorUpdate(
-                    id_resultado=(
-                        update.id_resultado
-                        if update.id_resultado is not None
-                        else relacion.id_resultado
-                    ),
-                    activo=True,
-                ),
-            )
-            # Desactivar la fila original
-            FichaInstructorRepository.desactivar(session, int(relacion_id))
-            return FichaInstructorRepository.buscar(session, otra_cualquiera.id)
-
-        return FichaInstructorRepository.actualizar(session, int(relacion_id), update)
+        FichaInstructorRepository.desactivar(session, relacion_id)
+        return FichaInstructorRepository.buscar(session, otra.id)
 
     @staticmethod
     def desactivar(session: Session, relacion_id: int) -> bool:

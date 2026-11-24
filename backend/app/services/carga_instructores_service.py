@@ -24,7 +24,6 @@ from sqlmodel import Session
 
 from app.schemas.instructor import InstructorCreate
 from app.services.instructor_service import InstructorService
-from app.services.email_service import enviar_credenciales_instructor
 
 
 def _normalizar_cabecera(nombre: str) -> str:
@@ -74,41 +73,44 @@ def _normalizar_cabecera(nombre: str) -> str:
 
 
 def _dividir_nombre_completo(completo: str) -> tuple[str, str]:
-    """Divide 'Adriana Maritza Vega' en nombre y apellido de forma razonable."""
-    partes = [p for p in (completo or "").strip().split() if p]
-    if not partes:
-        return "", ""
-    if len(partes) == 1:
-        return partes[0], ""
-    if len(partes) == 2:
-        return partes[0], partes[1]
-    if len(partes) >= 4:
-        return " ".join(partes[:-2]), " ".join(partes[-2:])
-    return " ".join(partes[:-1]), partes[-1]
+    """Divide 'Adriana Maritza Vega' en nombre y apellido de forma razonable.
+
+    1 palabra: solo nombre; 2: nombre + apellido; 3: dos nombres + apellido;
+    4 o más: los dos últimos son los apellidos.
+    """
+    partes = (completo or "").split()
+    if len(partes) < 2:
+        return (partes[0] if partes else ""), ""
+    corte = -2 if len(partes) >= 4 else -1
+    return " ".join(partes[:corte]), " ".join(partes[corte:])
+
+
+def _texto(valor) -> str:
+    return str(valor).strip() if valor is not None else ""
 
 
 def parsear_csv(contenido: bytes | str) -> list[dict[str, str]]:
     if isinstance(contenido, bytes):
         if contenido.startswith(b"\xef\xbb\xbf"):
             contenido = contenido[3:]
-        texto = contenido.decode("utf-8", errors="replace")
-    else:
-        texto = contenido
+        contenido = contenido.decode("utf-8", errors="replace")
 
-    primera = texto.splitlines()[0] if texto.strip() else ""
+    primera = contenido.splitlines()[0] if contenido.strip() else ""
     delimiter = ";" if primera.count(";") > primera.count(",") else ","
 
-    reader = csv.DictReader(io.StringIO(texto), delimiter=delimiter)
-    filas: list[dict[str, str]] = []
-    for row in reader:
-        normalizada = {}
-        for k, v in row.items():
-            if k is None:
-                continue
-            key = _normalizar_cabecera(k)
-            normalizada[key] = (v or "").strip()
-        filas.append(normalizada)
-    return filas
+    reader = csv.DictReader(io.StringIO(contenido), delimiter=delimiter)
+    return [
+        {_normalizar_cabecera(k): (v or "").strip() for k, v in row.items() if k is not None}
+        for row in reader
+    ]
+
+
+def _fila_vacia(row) -> bool:
+    return not row or all(_texto(c) == "" for c in row)
+
+
+def _normalizar_celdas(headers: list[str], row) -> dict[str, str]:
+    return {key: _texto(cell) for key, cell in zip(headers, row) if key}
 
 
 def parsear_xlsx(contenido: bytes) -> list[dict[str, str]]:
@@ -120,136 +122,116 @@ def parsear_xlsx(contenido: bytes) -> list[dict[str, str]]:
         ) from e
 
     wb = load_workbook(io.BytesIO(contenido), read_only=True, data_only=True)
-    ws = wb.active
-
-    rows = list(ws.iter_rows(values_only=True))
+    rows = list(wb.active.iter_rows(values_only=True))
     if not rows:
         return []
-
-    headers = [_normalizar_cabecera(str(h) if h is not None else "") for h in rows[0]]
-    filas: list[dict[str, str]] = []
-
-    for row in rows[1:]:
-        if not row or all(c is None or str(c).strip() == "" for c in row):
-            continue
-        normalizada: dict[str, str] = {}
-        for i, cell in enumerate(row):
-            if i >= len(headers):
-                break
-            key = headers[i]
-            if not key:
-                continue
-            normalizada[key] = (str(cell).strip() if cell is not None else "")
-        filas.append(normalizada)
-
+    headers = [_normalizar_cabecera(_texto(h)) for h in rows[0]]
+    filas = [_normalizar_celdas(headers, row) for row in rows[1:] if not _fila_vacia(row)]
     wb.close()
     return filas
 
 
 def parsear_archivo(contenido: bytes, filename: str) -> list[dict[str, str]]:
-    nombre = (filename or "").lower()
-    if nombre.endswith(".xlsx") or nombre.endswith(".xls"):
+    if (filename or "").lower().endswith((".xlsx", ".xls")):
         return parsear_xlsx(contenido)
     return parsear_csv(contenido)
 
 
-def _extraer_campos(fila: dict[str, str]) -> tuple[str, str, str, str, str | None]:
-    correo = (
-        fila.get("correo")
-        or fila.get("correo_electronico")
-        or fila.get("correo_sena")
-        or ""
-    ).strip().lower()
+def _primero(fila: dict[str, str], *claves: str) -> str:
+    """Primer valor no vacío de las claves indicadas, sin espacios."""
+    return next((fila.get(k) for k in claves if fila.get(k)), "").strip()
 
-    nombre_completo = (fila.get("nombre_completo") or "").strip()
+
+def _nombre_y_apellido(fila: dict[str, str]) -> tuple[str, str]:
+    nombre_completo = _primero(fila, "nombre_completo")
     if nombre_completo:
-        nombre, apellido = _dividir_nombre_completo(nombre_completo)
-    else:
-        nombre = (fila.get("nombre") or "").strip()
-        apellido = (fila.get("apellido") or "").strip()
+        return _dividir_nombre_completo(nombre_completo)
+    return _primero(fila, "nombre"), _primero(fila, "apellido")
 
-    telefono = (fila.get("telefono") or fila.get("documento") or "").strip() or "0000000000"
 
-    pc_raw = (fila.get("planta_contrato") or "").strip().upper()
-    planta_contrato = None
-    if pc_raw:
-        if "PLANTA" in pc_raw:
-            planta_contrato = "PLANTA"
-        elif "CONTRAT" in pc_raw:
-            planta_contrato = "CONTRATO"
-        else:
-            planta_contrato = pc_raw[:20]
+def _planta_contrato(valor: str) -> str | None:
+    pc_raw = valor.upper()
+    if not pc_raw:
+        return None
+    if "PLANTA" in pc_raw:
+        return "PLANTA"
+    if "CONTRAT" in pc_raw:
+        return "CONTRATO"
+    return pc_raw[:20]
 
+
+def _extraer_campos(fila: dict[str, str]) -> tuple[str, str, str, str, str | None]:
+    correo = _primero(fila, "correo", "correo_electronico", "correo_sena").lower()
+    nombre, apellido = _nombre_y_apellido(fila)
+    telefono = _primero(fila, "telefono", "documento") or "0000000000"
+    planta_contrato = _planta_contrato(_primero(fila, "planta_contrato"))
     return nombre, apellido, correo, telefono, planta_contrato
 
 
-def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[str, Any]:
-    creados = []
-    omitidos = []
-    errores = []
+MSG_FALTAN = "Faltan nombre completo o correo institucional @sena.edu.co."
+MSG_CORREO = (
+    "El correo debe ser institucional (@sena.edu.co). Columna: CORREO "
+    "ELECTRÓNICO @SENA.EDU.CO"
+)
 
+
+def _validar(nombre: str, correo: str) -> tuple[str, str] | None:
+    """(correo_a_mostrar, mensaje) si la fila no es válida; None si está bien."""
+    if not nombre or not correo:
+        return correo or "(vacío)", MSG_FALTAN
+    if not correo.endswith("@sena.edu.co"):
+        return correo, MSG_CORREO
+    return None
+
+
+def _es_duplicado(msg: str) -> bool:
+    return "ya existe" in msg.lower()
+
+
+def _crear_instructor(session: Session, i: int, campos: tuple, resultado: dict) -> None:
+    nombre, apellido, correo, telefono, planta_contrato = campos
+    try:
+        data = InstructorCreate(
+            nombre=nombre,
+            apellido=apellido,
+            correo=correo,
+            telefono=telefono,
+            foto=None,
+            planta_contrato=planta_contrato,
+            resultados_aprendizaje=[],
+        )
+        # Correos se envían después con el botón «Enviar correos»
+        inst = InstructorService.crear(session, data, enviar_correo=False)
+        resultado["creados"].append({
+            "fila": i,
+            "correo": correo,
+            "nombre": f"{nombre} {apellido}",
+            "id_instructor": inst.id_instructor,
+        })
+    except ValueError as e:
+        msg = str(e)
+        if _es_duplicado(msg):
+            resultado["omitidos"].append({"fila": i, "correo": correo, "motivo": msg})
+        else:
+            resultado["errores"].append({"fila": i, "correo": correo, "error": msg})
+    except Exception as e:
+        resultado["errores"].append(
+            {"fila": i, "correo": correo, "error": f"{type(e).__name__}: {e}"}
+        )
+
+
+def cargar_desde_filas(session: Session, filas: list[dict[str, str]]) -> dict[str, Any]:
+    resultado: dict[str, list] = {"creados": [], "omitidos": [], "errores": []}
     for i, fila in enumerate(filas, start=2):
         nombre, apellido, correo, telefono, planta_contrato = _extraer_campos(fila)
-
-        if not nombre or not correo:
-            errores.append({
-                "fila": i,
-                "correo": correo or "(vacío)",
-                "error": "Faltan nombre completo o correo institucional @sena.edu.co.",
-            })
+        invalido = _validar(nombre, correo)
+        if invalido:
+            resultado["errores"].append({"fila": i, "correo": invalido[0], "error": invalido[1]})
             continue
+        campos = (nombre, apellido or "-", correo, telefono, planta_contrato)
+        _crear_instructor(session, i, campos, resultado)
 
-        if not apellido:
-            apellido = "-"
-
-        if not correo.endswith("@sena.edu.co"):
-            errores.append({
-                "fila": i,
-                "correo": correo,
-                "error": "El correo debe ser institucional (@sena.edu.co). Columna: CORREO ELECTRÓNICO @SENA.EDU.CO",
-            })
-            continue
-
-        try:
-            data = InstructorCreate(
-                nombre=nombre,
-                apellido=apellido,
-                correo=correo,
-                telefono=telefono,
-                foto=None,
-                planta_contrato=planta_contrato,
-                resultados_aprendizaje=[],
-            )
-            inst = InstructorService.crear(session, data, enviar_correo=False)
-            # Correos se envían después con el botón «Enviar correos»
-
-            creados.append({
-                "fila": i,
-                "correo": correo,
-                "nombre": f"{nombre} {apellido}",
-                "id_instructor": inst.id_instructor,
-            })
-        except ValueError as e:
-            msg = str(e)
-            if "Ya existe" in msg or "ya existe" in msg.lower():
-                omitidos.append({
-                    "fila": i,
-                    "correo": correo,
-                    "motivo": msg,
-                })
-            else:
-                errores.append({
-                    "fila": i,
-                    "correo": correo,
-                    "error": msg,
-                })
-        except Exception as e:
-            errores.append({
-                "fila": i,
-                "correo": correo,
-                "error": f"{type(e).__name__}: {e}",
-            })
-
+    creados, omitidos, errores = (resultado[k] for k in ("creados", "omitidos", "errores"))
     return {
         "total_filas": len(filas),
         "creados": len(creados),

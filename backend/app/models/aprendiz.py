@@ -1,5 +1,11 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from app.models.evaluacion import Evaluacion
+    from app.models.ficha import Ficha
+    from app.models.periodo import Periodo
+
 
 class Aprendiz(SQLModel, table=True):
     __tablename__ = "aprendices"
@@ -11,7 +17,9 @@ class Aprendiz(SQLModel, table=True):
     contrasena: str = Field(max_length=255, nullable=False)
     id_ficha: int = Field(foreign_key="fichas.id_ficha", nullable=False)
     id_periodo: int = Field(foreign_key="periodos.id_periodo", nullable=False)
-    id_usuario: Optional[int] = Field(default=None, foreign_key="usuarios.id_usuario", unique=True, nullable=True, index=True)
+    id_usuario: Optional[int] = Field(
+        default=None, foreign_key="usuarios.id_usuario", unique=True, nullable=True, index=True
+    )
 
     ficha: "Ficha" = Relationship(back_populates="aprendices")
     periodo: "Periodo" = Relationship(back_populates="aprendices")

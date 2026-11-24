@@ -10,7 +10,6 @@ from app.models.evaluacion import Evaluacion
 from app.models.respuesta import Respuesta
 from app.models.ficha_instructor import FichaInstructor
 from app.models.instructor_resultado_aprendizaje import InstructorResultadoAprendizaje
-from app.models.horario import Horario
 from app.models.auditoria import Auditoria
 from app.models.notificacion import Notificacion
 from app.models.novedad import Novedad
@@ -19,3 +18,24 @@ from app.models.novedad import Novedad
 # (por si algún script antiguo aún importa Competencia)
 Competencia = ResultadoAprendizaje
 InstructorCompetencia = InstructorResultadoAprendizaje
+
+__all__ = [
+    "Usuario",
+    "Rol",
+    "Aprendiz",
+    "Instructor",
+    "Ficha",
+    "ResultadoAprendizaje",
+    "Periodo",
+    "Pregunta",
+    "Evaluacion",
+    "Respuesta",
+    "FichaInstructor",
+    "InstructorResultadoAprendizaje",
+    "Horario",
+    "Auditoria",
+    "Notificacion",
+    "Novedad",
+    "Competencia",
+    "InstructorCompetencia",
+]
