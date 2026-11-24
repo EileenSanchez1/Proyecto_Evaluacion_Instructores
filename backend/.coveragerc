@@ -1,0 +1,15 @@
+[run]
+source = app
+omit =
+    app/uploads/*
+    app/data/*
+
+[report]
+show_missing = True
+skip_empty = True
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+
+[html]
+directory = htmlcov
