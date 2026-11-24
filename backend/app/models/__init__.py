@@ -10,7 +10,6 @@ from app.models.evaluacion import Evaluacion
 from app.models.respuesta import Respuesta
 from app.models.ficha_instructor import FichaInstructor
 from app.models.instructor_resultado_aprendizaje import InstructorResultadoAprendizaje
-from app.models.horario import Horario
 from app.models.auditoria import Auditoria
 from app.models.notificacion import Notificacion
 from app.models.novedad import Novedad

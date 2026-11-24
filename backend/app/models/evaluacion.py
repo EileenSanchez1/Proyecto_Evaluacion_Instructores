@@ -18,7 +18,6 @@ class Evaluacion(SQLModel, table=True):
         Index("ix_evaluaciones_aprendiz", "id_aprendiz"),
         Index("ix_evaluaciones_instructor", "id_instructor"),
         Index("ix_evaluaciones_periodo", "id_periodo"),
-        Index("ix_evaluaciones_estado", "estado"),
         Index(
             "ix_evaluaciones_aprendiz_instructor_periodo",
             "id_aprendiz",

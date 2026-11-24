@@ -4,7 +4,6 @@ from sqlmodel import SQLModel, Field, Relationship
 if TYPE_CHECKING:
     from app.models.aprendiz import Aprendiz
     from app.models.ficha_instructor import FichaInstructor
-    from app.models.horario import Horario
 
 
 class Ficha(SQLModel, table=True):
@@ -17,7 +16,6 @@ class Ficha(SQLModel, table=True):
 
     aprendices: list["Aprendiz"] = Relationship(back_populates="ficha")
     ficha_instructores: list["FichaInstructor"] = Relationship(back_populates="ficha")
-    horarios: list["Horario"] = Relationship(back_populates="ficha")
 
     def __repr__(self):
         return f"<Ficha {self.numero_ficha}>"

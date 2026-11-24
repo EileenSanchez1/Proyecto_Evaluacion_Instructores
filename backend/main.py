@@ -33,13 +33,6 @@ def ensure_extra_columns():
                     "VARCHAR(1000)"
                 )
             )
-            # Horario: enlace a Resultado de Aprendizaje + ambiente
-            conn.execute(text(
-                "ALTER TABLE horarios ADD COLUMN IF NOT EXISTS id_resultado INTEGER"
-            ))
-            conn.execute(text(
-                "ALTER TABLE horarios ADD COLUMN IF NOT EXISTS ambiente VARCHAR(80)"
-            ))
             # Asignación ficha-instructor: RA que dicta en esa ficha/periodo
             conn.execute(text(
                 "ALTER TABLE ficha_instructor ADD COLUMN IF NOT EXISTS id_resultado INTEGER"
